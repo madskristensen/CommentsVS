@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json.schemastore.org/vsix-publish",
+  "categories": [ "other" ],
+  "identity": {
+    "internalName": "Toon",
+    "tags": [ "toon", "AI", "copilot" ]
+  },
+  "assetFiles": [
+    {
+      "pathOnDisk": "art/colorizer.png",
+      "targetPath": "art/colorizer.png"
+    },
+    {
+      "pathOnDisk": "art/error.png",
+      "targetPath": "art/error.png"
+    },
+    {
+      "pathOnDisk": "art/nested.png",
+      "targetPath": "art/nested.png"
+    },
+    {
+      "pathOnDisk": "art/sync.png",
+      "targetPath": "art/sync.png"
+    }
+  ],
+  "overview": "README.md",
+  "publisher": "MadsKristensen",
+  "repo": "https://github.com/MadsKristensen/ToonVS"
+}
