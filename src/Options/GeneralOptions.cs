@@ -58,6 +58,7 @@ namespace CommentsVS.Options
 
         private const string _outliningCategory = "Comment Outlining";
 
+
         [Category(_outliningCategory)]
         [DisplayName("Collapse Comments on File Open")]
         [Description("When enabled, XML documentation comments will be automatically collapsed when opening a file.")]
@@ -71,6 +72,14 @@ namespace CommentsVS.Options
         [Description("When enabled, issue references like #123 in comments will become clickable links to the issue on GitHub, GitLab, Bitbucket, or Azure DevOps.")]
         [DefaultValue(true)]
         public bool EnableIssueLinks { get; set; } = true;
+
+        private const string _renderingCategory = "Comment Rendering";
+
+        [Category(_renderingCategory)]
+        [DisplayName("Enable Rendered Comments")]
+        [Description("When enabled, XML documentation comments will be rendered without XML tags for easier reading. Toggle with Ctrl+M, Ctrl+R.")]
+        [DefaultValue(false)]
+        public bool EnableRenderedComments { get; set; } = false;
 
         /// <summary>
         /// Creates a CommentReflowEngine configured with the current options.

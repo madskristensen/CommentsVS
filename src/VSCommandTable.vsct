@@ -29,6 +29,18 @@
           <ToolTipText>Toggle visibility of XML documentation comments (Ctrl+M, Ctrl+C)</ToolTipText>
         </Strings>
       </Button>
+      <Button guid="CommentsVS" id="ToggleRenderedComments" priority="0x0101" type="Button">
+        <Parent guid="CommentsVS" id="MyMenuGroup" />
+        <Icon guid="ImageCatalogGuid" id="XMLCommentTag" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Toggle Rendered Comments</ButtonText>
+          <CanonicalName>.CommentsVS.ToggleRenderedComments</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ToggleRenderedComments</LocCanonicalName>
+          <ToolTipText>Toggle rendered view of XML documentation comments (Ctrl+M, Ctrl+R)</ToolTipText>
+        </Strings>
+      </Button>
     </Buttons>
   </Commands>
 
@@ -40,6 +52,7 @@
 
   <KeyBindings>
     <KeyBinding guid="CommentsVS" id="ToggleCommentVisibility" editor="guidVSStd97" key1="M" mod1="Control" key2="C" mod2="Control" />
+    <KeyBinding guid="CommentsVS" id="ToggleRenderedComments" editor="guidVSStd97" key1="M" mod1="Control" key2="R" mod2="Control" />
   </KeyBindings>
 
   <Symbols>
@@ -47,6 +60,7 @@
       <IDSymbol name="MyMenuGroup" value="0x0001" />
       <IDSymbol name="ToolbarGroup" value="0x0002" />
       <IDSymbol name="ToggleCommentVisibility" value="0x0200" />
+      <IDSymbol name="ToggleRenderedComments" value="0x0201" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

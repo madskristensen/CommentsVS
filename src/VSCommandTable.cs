@@ -25,5 +25,6 @@ namespace CommentsVS
         public const int MyMenuGroup = 0x0001;
         public const int ToolbarGroup = 0x0002;
         public const int ToggleCommentVisibility = 0x0200;
+        public const int ToggleRenderedComments = 0x0201;
     }
 }

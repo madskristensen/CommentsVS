@@ -22,6 +22,17 @@ Use **Ctrl+M, Ctrl+C** to toggle all XML doc comments in the current file betwee
 
 ![Collapsed Comments](art/collapsed.png)
 
+### Rendered XML Doc Comments
+View XML documentation comments in a clean, rendered format without the XML syntax noise. The extension parses the XML and displays the content with proper formatting:
+
+- **Bold** headings for sections like Remarks, Returns, Parameters
+- Clickable links for `<see>`, `<seealso>`, `<paramref>`, and `<typeparamref>` tags
+- Inline code formatting for `<c>` and `<code>` blocks  
+- Proper list rendering for `<list>` elements
+- Gray text color that matches Visual Studio's comment styling (works with light and dark themes)
+
+Use **Ctrl+M, Ctrl+R** to toggle between the rendered view and the raw XML source. This is great for reading documentation without the visual clutter of XML tags.
+
 ### Automatic Comment Reflow
 Automatically reformat XML documentation comments to fit within a configurable line length (default: 120 characters). The extension intelligently wraps text while preserving XML structure.
 
@@ -104,6 +115,7 @@ Configure the extension behavior via **Tools > Options > CommentsVS**.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Collapse Comments on File Open | Off | Automatically collapse XML doc comments when opening files |
+| Enable Rendered Comments | Off | Show XML doc comments in a rendered, formatted view |
 
 ### Issue Links (General)
 | Setting | Default | Description |
@@ -127,6 +139,7 @@ Tag colors can be customized via **Tools > Options > Environment > Fonts and Col
    - **Light Bulb** (Ctrl+.) → "Reflow XML Documentation Comment"
    - **Paste** text into a comment block
 4. Use **Ctrl+M, Ctrl+C** to toggle comment visibility
+5. Use **Ctrl+M, Ctrl+R** to toggle rendered comment view
 
 ## Requirements
 
