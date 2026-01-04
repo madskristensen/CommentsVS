@@ -57,7 +57,6 @@ namespace CommentsVS.Adornments
 
     internal sealed class RenderedCommentIntraTextTagger : IntraTextAdornmentTagger<XmlDocCommentBlock, FrameworkElement>
     {
-        private readonly HashSet<int> _expandedComments = new HashSet<int>();
         private readonly HashSet<int> _temporarilyHiddenComments = new HashSet<int>();
         private int? _lastCaretLine;
 
@@ -82,68 +81,14 @@ namespace CommentsVS.Adornments
 
         /// <summary>
         /// Public method for command handler to invoke ESC key behavior.
-        /// Returns true if the ESC key was handled (collapsed or hidden a comment).
+        /// Returns true if the ESC key was handled (hidden a comment).
         /// </summary>
         public bool HandleEscapeKey(int startLine)
         {
-            // If comment is expanded, collapse it first
-            if (_expandedComments.Contains(startLine))
-            {
-                _expandedComments.Remove(startLine);
-                RefreshTags();
-                return true;
-            }
-
             // If comment is rendered, hide it
             if (!_temporarilyHiddenComments.Contains(startLine))
             {
                 HideCommentRendering(startLine);
-                return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Expand a comment to show all sections.
-        /// Returns true if the comment was expanded.
-        /// </summary>
-        public bool ExpandComment(int startLine)
-        {
-            // Only expand if comment has more content and is not already expanded
-            if (!_expandedComments.Contains(startLine))
-            {
-                _expandedComments.Add(startLine);
-
-#pragma warning disable VSTHRD001, VSTHRD110 // Intentional fire-and-forget for UI update
-                view.VisualElement.Dispatcher.BeginInvoke(
-                    new Action(() => RefreshTags()),
-                    System.Windows.Threading.DispatcherPriority.Input);
-#pragma warning restore VSTHRD001, VSTHRD110
-
-                return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Collapse an expanded comment to show only summary.
-        /// Returns true if the comment was collapsed.
-        /// </summary>
-        public bool CollapseComment(int startLine)
-        {
-            // Only collapse if comment is currently expanded
-            if (_expandedComments.Contains(startLine))
-            {
-                _expandedComments.Remove(startLine);
-
-#pragma warning disable VSTHRD001, VSTHRD110 // Intentional fire-and-forget for UI update
-                view.VisualElement.Dispatcher.BeginInvoke(
-                    new Action(() => RefreshTags()),
-                    System.Windows.Threading.DispatcherPriority.Input);
-#pragma warning restore VSTHRD001, VSTHRD110
-
                 return true;
             }
 
@@ -194,15 +139,6 @@ namespace CommentsVS.Adornments
                     {
                         if (caretLine >= block.StartLine && caretLine <= block.EndLine)
                         {
-                            // If comment is expanded, collapse it first
-                            if (_expandedComments.Contains(block.StartLine))
-                            {
-                                _expandedComments.Remove(block.StartLine);
-                                RefreshTags();
-                                e.Handled = true;
-                                return;
-                            }
-
                             // If comment is rendered (not temporarily hidden), hide it
                             if (!_temporarilyHiddenComments.Contains(block.StartLine))
                             {
@@ -342,7 +278,6 @@ namespace CommentsVS.Adornments
             var fontSize = view.FormattedLineSource?.DefaultTextProperties?.FontRenderingEmSize ?? 13.0;
             var fontFamily = view.FormattedLineSource?.DefaultTextProperties?.Typeface?.FontFamily
                 ?? new FontFamily("Consolas");
-            var lineHeight = view.FormattedLineSource?.LineHeight ?? 15.0;
 
             // Calculate character width for monospace font
             var charWidth = fontSize * 0.6;  // Approximate width of a character in monospace
@@ -350,19 +285,11 @@ namespace CommentsVS.Adornments
             // Calculate indentation width in pixels
             var indentWidth = block.Indentation.Length * charWidth;
 
-            // Calculate max width for 100 characters total (including indentation)
-            // Subtract indentation to ensure total line length doesn't exceed 100 chars
-            var maxContentWidth = (100 - block.Indentation.Length) * charWidth;
-
             // Gray color palette for clean, subtle appearance
             var textBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));        // Gray for all text
-            var labelBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));       // Gray for labels
             var linkBrush = new SolidColorBrush(Color.FromRgb(86, 156, 214));         // VS blue for links
             var codeBrush = new SolidColorBrush(Color.FromRgb(180, 180, 180));        // Lighter gray for code
             var paramBrush = new SolidColorBrush(Color.FromRgb(150, 150, 150));       // Medium gray for params
-
-            var isExpanded = _expandedComments.Contains(block.StartLine);
-            var hasMoreContent = renderedComment.HasAdditionalSections;
 
             // Main container - no padding/margin to match exact line height
             var outerBorder = new Border
@@ -371,7 +298,9 @@ namespace CommentsVS.Adornments
                 Padding = new Thickness(0),  // No padding to avoid indentation
                 Margin = new Thickness(indentWidth, 0, 0, 0),  // Add left margin for indentation
                 Focusable = true,
-                Tag = block.StartLine
+                Tag = block.StartLine,
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
             };
 
             // Add double-click handler to hide this specific comment's rendering
@@ -401,32 +330,6 @@ namespace CommentsVS.Adornments
                 Keyboard.Focus((Border)s);
             };
 
-            var container = new StackPanel
-            {
-                Orientation = Orientation.Vertical
-            };
-
-            if (isExpanded && hasMoreContent)
-            {
-                // Expanded view with clean appearance
-                RenderExpandedView(container, renderedComment, block, fontSize, fontFamily, lineHeight,
-                    textBrush, labelBrush, linkBrush, codeBrush, paramBrush, maxContentWidth);
-            }
-            else
-            {
-                // Compact summary view with inline expand button
-                RenderCompactView(container, renderedComment, block, fontSize, fontFamily,
-                    textBrush, linkBrush, codeBrush, paramBrush, hasMoreContent, maxContentWidth);
-            }
-
-            outerBorder.Child = container;
-            return outerBorder;
-        }
-
-        private void RenderCompactView(StackPanel container, RenderedComment comment, XmlDocCommentBlock block,
-            double fontSize, FontFamily fontFamily, Brush textBrush, Brush linkBrush,
-            Brush codeBrush, Brush paramBrush, bool hasMoreContent, double maxWidth)
-        {
             var summaryPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -436,250 +339,27 @@ namespace CommentsVS.Adornments
             var summaryBlock = new TextBlock
             {
                 FontFamily = fontFamily,
-                FontSize = fontSize,  // Use exact font size
+                FontSize = fontSize,
                 Foreground = textBrush,
                 TextWrapping = TextWrapping.NoWrap,
                 VerticalAlignment = VerticalAlignment.Top,
                 Padding = new Thickness(0),
-                Margin = new Thickness(0)
+                Margin = new Thickness(0),
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
             };
+            TextOptions.SetTextFormattingMode(summaryBlock, TextFormattingMode.Display);
+            TextOptions.SetTextRenderingMode(summaryBlock, TextRenderingMode.Auto);
 
-            RenderedCommentSection summary = comment.Summary;
+            RenderedCommentSection summary = renderedComment.Summary;
             if (summary != null)
             {
                 RenderSectionContent(summaryBlock, summary.ProseLines, textBrush, linkBrush, codeBrush, paramBrush);
             }
 
             summaryPanel.Children.Add(summaryBlock);
-
-            // Expand button with hover effect
-            if (hasMoreContent)
-            {
-                var expanderContainer = new Border
-                {
-                    Background = new SolidColorBrush(Color.FromArgb(0, 86, 156, 214)),
-                    CornerRadius = new CornerRadius(2),
-                    Padding = new Thickness(3, 0, 3, 0),  // Minimal horizontal padding only
-                    Margin = new Thickness(6, 0, 0, 0),
-                    VerticalAlignment = VerticalAlignment.Top,
-                    Cursor = Cursors.Hand,
-                    Focusable = false  // Prevent focus, handle click immediately
-                };
-
-                var expander = new TextBlock
-                {
-                    Text = "⋯",
-                    FontFamily = fontFamily,
-                    FontSize = fontSize,
-                    Foreground = linkBrush,
-                    FontWeight = FontWeights.Bold,
-                    ToolTip = "Show parameters, returns, and more",
-                    VerticalAlignment = VerticalAlignment.Top,
-                    Padding = new Thickness(0),
-                    Margin = new Thickness(0),
-                    IsHitTestVisible = false,  // Let clicks pass through to the border
-                    Focusable = false
-                };
-
-                expanderContainer.Child = expander;
-                expanderContainer.Tag = block.StartLine;
-
-                // Use PreviewMouseLeftButtonDown for immediate response
-                expanderContainer.PreviewMouseLeftButtonDown += (s, e) =>
-                {
-                    if (s is Border border && border.Tag is int startLine)
-                    {
-                        _expandedComments.Add(startLine);
-
-                        // Defer refresh to avoid double-click issue
-#pragma warning disable VSTHRD001, VSTHRD110 // Intentional fire-and-forget for UI update
-                        view.VisualElement.Dispatcher.BeginInvoke(
-                            new Action(() => RefreshTags()),
-                            System.Windows.Threading.DispatcherPriority.Input);
-#pragma warning restore VSTHRD001, VSTHRD110
-
-                        e.Handled = true;
-                    }
-                };
-
-                // Hover effect
-                expanderContainer.MouseEnter += (s, e) =>
-                {
-                    ((Border)s).Background = new SolidColorBrush(Color.FromArgb(20, 86, 156, 214));
-                };
-                expanderContainer.MouseLeave += (s, e) =>
-                {
-                    ((Border)s).Background = new SolidColorBrush(Color.FromArgb(0, 86, 156, 214));
-                };
-
-                summaryPanel.Children.Add(expanderContainer);
-            }
-
-            container.Children.Add(summaryPanel);
-        }
-
-        private void RenderExpandedView(StackPanel container, RenderedComment comment, XmlDocCommentBlock block,
-            double fontSize, FontFamily fontFamily, double lineHeight, Brush textBrush, Brush labelBrush,
-            Brush linkBrush, Brush codeBrush, Brush paramBrush, double maxWidth)
-        {
-            var isFirst = true;
-
-            foreach (RenderedCommentSection section in comment.Sections)
-            {
-                if (section.IsEmpty)
-                    continue;
-
-                // Add spacing between sections (no horizontal lines)
-                if (!isFirst)
-                {
-                    container.Children.Add(new Border { Height = lineHeight * 0.5 });
-                }
-
-                var sectionPanel = new StackPanel { Orientation = Orientation.Vertical };
-
-                // Label and content on same line for compact sections
-                if (section.Type != CommentSectionType.Summary)
-                {
-                    var sectionLine = new StackPanel
-                    {
-                        Orientation = Orientation.Horizontal,
-                        Margin = new Thickness(0, 0, 0, 0)
-                    };
-
-                    var label = GetSectionLabel(section);
-                    if (!string.IsNullOrEmpty(label))
-                    {
-                        var labelBlock = new TextBlock
-                        {
-                            Text = label + ": ",
-                            FontFamily = fontFamily,
-                            FontSize = fontSize,
-                            Foreground = labelBrush,
-                            FontWeight = FontWeights.SemiBold,
-                            VerticalAlignment = VerticalAlignment.Top,
-                            Padding = new Thickness(0),
-                            Margin = new Thickness(0, 0, 4, 0)
-                        };
-                        sectionLine.Children.Add(labelBlock);
-                    }
-
-                    var contentBlock = new TextBlock
-                    {
-                        FontFamily = fontFamily,
-                        FontSize = fontSize,
-                        Foreground = textBrush,
-                        TextWrapping = TextWrapping.Wrap,
-                        Padding = new Thickness(0),
-                        MaxWidth = maxWidth,
-                        VerticalAlignment = VerticalAlignment.Top
-                    };
-
-                    RenderSectionContent(contentBlock, section.Lines, textBrush, linkBrush, codeBrush, paramBrush);
-                    sectionLine.Children.Add(contentBlock);
-                    sectionPanel.Children.Add(sectionLine);
-                }
-                else
-                {
-                    // Summary section - no label
-                    var contentBlock = new TextBlock
-                    {
-                        FontFamily = fontFamily,
-                        FontSize = fontSize,
-                        Foreground = textBrush,
-                        TextWrapping = TextWrapping.Wrap,
-                        Padding = new Thickness(0),
-                        MaxWidth = maxWidth,
-                        VerticalAlignment = VerticalAlignment.Top
-                    };
-
-                    RenderSectionContent(contentBlock, section.Lines, textBrush, linkBrush, codeBrush, paramBrush);
-                    sectionPanel.Children.Add(contentBlock);
-                }
-
-                container.Children.Add(sectionPanel);
-                isFirst = false;
-            }
-
-            // Collapse button at bottom - compact design
-            var collapsePanel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Margin = new Thickness(0, lineHeight * 0.5, 0, 0)
-            };
-
-            var collapseBorder = new Border
-            {
-                Background = new SolidColorBrush(Color.FromArgb(0, 86, 156, 214)),
-                CornerRadius = new CornerRadius(2),
-                Padding = new Thickness(6, 2, 6, 2),
-                Cursor = Cursors.Hand,
-                Tag = block.StartLine,
-                Focusable = false
-            };
-
-            var collapser = new TextBlock
-            {
-                Text = "▲",
-                FontFamily = fontFamily,
-                FontSize = fontSize * 0.85,
-                Foreground = linkBrush,
-                IsHitTestVisible = false,
-                Padding = new Thickness(0),
-                Margin = new Thickness(0),
-                Focusable = false,
-                ToolTip = "Collapse to summary"
-            };
-
-            collapseBorder.Child = collapser;
-
-            // Use PreviewMouseLeftButtonDown for immediate response
-            collapseBorder.PreviewMouseLeftButtonDown += (s, e) =>
-            {
-                if (s is Border border && border.Tag is int startLine)
-                {
-                    _expandedComments.Remove(startLine);
-
-                    // Defer refresh to avoid double-click issue
-#pragma warning disable VSTHRD001, VSTHRD110 // Intentional fire-and-forget for UI update
-                    view.VisualElement.Dispatcher.BeginInvoke(
-                        new Action(() => RefreshTags()),
-                        System.Windows.Threading.DispatcherPriority.Input);
-#pragma warning restore VSTHRD001, VSTHRD110
-
-                    e.Handled = true;
-                }
-            };
-
-            // Hover effect
-            collapseBorder.MouseEnter += (s, e) =>
-            {
-                ((Border)s).Background = new SolidColorBrush(Color.FromArgb(20, 86, 156, 214));
-            };
-            collapseBorder.MouseLeave += (s, e) =>
-            {
-                ((Border)s).Background = new SolidColorBrush(Color.FromArgb(0, 86, 156, 214));
-            };
-
-            collapsePanel.Children.Add(collapseBorder);
-            container.Children.Add(collapsePanel);
-        }
-
-        private string GetSectionLabel(RenderedCommentSection section)
-        {
-            return section.Type switch
-            {
-                CommentSectionType.Param => $"{section.Name}",
-                CommentSectionType.TypeParam => $"<{section.Name}>",
-                CommentSectionType.Returns => "Returns",
-                CommentSectionType.Exception => $"{section.Name}",
-                CommentSectionType.Remarks => "Remarks",
-                CommentSectionType.Example => "Example",
-                CommentSectionType.Value => "Value",
-                CommentSectionType.SeeAlso => "See Also",
-                CommentSectionType.Summary => "Summary",
-                _ => null
-            };
+            outerBorder.Child = summaryPanel;
+            return outerBorder;
         }
 
         private void RenderSectionContent(TextBlock textBlock, IEnumerable<RenderedLine> lines,
@@ -718,12 +398,12 @@ namespace CommentsVS.Adornments
                     {
                         Foreground = paramBrush,
                         FontStyle = FontStyles.Italic,
-                        FontWeight = FontWeights.SemiBold
+                        FontWeight = FontWeights.Normal  // Normal weight, not bold
                     },
                 RenderedSegmentType.Bold =>
                     new Run(segment.Text)
                     {
-                        FontWeight = FontWeights.Bold,
+                        FontWeight = FontWeights.Normal,  // Normal weight, not bold
                         Foreground = defaultBrush
                     },
                 RenderedSegmentType.Italic =>
