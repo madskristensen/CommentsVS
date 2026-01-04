@@ -6,45 +6,27 @@ namespace CommentsVS.Services
     /// <summary>
     /// Represents information about a Git repository's hosting provider.
     /// </summary>
-    public sealed class GitRepositoryInfo
+    public sealed class GitRepositoryInfo(GitHostingProvider provider, string owner, string repository, string baseUrl)
     {
-        public GitHostingProvider Provider { get; }
-        public string Owner { get; }
-        public string Repository { get; }
-        public string BaseUrl { get; }
-
-        public GitRepositoryInfo(GitHostingProvider provider, string owner, string repository, string baseUrl)
-        {
-            Provider = provider;
-            Owner = owner;
-            Repository = repository;
-            BaseUrl = baseUrl;
-        }
+        public GitHostingProvider Provider { get; } = provider;
+        public string Owner { get; } = owner;
+        public string Repository { get; } = repository;
+        public string BaseUrl { get; } = baseUrl;
 
         /// <summary>
         /// Gets the URL for an issue/work item number.
         /// </summary>
         public string GetIssueUrl(int issueNumber)
         {
-            switch (Provider)
+            return Provider switch
             {
-                case GitHostingProvider.GitHub:
-                    return $"{BaseUrl}/{Owner}/{Repository}/issues/{issueNumber}";
-
-                case GitHostingProvider.GitLab:
-                    return $"{BaseUrl}/{Owner}/{Repository}/-/issues/{issueNumber}";
-
-                case GitHostingProvider.Bitbucket:
-                    return $"{BaseUrl}/{Owner}/{Repository}/issues/{issueNumber}";
-
-                case GitHostingProvider.AzureDevOps:
-                    // Azure DevOps uses work items which are org-wide
-                    // Format: https://dev.azure.com/{org}/{project}/_workitems/edit/{id}
-                    return $"{BaseUrl}/{Owner}/{Repository}/_workitems/edit/{issueNumber}";
-
-                default:
-                    return null;
-            }
+                GitHostingProvider.GitHub => $"{BaseUrl}/{Owner}/{Repository}/issues/{issueNumber}",
+                GitHostingProvider.GitLab => $"{BaseUrl}/{Owner}/{Repository}/-/issues/{issueNumber}",
+                GitHostingProvider.Bitbucket => $"{BaseUrl}/{Owner}/{Repository}/issues/{issueNumber}",
+                GitHostingProvider.AzureDevOps => $"{BaseUrl}/{Owner}/{Repository}/_workitems/edit/{issueNumber}",// Azure DevOps uses work items which are org-wide
+                                                                                                                  // Format: https://dev.azure.com/{org}/{project}/_workitems/edit/{id}
+                _ => null,
+            };
         }
     }
 
@@ -114,13 +96,13 @@ namespace CommentsVS.Services
 
             try
             {
-                string gitDir = FindGitDirectory(filePath);
+                var gitDir = FindGitDirectory(filePath);
                 if (gitDir == null)
                 {
                     return null;
                 }
 
-                string remoteUrl = GetOriginRemoteUrl(gitDir);
+                var remoteUrl = GetOriginRemoteUrl(gitDir);
                 if (string.IsNullOrEmpty(remoteUrl))
                 {
                     return null;
@@ -136,11 +118,11 @@ namespace CommentsVS.Services
 
         private static string FindGitDirectory(string startPath)
         {
-            string directory = Path.GetDirectoryName(startPath);
+            var directory = Path.GetDirectoryName(startPath);
 
             while (!string.IsNullOrEmpty(directory))
             {
-                string gitDir = Path.Combine(directory, ".git");
+                var gitDir = Path.Combine(directory, ".git");
                 if (Directory.Exists(gitDir))
                 {
                     return gitDir;
@@ -160,18 +142,18 @@ namespace CommentsVS.Services
 
         private static string GetOriginRemoteUrl(string gitDir)
         {
-            string configPath = Path.Combine(gitDir, "config");
+            var configPath = Path.Combine(gitDir, "config");
             if (!File.Exists(configPath))
             {
                 return null;
             }
 
-            string[] lines = File.ReadAllLines(configPath);
-            bool inOriginSection = false;
+            var lines = File.ReadAllLines(configPath);
+            var inOriginSection = false;
 
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
-                string trimmed = line.Trim();
+                var trimmed = line.Trim();
 
                 if (trimmed.StartsWith("["))
                 {
@@ -181,7 +163,7 @@ namespace CommentsVS.Services
 
                 if (inOriginSection && trimmed.StartsWith("url", StringComparison.OrdinalIgnoreCase))
                 {
-                    int equalsIndex = trimmed.IndexOf('=');
+                    var equalsIndex = trimmed.IndexOf('=');
                     if (equalsIndex > 0)
                     {
                         return trimmed.Substring(equalsIndex + 1).Trim();

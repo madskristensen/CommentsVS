@@ -32,7 +32,7 @@ namespace CommentsVS.Classification
         private readonly IClassificationTypeRegistryService _registry;
 
         // Regex to match comment tags - looks for tag keywords after comment prefixes
-        private static readonly Regex TagRegex = new Regex(
+        private static readonly Regex TagRegex = new(
             @"(?<=//.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?)|" +
             @"(?<=/\*.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?)|" +
             @"(?<='.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?)",
@@ -51,7 +51,7 @@ namespace CommentsVS.Classification
         {
             foreach (ITextChange change in e.Changes)
             {
-                var line = e.After.GetLineFromPosition(change.NewPosition);
+                ITextSnapshotLine line = e.After.GetLineFromPosition(change.NewPosition);
                 ClassificationChanged?.Invoke(this, new ClassificationChangedEventArgs(
                     new SnapshotSpan(e.After, line.Start, line.Length)));
             }
@@ -66,8 +66,8 @@ namespace CommentsVS.Classification
                 return result;
             }
 
-            string text = span.GetText();
-            int lineStart = span.Start.Position;
+            var text = span.GetText();
+            var lineStart = span.Start.Position;
 
             foreach (Match match in TagRegex.Matches(text))
             {
@@ -77,7 +77,7 @@ namespace CommentsVS.Classification
                     continue;
                 }
 
-                string tag = tagGroup.Value.TrimEnd(':').ToUpperInvariant();
+                var tag = tagGroup.Value.TrimEnd(':').ToUpperInvariant();
                 IClassificationType classificationType = GetClassificationType(tag);
 
                 if (classificationType != null)

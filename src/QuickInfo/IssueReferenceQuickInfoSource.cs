@@ -26,24 +26,18 @@ namespace CommentsVS.QuickInfo
     /// <summary>
     /// Provides hover tooltips for issue references (#123) showing the full URL.
     /// </summary>
-    internal sealed class IssueReferenceQuickInfoSource : IAsyncQuickInfoSource
+    internal sealed class IssueReferenceQuickInfoSource(ITextBuffer textBuffer) : IAsyncQuickInfoSource
     {
-        private readonly ITextBuffer _textBuffer;
         private GitRepositoryInfo _repoInfo;
         private bool _repoInfoInitialized;
 
-        private static readonly Regex IssueReferenceRegex = new Regex(
+        private static readonly Regex _issueReferenceRegex = new(
             @"#(?<number>\d+)\b",
             RegexOptions.Compiled);
 
-        private static readonly Regex CommentLineRegex = new Regex(
+        private static readonly Regex _commentLineRegex = new(
             @"^\s*(//|/\*|\*|')",
             RegexOptions.Compiled);
-
-        public IssueReferenceQuickInfoSource(ITextBuffer textBuffer)
-        {
-            _textBuffer = textBuffer;
-        }
 
         public Task<QuickInfoItem> GetQuickInfoItemAsync(
             IAsyncQuickInfoSession session,
@@ -54,7 +48,7 @@ namespace CommentsVS.QuickInfo
                 return Task.FromResult<QuickInfoItem>(null);
             }
 
-            SnapshotPoint? triggerPoint = session.GetTriggerPoint(_textBuffer.CurrentSnapshot);
+            SnapshotPoint? triggerPoint = session.GetTriggerPoint(textBuffer.CurrentSnapshot);
             if (!triggerPoint.HasValue)
             {
                 return Task.FromResult<QuickInfoItem>(null);
@@ -72,33 +66,33 @@ namespace CommentsVS.QuickInfo
             }
 
             ITextSnapshotLine line = triggerPoint.Value.GetContainingLine();
-            string lineText = line.GetText();
+            var lineText = line.GetText();
 
             // Check if this line is a comment
-            if (!CommentLineRegex.IsMatch(lineText))
+            if (!_commentLineRegex.IsMatch(lineText))
             {
                 return Task.FromResult<QuickInfoItem>(null);
             }
 
-            int positionInLine = triggerPoint.Value.Position - line.Start.Position;
+            var positionInLine = triggerPoint.Value.Position - line.Start.Position;
 
             // Find issue references in the line
-            foreach (Match match in IssueReferenceRegex.Matches(lineText))
+            foreach (Match match in _issueReferenceRegex.Matches(lineText))
             {
                 // Check if the trigger point is within this match
                 if (positionInLine >= match.Index && positionInLine <= match.Index + match.Length)
                 {
-                    if (int.TryParse(match.Groups["number"].Value, out int issueNumber))
+                    if (int.TryParse(match.Groups["number"].Value, out var issueNumber))
                     {
-                        string url = _repoInfo.GetIssueUrl(issueNumber);
+                        var url = _repoInfo.GetIssueUrl(issueNumber);
                         if (!string.IsNullOrEmpty(url))
                         {
                             var span = new SnapshotSpan(line.Start + match.Index, match.Length);
-                            var trackingSpan = _textBuffer.CurrentSnapshot.CreateTrackingSpan(
+                            ITrackingSpan trackingSpan = textBuffer.CurrentSnapshot.CreateTrackingSpan(
                                 span, SpanTrackingMode.EdgeInclusive);
 
-                            string providerName = GetProviderName(_repoInfo.Provider);
-                            string tooltip = $"{providerName} Issue #{issueNumber}\n{url}\n\nCtrl+Click to open";
+                            var providerName = GetProviderName(_repoInfo.Provider);
+                            var tooltip = $"{providerName} Issue #{issueNumber}\n{url}\n\nCtrl+Click to open";
 
                             return Task.FromResult(new QuickInfoItem(trackingSpan, tooltip));
                         }
@@ -111,26 +105,21 @@ namespace CommentsVS.QuickInfo
 
         private static string GetProviderName(GitHostingProvider provider)
         {
-            switch (provider)
+            return provider switch
             {
-                case GitHostingProvider.GitHub:
-                    return "GitHub";
-                case GitHostingProvider.GitLab:
-                    return "GitLab";
-                case GitHostingProvider.Bitbucket:
-                    return "Bitbucket";
-                case GitHostingProvider.AzureDevOps:
-                    return "Azure DevOps Work Item";
-                default:
-                    return "Issue";
-            }
+                GitHostingProvider.GitHub => "GitHub",
+                GitHostingProvider.GitLab => "GitLab",
+                GitHostingProvider.Bitbucket => "Bitbucket",
+                GitHostingProvider.AzureDevOps => "Azure DevOps Work Item",
+                _ => "Issue",
+            };
         }
 
         private void InitializeRepoInfo()
         {
             _repoInfoInitialized = true;
 
-            if (_textBuffer.Properties.TryGetProperty(typeof(ITextDocument), out ITextDocument document))
+            if (textBuffer.Properties.TryGetProperty(typeof(ITextDocument), out ITextDocument document))
             {
                 _repoInfo = GitRepositoryService.GetRepositoryInfo(document.FilePath);
             }

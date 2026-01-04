@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
@@ -40,12 +39,12 @@ namespace CommentsVS.Tagging
 
         // Match #123 pattern (issue/PR number) - must be preceded by whitespace or start of line
         // and followed by word boundary
-        private static readonly Regex IssueReferenceRegex = new Regex(
+        private static readonly Regex _issueReferenceRegex = new(
             @"(?<=^|[\s\(\[\{])#(?<number>\d+)\b",
             RegexOptions.Compiled);
 
         // Match comment patterns to ensure we're in a comment
-        private static readonly Regex CommentLineRegex = new Regex(
+        private static readonly Regex _commentLineRegex = new(
             @"^\s*(//|/\*|\*|')",
             RegexOptions.Compiled);
 
@@ -92,7 +91,7 @@ namespace CommentsVS.Tagging
 
             foreach (SnapshotSpan span in spans)
             {
-                string text = span.GetText();
+                var text = span.GetText();
 
                 // Quick check - skip if no # in the text
                 if (!text.Contains("#"))
@@ -106,11 +105,11 @@ namespace CommentsVS.Tagging
                     continue;
                 }
 
-                foreach (Match match in IssueReferenceRegex.Matches(text))
+                foreach (Match match in _issueReferenceRegex.Matches(text))
                 {
-                    if (int.TryParse(match.Groups["number"].Value, out int issueNumber))
+                    if (int.TryParse(match.Groups["number"].Value, out var issueNumber))
                     {
-                        string url = _repoInfo.GetIssueUrl(issueNumber);
+                        var url = _repoInfo.GetIssueUrl(issueNumber);
                         if (!string.IsNullOrEmpty(url))
                         {
                             var tagSpan = new SnapshotSpan(span.Snapshot, span.Start + match.Index, match.Length);
@@ -133,7 +132,7 @@ namespace CommentsVS.Tagging
 
         private static bool IsCommentLine(string text)
         {
-            return CommentLineRegex.IsMatch(text);
+            return _commentLineRegex.IsMatch(text);
         }
     }
 }
