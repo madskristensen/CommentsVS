@@ -12,7 +12,7 @@ namespace CommentsVS
         public const string Name = "Comments";
         public const string Description = @"A modern commenting experience for Visual Studio with automatic XML documentation comment reformatting.";
         public const string Language = "en-US";
-        public const string Version = "1.0.902";
+        public const string Version = "1.0.903";
         public const string Author = "Mads Kristensen";
         public const string Tags = "";
         public const bool IsPreview = false;

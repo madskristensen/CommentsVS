@@ -12,31 +12,31 @@ namespace CommentsVS.Classification
     {
         [Export(typeof(ClassificationTypeDefinition))]
         [Name(CommentTagClassificationTypes.Todo)]
-        internal static ClassificationTypeDefinition TodoType;
+        internal static ClassificationTypeDefinition TodoType = null;
 
         [Export(typeof(ClassificationTypeDefinition))]
         [Name(CommentTagClassificationTypes.Hack)]
-        internal static ClassificationTypeDefinition HackType;
+        internal static ClassificationTypeDefinition HackType = null;
 
         [Export(typeof(ClassificationTypeDefinition))]
         [Name(CommentTagClassificationTypes.Note)]
-        internal static ClassificationTypeDefinition NoteType;
+        internal static ClassificationTypeDefinition NoteType = null;
 
         [Export(typeof(ClassificationTypeDefinition))]
         [Name(CommentTagClassificationTypes.Bug)]
-        internal static ClassificationTypeDefinition BugType;
+        internal static ClassificationTypeDefinition BugType = null;
 
         [Export(typeof(ClassificationTypeDefinition))]
         [Name(CommentTagClassificationTypes.Fixme)]
-        internal static ClassificationTypeDefinition FixmeType;
+        internal static ClassificationTypeDefinition FixmeType = null;
 
         [Export(typeof(ClassificationTypeDefinition))]
         [Name(CommentTagClassificationTypes.Undone)]
-        internal static ClassificationTypeDefinition UndoneType;
+        internal static ClassificationTypeDefinition UndoneType = null;
 
         [Export(typeof(ClassificationTypeDefinition))]
         [Name(CommentTagClassificationTypes.Review)]
-        internal static ClassificationTypeDefinition ReviewType;
+        internal static ClassificationTypeDefinition ReviewType = null;
     }
 
     [Export(typeof(EditorFormatDefinition))]

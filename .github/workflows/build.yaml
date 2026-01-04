@@ -43,6 +43,9 @@ jobs:
     - name: Build
       run: msbuild /v:m -restore /p:OutDir=\_built
 
+    - name: Run tests
+      run: dotnet vstest /_built/CommentsVS.Test.dll
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:

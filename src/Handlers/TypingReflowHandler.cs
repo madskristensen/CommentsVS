@@ -4,6 +4,7 @@ using System.Threading;
 using CommentsVS.Options;
 using CommentsVS.Services;
 
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
@@ -72,6 +73,7 @@ namespace CommentsVS.Handlers
 
                 var changePosition = e.Changes[0].NewPosition + e.Changes[0].NewLength;
 
+
                 // Cancel any pending reflow
                 _debounceCts?.Cancel();
                 _debounceCts?.Dispose();
@@ -80,7 +82,8 @@ namespace CommentsVS.Handlers
                 CancellationToken token = _debounceCts.Token;
 
                 // Schedule debounced reflow check (fire-and-forget by design for debouncing)
-                _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+#pragma warning disable VSSDK007 // Use AsyncPackage.JoinableTaskFactory
+                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                 {
                     try
                     {
@@ -104,7 +107,8 @@ namespace CommentsVS.Handlers
                     {
                         // Expected when typing continues
                     }
-                });
+                }).FireAndForget();
+#pragma warning restore VSSDK007
             }
 
             private static bool IsSingleCharacterTyping(TextContentChangedEventArgs e)

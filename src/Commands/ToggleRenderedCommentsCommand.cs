@@ -22,7 +22,7 @@ namespace CommentsVS.Commands
             // Notify that rendered comments state changed
             RenderedCommentsStateChanged?.Invoke(this, EventArgs.Empty);
 
-            string state = General.Instance.EnableRenderedComments ? "enabled" : "disabled";
+            var state = General.Instance.EnableRenderedComments ? "enabled" : "disabled";
             await VS.StatusBar.ShowMessageAsync($"Rendered comments {state}");
         }
 

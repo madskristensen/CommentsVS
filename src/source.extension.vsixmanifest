@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="CommentsVS.38981599-e7f2-4db8-bf34-85b325aec2b6" Version="1.0.902" Language="en-US" Publisher="Mads Kristensen" />
+        <Identity Id="CommentsVS.38981599-e7f2-4db8-bf34-85b325aec2b6" Version="1.0.903" Language="en-US" Publisher="Mads Kristensen" />
         <DisplayName>Comments</DisplayName>
         <Description xml:space="preserve">A modern commenting experience for Visual Studio with automatic XML documentation comment reformatting.</Description>
         <MoreInfo>https://github.com/madskristensen/CommentsVS</MoreInfo>

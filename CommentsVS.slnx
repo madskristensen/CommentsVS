@@ -4,6 +4,7 @@
     <Platform Name="arm64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="CommentsVS.Test/CommentsVS.Test.csproj" Id="22f14d45-d0de-4457-89fa-1395df84da33" />
   <Project Path="src/CommentsVS.csproj" Id="3c1f03f1-b80f-400d-84db-a4044664a49d">
     <Platform Solution="*|arm64" Project="arm64" />
     <Platform Solution="*|x86" Project="x86" />
