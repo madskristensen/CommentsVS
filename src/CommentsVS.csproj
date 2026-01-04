@@ -45,10 +45,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Classification\CommentTagClassifier.cs" />
+    <Compile Include="Classification\CommentTagFormatDefinitions.cs" />
     <Compile Include="Commands\ToggleCommentVisibilityCommand.cs" />
     <Compile Include="Handlers\FormatDocumentHandler.cs" />
     <Compile Include="Handlers\PasteHandler.cs" />
     <Compile Include="Handlers\TypingReflowHandler.cs" />
+    <Compile Include="Options\CommentTagsOptions.cs" />
     <Compile Include="Options\GeneralOptions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CommentsVSPackage.cs" />

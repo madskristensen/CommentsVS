@@ -59,11 +59,26 @@ Works with C# and VB.NET XML documentation comments:
 - `'''` single-line comments (VB.NET)
 - `/** */` block comments (C#)
 
+### Color-coded Comment Tags
+Comment tags like TODO, HACK, NOTE, BUG, FIXME, UNDONE, and REVIEW are automatically highlighted with distinct colors, making them easy to spot in your code.
+
+| Tag | Default Color | Description |
+|-----|---------------|-------------|
+| TODO | Orange | Tasks to be completed |
+| HACK | Crimson | Temporary workarounds |
+| NOTE | Lime Green | Important notes |
+| BUG | Red | Known bugs |
+| FIXME | Orange Red | Code that needs fixing |
+| UNDONE | Purple | Incomplete work |
+| REVIEW | Dodger Blue | Code needing review |
+
+Colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - [TAG]" entries.
+
 ## Options
 
-Configure the extension behavior via **Tools > Options > CommentsVS > General**.
+Configure the extension behavior via **Tools > Options > CommentsVS**.
 
-### Comment Reflow
+### Comment Reflow (General)
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Maximum Line Length | 120 | Maximum line length for reflowed comments |
@@ -73,10 +88,17 @@ Configure the extension behavior via **Tools > Options > CommentsVS > General**.
 | Use Compact Style for Short Summaries | On | Use single-line format for short summaries |
 | Preserve Blank Lines | On | Keep intentional blank lines in comments |
 
-### Comment Outlining
+### Comment Outlining (General)
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Collapse Comments on File Open | Off | Automatically collapse XML doc comments when opening files |
+
+### Comment Tags
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Enable Comment Tag Highlighting | On | Enable/disable tag highlighting |
+
+Tag colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - [TAG]" entries.
 
 ## Getting Started
 
