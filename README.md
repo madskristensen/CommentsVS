@@ -11,9 +11,16 @@ or get the [CI build][vsixgallery].
 
 --------------------------------------
 
-A Visual Studio extension that brings a modern commenting experience with automatic XML documentation comment reformatting. Keep your documentation clean, readable, and consistently formatted.
+A Visual Studio extension that brings a modern commenting experience with automatic XML documentation comment reformatting and collapsing. Keep your documentation clean, readable, and consistently formatted.
 
 ## Features
+
+### Comment Outlining/Collapsing
+Collapse XML documentation comments to reduce visual clutter and focus on your code. When collapsed, comments display the first 100 characters of the summary text.
+
+Use **Ctrl+M, Ctrl+H** to toggle all XML doc comments in the current file between collapsed and expanded states. The extension remembers your preference, so newly opened files will match your last toggle state.
+
+![Collapsed Comments](art/collapsed.png)
 
 ### Automatic Comment Reflow
 Automatically reformat XML documentation comments to fit within a configurable line length (default: 120 characters). The extension intelligently wraps text while preserving XML structure.
@@ -29,7 +36,7 @@ Place your cursor inside any XML documentation comment and press **Ctrl+.** to s
 
 ![Light Bulb](art/lightbulb.png)
 
-### Style C Formatting
+### Compact Style Formatting
 Short summaries stay on a single line for compactness:
 ```csharp
 /// <summary>Gets the name.</summary>
@@ -44,32 +51,39 @@ Longer content automatically expands to multi-line format:
 ```
 
 ### Multi-Language Support
-Works with C#, VB.NET, and C++ XML documentation comments:
-- `///` single-line comments (C#, C++)
-- `''' ` single-line comments (VB.NET)
-- `/** */` block comments
+Works with C# and VB.NET XML documentation comments:
+- `///` single-line comments (C#)
+- `'''` single-line comments (VB.NET)
+- `/** */` block comments (C#)
 
-## Configuration
+## Options
 
-Go to **Tools → Options → Comments** to configure:
+Configure the extension behavior via **Tools > Options > CommentsVS > General**.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| Max Line Length | 120 | Maximum line length for reflowed comments |
-| Reflow on Format Document | true | Enable reflow when formatting document/selection |
-| Reflow on Paste | true | Enable reflow when pasting into comments |
-| Use Compact Style | true | Use single-line format for short summaries |
-| Preserve Blank Lines | true | Keep intentional blank lines in comments |
+### Comment Reflow
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Maximum Line Length | 120 | Maximum line length for reflowed comments |
+| Enable Reflow on Format Document | On | Reflow comments when formatting document/selection |
+| Enable Reflow on Paste | On | Reflow comments when pasting into comment blocks |
+| Use Compact Style for Short Summaries | On | Use single-line format for short summaries |
+| Preserve Blank Lines | On | Keep intentional blank lines in comments |
+
+### Comment Outlining
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Collapse Comments on File Open | Off | Automatically collapse XML doc comments when opening files |
 
 ## Getting Started
 
 1. Install the extension from the Visual Studio Marketplace
-2. Open any C#, VB.NET, or C++ file with XML documentation comments
+2. Open any C# or VB.NET file with XML documentation comments
 3. Use any of the following to reflow comments:
    - **Format Document** (Ctrl+K, Ctrl+D)
    - **Format Selection** (Ctrl+K, Ctrl+F)
    - **Light Bulb** (Ctrl+.) → "Reflow XML Documentation Comment"
    - **Paste** text into a comment block
+4. Use **Ctrl+M, Ctrl+H** to toggle comment visibility
 
 ## Requirements
 
