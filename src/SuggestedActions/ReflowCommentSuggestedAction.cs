@@ -28,7 +28,7 @@ namespace CommentsVS.SuggestedActions
 
         public string IconAutomationText => null;
 
-        public ImageMoniker IconMoniker => KnownMonikers.Comment;
+        public ImageMoniker IconMoniker => KnownMonikers.TextLeft;
 
         public string InputGestureText => null;
 

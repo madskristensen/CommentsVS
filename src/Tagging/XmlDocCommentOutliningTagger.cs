@@ -29,11 +29,6 @@ namespace CommentsVS.Tagging
     /// </summary>
     internal sealed class XmlDocCommentOutliningTagger : ITagger<IOutliningRegionTag>
     {
-        // Match <summary>content</summary> on a single line - captures content inside
-        private static readonly Regex SingleLineSummaryRegex = new(
-            @"<summary>\s*(.*?)\s*</summary>",
-            RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
         private readonly ITextBuffer _buffer;
 
         public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
@@ -85,7 +80,7 @@ namespace CommentsVS.Tagging
                 }
 
                 // Get the collapsed text to display
-                var collapsedText = GetCollapsedText(snapshot, block, commentStyle);
+                string collapsedText = GetCollapsedText(snapshot, block);
 
                 var tag = new OutliningRegionTag(
                     collapsedForm: collapsedText,
@@ -97,22 +92,53 @@ namespace CommentsVS.Tagging
             }
         }
 
-        private static string GetCollapsedText(ITextSnapshot snapshot, XmlDocCommentBlock block, LanguageCommentStyle commentStyle)
+        private static string GetCollapsedText(ITextSnapshot snapshot, XmlDocCommentBlock block)
         {
-            // Get the first line text
-            ITextSnapshotLine firstLine = snapshot.GetLineFromLineNumber(block.StartLine);
-            var lineText = firstLine.GetText().Trim();
+            const int maxLength = 85;
 
-            // Check if this is a single-line compact summary: /// <summary>text</summary>
-            Match match = SingleLineSummaryRegex.Match(lineText);
-            if (match.Success)
+            // Start with the first line
+            ITextSnapshotLine firstLine = snapshot.GetLineFromLineNumber(block.StartLine);
+            string result = firstLine.GetText().TrimStart();
+
+            // If first line is just "/// <summary>" and there are more lines, append content
+            if (result.EndsWith("<summary>") && block.EndLine > block.StartLine)
             {
-                // Return the whole line for compact summaries
-                return lineText;
+                // Get content from subsequent lines
+                for (int i = block.StartLine + 1; i <= block.EndLine; i++)
+                {
+                    ITextSnapshotLine line = snapshot.GetLineFromLineNumber(i);
+                    string lineText = line.GetText().Trim();
+
+                    // Strip comment prefix (///, ''', *)
+                    if (lineText.StartsWith("///"))
+                        lineText = lineText.Substring(3).Trim();
+                    else if (lineText.StartsWith("'''"))
+                        lineText = lineText.Substring(3).Trim();
+                    else if (lineText.StartsWith("*"))
+                        lineText = lineText.Substring(1).Trim();
+
+                    // Stop if we hit the closing tag or another XML tag
+                    if (lineText.StartsWith("</") || lineText.StartsWith("<"))
+                        break;
+
+                    if (!string.IsNullOrEmpty(lineText))
+                    {
+                        result += " " + lineText;
+                    }
+
+                    // Stop if we've collected enough
+                    if (result.Length >= maxLength)
+                        break;
+                }
             }
 
-            // For multi-line comments, return just the first line (e.g., "/// <summary>")
-            return lineText;
+            // Truncate and add ellipsis if too long
+            if (result.Length > maxLength)
+            {
+                result = result.Substring(0, maxLength - 4) + " ...";
+            }
+
+            return result;
         }
     }
 }
