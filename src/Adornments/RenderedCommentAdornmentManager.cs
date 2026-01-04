@@ -1,7 +1,6 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Linq;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -13,120 +12,121 @@ using CommentsVS.Services;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
+using Microsoft.VisualStudio.Text.Outlining;
+using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
 namespace CommentsVS.Adornments
 {
-    /// <summary>
-    /// Provides line transforms to shrink comment lines when rendered view is enabled.
-    /// </summary>
-    [Export(typeof(ILineTransformSourceProvider))]
-    [ContentType("CSharp")]
-    [ContentType("Basic")]
-    [TextViewRole(PredefinedTextViewRoles.Document)]
-    [Name("RenderedCommentLineTransformSourceProvider")]
-    internal sealed class RenderedCommentLineTransformSourceProvider : ILineTransformSourceProvider
-    {
-        [Export(typeof(AdornmentLayerDefinition))]
-        [Name("RenderedCommentAdornment")]
-        [Order(After = PredefinedAdornmentLayers.Caret)]
-        internal AdornmentLayerDefinition EditorAdornmentLayer = null;
+/// <summary>
+/// Provides the adornment layer for rendered comments and creates the adornment manager.
+/// </summary>
+[Export(typeof(IWpfTextViewCreationListener))]
+[ContentType("CSharp")]
+[ContentType("Basic")]
+[TextViewRole(PredefinedTextViewRoles.Document)]
+internal sealed class RenderedCommentAdornmentManagerProvider : IWpfTextViewCreationListener
+{
+    [Export(typeof(AdornmentLayerDefinition))]
+    [Name("RenderedCommentAdornment")]
+    [Order(After = PredefinedAdornmentLayers.Text, Before = PredefinedAdornmentLayers.Caret)]
+    internal AdornmentLayerDefinition EditorAdornmentLayer = null;
 
-        public ILineTransformSource Create(IWpfTextView view)
+    [Import]
+        internal IOutliningManagerService OutliningManagerService { get; set; }
+
+        [Import]
+        internal IViewTagAggregatorFactoryService TagAggregatorFactoryService { get; set; }
+
+        public void TextViewCreated(IWpfTextView textView)
         {
-            return view.Properties.GetOrCreateSingletonProperty(
-                () => new RenderedCommentLineTransformSource(view));
+            // Create the adornment manager for this view
+            textView.Properties.GetOrCreateSingletonProperty(
+                () => new RenderedCommentAdornmentManager(
+                    textView, 
+                    OutliningManagerService,
+                    TagAggregatorFactoryService));
         }
     }
 
     /// <summary>
-    /// Line transform source that shrinks comment lines when rendered view is enabled.
+    /// Manages rendered comment adornments that overlay collapsed outlining regions.
     /// </summary>
-    internal sealed class RenderedCommentLineTransformSource : ILineTransformSource, IDisposable
+    internal sealed class RenderedCommentAdornmentManager : IDisposable
     {
-        private static readonly Regex _cSharpDocCommentRegex = new(@"^\s*///", RegexOptions.Compiled);
-        private static readonly Regex _vBDocCommentRegex = new(@"^\s*'''", RegexOptions.Compiled);
-
         private readonly IWpfTextView _textView;
         private readonly IAdornmentLayer _adornmentLayer;
-        private readonly List<CommentRenderInfo> _renderInfos = [];
-        private readonly Dictionary<int, bool> _expandedComments = []; // Key: StartLine
-        private readonly HashSet<int> _editModeComments = []; // Comments currently in edit mode (showing raw text)
+        private readonly IOutliningManager _outliningManager;
+        private readonly ITagAggregator<IOutliningRegionTag> _outliningTagAggregator;
+        private readonly HashSet<int> _expandedComments = new HashSet<int>(); // Track expanded state by start line
         private bool _disposed;
 
-        public RenderedCommentLineTransformSource(IWpfTextView textView)
+        public RenderedCommentAdornmentManager(
+            IWpfTextView textView,
+            IOutliningManagerService outliningManagerService,
+            IViewTagAggregatorFactoryService tagAggregatorFactoryService)
         {
             _textView = textView;
             _adornmentLayer = textView.GetAdornmentLayer("RenderedCommentAdornment");
-
+            _outliningManager = outliningManagerService?.GetOutliningManager(textView);
+            _outliningTagAggregator = tagAggregatorFactoryService?.CreateTagAggregator<IOutliningRegionTag>(textView);
 
             _textView.LayoutChanged += OnLayoutChanged;
-            _textView.Caret.PositionChanged += OnCaretPositionChanged;
             _textView.Closed += OnViewClosed;
-            _textView.VisualElement.PreviewKeyDown += OnPreviewKeyDown;
+
+            if (_outliningManager != null)
+            {
+                _outliningManager.RegionsCollapsed += OnRegionsCollapsed;
+                _outliningManager.RegionsExpanded += OnRegionsExpanded;
+            }
 
             ToggleRenderedCommentsCommand.RenderedCommentsStateChanged += OnRenderedStateChanged;
         }
 
-        public LineTransform GetLineTransform(ITextViewLine line, double yPosition, ViewRelativePosition placement)
+        private void OnRegionsCollapsed(object sender, RegionsCollapsedEventArgs e)
         {
-            if (!General.Instance.EnableRenderedComments || _disposed)
-            {
-                return new LineTransform(1.0);
-            }
-
-            // Check if this line is part of a doc comment
-            var lineText = line.Extent.GetText();
-            var contentType = _textView.TextBuffer.ContentType.TypeName;
-            Regex regex = contentType == "Basic" ? _vBDocCommentRegex : _cSharpDocCommentRegex;
-
-            if (!regex.IsMatch(lineText))
-            {
-                return new LineTransform(1.0);
-            }
-
-            var lineNumber = line.Start.GetContainingLine().LineNumber;
-            CommentRenderInfo renderInfo = FindRenderInfoForLine(lineNumber);
-
-            if (renderInfo != null && !renderInfo.IsInEditMode)
-            {
-                // Scale this line based on the render info
-                return new LineTransform(renderInfo.VerticalScale);
-            }
-
-            return new LineTransform(1.0);
+            DeferredUpdateAdornments();
         }
 
-        private CommentRenderInfo FindRenderInfoForLine(int lineNumber)
+        private void OnRegionsExpanded(object sender, RegionsExpandedEventArgs e)
         {
-            foreach (CommentRenderInfo info in _renderInfos)
-            {
-                if (lineNumber >= info.StartLine && lineNumber <= info.EndLine)
-                {
-                    return info;
-                }
-            }
-            return null;
+            DeferredUpdateAdornments();
+        }
+
+        private void OnRenderedStateChanged(object sender, EventArgs e)
+        {
+            DeferredUpdateAdornments();
         }
 
         private void OnLayoutChanged(object sender, TextViewLayoutChangedEventArgs e)
         {
-            if (!General.Instance.EnableRenderedComments || _disposed)
-            {
-                _adornmentLayer?.RemoveAllAdornments();
-                return;
-            }
+            DeferredUpdateAdornments();
+        }
 
-            // Clear and rebuild render info
-            _renderInfos.Clear();
+        private void DeferredUpdateAdornments()
+        {
+            // Defer to avoid layout exceptions when called during layout
+#pragma warning disable VSTHRD001, VSTHRD110 // Intentional fire-and-forget for UI update
+            _textView.VisualElement.Dispatcher.BeginInvoke(
+                new Action(UpdateAdornments),
+                System.Windows.Threading.DispatcherPriority.Background);
+#pragma warning restore VSTHRD001, VSTHRD110
+        }
+
+        private void UpdateAdornments()
+        {
+            if (_disposed || _textView.IsClosed)
+                return;
+
             _adornmentLayer.RemoveAllAdornments();
+
+            if (!General.Instance.EnableRenderedComments || _outliningManager == null)
+                return;
 
             ITextSnapshot snapshot = _textView.TextSnapshot;
             var commentStyle = LanguageCommentStyle.GetForContentType(snapshot.ContentType);
             if (commentStyle == null)
-            {
                 return;
-            }
 
             var parser = new XmlDocCommentParser(commentStyle);
             IReadOnlyList<XmlDocCommentBlock> commentBlocks = parser.FindAllCommentBlocks(snapshot);
@@ -135,7 +135,36 @@ namespace CommentsVS.Adornments
             {
                 try
                 {
-                    CreateRenderInfoAndAdornment(block, snapshot);
+                    // Check if this region is collapsed
+                    var adjustedStart = block.Span.Start + block.Indentation.Length;
+                    var adjustedSpan = new SnapshotSpan(snapshot, adjustedStart, block.Span.End - adjustedStart);
+
+                    ICollapsible collapsible = FindCollapsedRegion(adjustedSpan);
+                    if (collapsible == null || !collapsible.IsCollapsed)
+                        continue;
+
+
+                    // Get the visual position of the collapsed region
+                    ITextViewLine line = _textView.TextViewLines.GetTextViewLineContainingBufferPosition(adjustedSpan.Start);
+                    if (line == null)
+                        continue;
+
+                    var lineHeight = line.Height;
+
+                    // Create and position the adornment
+                    UIElement adornment = CreateRenderedCommentElement(block, lineHeight);
+                    
+                    // Position at the start of the collapsed region
+                    TextBounds bounds = line.GetCharacterBounds(adjustedSpan.Start);
+                    Canvas.SetLeft(adornment, bounds.Left);
+                    Canvas.SetTop(adornment, line.Top);
+
+                    _adornmentLayer.AddAdornment(
+                        AdornmentPositioningBehavior.TextRelative,
+                        adjustedSpan,
+                        null,
+                        adornment,
+                        null);
                 }
                 catch
                 {
@@ -144,440 +173,226 @@ namespace CommentsVS.Adornments
             }
         }
 
-        private void CreateRenderInfoAndAdornment(XmlDocCommentBlock block, ITextSnapshot snapshot)
+        private ICollapsible FindCollapsedRegion(SnapshotSpan span)
         {
-            ITextSnapshotLine startLine = snapshot.GetLineFromLineNumber(block.StartLine);
-            ITextSnapshotLine endLine = snapshot.GetLineFromLineNumber(block.EndLine);
+            if (_outliningManager == null)
+                return null;
 
-            // Check if this comment is in edit mode (user explicitly entered it)
-            var isInEditMode = _editModeComments.Contains(block.StartLine);
+            IEnumerable<ICollapsible> regions = _outliningManager.GetAllRegions(span);
+            foreach (ICollapsible region in regions)
+            {
+                if (region.IsCollapsed)
+                {
+                    SnapshotSpan regionSpan = region.Extent.GetSpan(span.Snapshot);
+                    if (regionSpan.Start == span.Start)
+                        return region;
+                }
+            }
+            return null;
+        }
 
-            // Calculate heights
-            var lineHeight = _textView.FormattedLineSource?.LineHeight ?? 15;
-            var columnWidth = _textView.FormattedLineSource?.ColumnWidth ?? 8;
-            var numLines = block.EndLine - block.StartLine + 1;
-            var originalHeight = numLines * lineHeight;
 
-            // Render the comment
+
+        private UIElement CreateRenderedCommentElement(XmlDocCommentBlock block, double lineHeight)
+        {
             RenderedComment renderedComment = XmlDocCommentRenderer.Render(block);
 
-
-            // Check if this comment has expandable content (sections beyond summary)
-            var hasExpandableContent = renderedComment.HasAdditionalSections;
-
-            // Get expanded state from dictionary, default to collapsed if has expandable content
-            var isExpanded = false;
-            if (_expandedComments.TryGetValue(block.StartLine, out var savedState))
-            {
-                isExpanded = savedState;
-            }
-
-            // Calculate the width for wrapping (100 chars total, accounting for indentation)
-            var indentChars = block.Indentation?.Length ?? 0;
-            var maxChars = 100 - indentChars;
-            var maxTextWidth = maxChars * columnWidth;
-
-            // Calculate rendered height based on actual content
-            var renderedHeight = CalculateRenderedHeight(renderedComment, isExpanded, hasExpandableContent,
-                maxChars, lineHeight);
-
-
-
-            // Calculate scale to fit rendered content in original space
-            // In edit mode, show full size (scale = 1.0); otherwise scale to fit rendered content
-            var scale = isInEditMode ? 1.0 : renderedHeight / originalHeight;
-            scale = Math.Max(0.1, scale); // Don't scale below 10%
-
-            var renderInfo = new CommentRenderInfo
-            {
-                StartLine = block.StartLine,
-                EndLine = block.EndLine,
-                VerticalScale = scale,
-                IsInEditMode = isInEditMode,
-                Block = block,
-                RenderedComment = renderedComment,
-                RenderedHeight = renderedHeight,
-                IsExpanded = isExpanded,
-                HasExpandableContent = hasExpandableContent
-            };
-            _renderInfos.Add(renderInfo);
-
-            // Don't show adornment if in edit mode
-            if (isInEditMode)
-            {
-                return;
-            }
-
-            // Create and position the adornment
-            var span = new SnapshotSpan(startLine.Start, endLine.End);
-
-            // Get the geometry for the entire comment block
-            // This reflects the actual space after line transforms are applied
-            Geometry geometry = _textView.TextViewLines.GetMarkerGeometry(span);
-            if (geometry == null)
-            {
-                return;
-            }
-
-            Rect bounds = geometry.Bounds;
-
-            // The adornment height should match the geometry bounds exactly
-            // The line transform has already allocated the correct space
-            var adornmentBounds = new Rect(bounds.Left, bounds.Top, bounds.Width, bounds.Height);
-
-            // Calculate the left position for the rendered text
-            // We need to find the pixel position where the /// starts
-            double bgLeftPos;
-            
-            // Get the indentation of the comment
-            var commentLineText = startLine.GetText();
-            var commentIndentLength = commentLineText.Length - commentLineText.TrimStart().Length;
-            
-            // Find a suitable reference line (not scaled) that's long enough to measure from
-            // Try lines after the comment first, then before
-            IWpfTextViewLine suitableViewLine = null;
-            ITextSnapshotLine suitableRefLine = null;
-            
-            // Search for a line after the comment that's long enough
-            for (int i = block.EndLine + 1; i < Math.Min(block.EndLine + 10, snapshot.LineCount); i++)
-            {
-                ITextSnapshotLine candidateLine = snapshot.GetLineFromLineNumber(i);
-                if (candidateLine.Length >= commentIndentLength)
-                {
-                    IWpfTextViewLine viewLine = _textView.TextViewLines.GetTextViewLineContainingBufferPosition(candidateLine.Start);
-                    if (viewLine != null)
-                    {
-                        suitableViewLine = viewLine;
-                        suitableRefLine = candidateLine;
-                        break;
-                    }
-                }
-            }
-            
-            // If not found, search before the comment
-            if (suitableViewLine == null)
-            {
-                for (int i = block.StartLine - 1; i >= Math.Max(0, block.StartLine - 10); i--)
-                {
-                    ITextSnapshotLine candidateLine = snapshot.GetLineFromLineNumber(i);
-                    if (candidateLine.Length >= commentIndentLength)
-                    {
-                        IWpfTextViewLine viewLine = _textView.TextViewLines.GetTextViewLineContainingBufferPosition(candidateLine.Start);
-                        if (viewLine != null)
-                        {
-                            suitableViewLine = viewLine;
-                            suitableRefLine = candidateLine;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (suitableViewLine != null && suitableRefLine != null)
-            {
-                // Get the character bounds at the comment's indentation position
-                var targetPosition = suitableRefLine.Start.Position + commentIndentLength;
-                TextBounds charBounds = suitableViewLine.GetCharacterBounds(new SnapshotPoint(snapshot, targetPosition));
-                bgLeftPos = charBounds.Left;
-            }
-            else
-            {
-                // Fallback: use columnWidth calculation
-                bgLeftPos = _textView.ViewportLeft + (commentIndentLength * columnWidth);
-            }
-
-            // No padding - rendered text should start at the same position as ///
-            UIElement adornment = CreateVisualElement(renderInfo, adornmentBounds, maxTextWidth, 0);
-
-
-            // Position adornment where /// begins (same indentation as the comment)
-            Canvas.SetLeft(adornment, bgLeftPos);
-            Canvas.SetTop(adornment, bounds.Top);
-
-            _adornmentLayer.AddAdornment(
-                AdornmentPositioningBehavior.TextRelative,
-                span,
-                null,
-                adornment,
-                null);
-        }
-
-        private UIElement CreateVisualElement(CommentRenderInfo renderInfo, Rect bounds, double maxTextWidth, double textPadding)
-        {
-            RenderedComment comment = renderInfo.RenderedComment;
-            var isExpanded = renderInfo.IsExpanded;
-            var hasExpandableContent = renderInfo.HasExpandableContent;
-
-            // Width should cover from background start to end of viewport
-            var width = _textView.ViewportWidth;
-
-            var fontSize = _textView.FormattedLineSource?.DefaultTextProperties?.FontRenderingEmSize ?? 13;
-            FontFamily fontFamily = _textView.FormattedLineSource?.DefaultTextProperties?.Typeface?.FontFamily
+            var fontSize = _textView.FormattedLineSource?.DefaultTextProperties?.FontRenderingEmSize ?? 13.0;
+            var fontFamily = _textView.FormattedLineSource?.DefaultTextProperties?.Typeface?.FontFamily
                 ?? new FontFamily("Consolas");
-            var lineHeight = _textView.FormattedLineSource?.LineHeight ?? 15;
 
-            Brush textBrush = GetCommentTextBrush();
-            Brush linkBrush = GetLinkBrush();
-            Brush headingBrush = GetHeadingBrush();
-            Brush bgBrush = GetBackgroundBrush();
+            // Use gray color to reduce visual noise (similar to collapsed outlining text)
+            var textBrush = new SolidColorBrush(Color.FromRgb(155, 155, 155)); // Gray
+            var linkBrush = new SolidColorBrush(Color.FromRgb(86, 156, 214)); // VS blue for links
+            var paramBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128)); // Darker gray for params
+            var returnsBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
+            var exceptionBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
 
-            // Use the bounds height - this is the space allocated by line transforms
-            var gridHeight = bounds.Height;
+            // Get background from view
+            Brush bgBrush = _textView.Background is SolidColorBrush solidBrush ? solidBrush : Brushes.White;
 
-            // Create container with background - positioned at bgLeftPos via Canvas.SetLeft
-            var contentPanel = new Border
+            // Check if this comment is expanded
+            var isExpanded = _expandedComments.Contains(block.StartLine);
+            var hasMoreContent = renderedComment.HasAdditionalSections;
+
+            // Create container with explicit height to fully cover the outlining UI including border
+            // Add extra pixels to cover the collapsed region border
+            var container = new Border
             {
                 Background = bgBrush,
-                Width = width,
-                Height = gridHeight,
-                Padding = new Thickness(textPadding, 0, 0, 0), // Padding to align text after "/// "
-                ClipToBounds = true,
-                Tag = renderInfo.StartLine
+                Height = lineHeight + 4, // Extra height to cover the outlining border
+                VerticalAlignment = VerticalAlignment.Top,
+                ClipToBounds = false
             };
 
-            // Double-click to enter edit mode
-            contentPanel.MouseLeftButtonDown += OnAdornmentMouseDown;
+            var innerPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Background = bgBrush,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 0, 0, 0)
+            };
 
-            // Create the main content panel
-            var mainPanel = new StackPanel
+            // Main content panel
+            var contentPanel = new StackPanel
             {
                 Orientation = Orientation.Vertical,
-                VerticalAlignment = VerticalAlignment.Top,
-                HorizontalAlignment = HorizontalAlignment.Left
+                Background = bgBrush
             };
 
-            // Render based on expanded/collapsed state
-            if (isExpanded || !hasExpandableContent)
+            if (isExpanded && hasMoreContent)
             {
-                // Show all sections with proper formatting
-                RenderAllSections(mainPanel, comment, maxTextWidth, fontSize, fontFamily, lineHeight,
-                    textBrush, linkBrush, headingBrush, hasExpandableContent, renderInfo.StartLine);
+                // Show all sections
+                RenderAllSections(contentPanel, renderedComment, fontSize, fontFamily, lineHeight,
+                    textBrush, linkBrush, paramBrush, returnsBrush, exceptionBrush, bgBrush);
             }
             else
             {
-                // Show only summary with expander
-                RenderCollapsedView(mainPanel, comment, maxTextWidth, fontSize, fontFamily,
-                    textBrush, linkBrush, headingBrush, renderInfo.StartLine);
+                // Show only summary
+                var summaryBlock = new TextBlock
+                {
+                    FontFamily = fontFamily,
+                    FontSize = fontSize,
+                    Foreground = textBrush,
+                    Background = bgBrush,
+                    TextWrapping = TextWrapping.NoWrap,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                RenderedCommentSection summary = renderedComment.Summary;
+                if (summary != null)
+                {
+                    RenderSectionContent(summaryBlock, summary.ProseLines, textBrush, linkBrush, paramBrush);
+                }
+
+                contentPanel.Children.Add(summaryBlock);
             }
 
-            contentPanel.Child = mainPanel;
+            innerPanel.Children.Add(contentPanel);
 
-            return contentPanel;
-        }
-
-
-        private void RenderCollapsedView(StackPanel mainPanel, RenderedComment comment, double maxTextWidth,
-            double fontSize, FontFamily fontFamily, Brush textBrush, Brush linkBrush, Brush headingBrush, int startLine)
-        {
-            var containerPanel = new StackPanel { Orientation = Orientation.Horizontal };
-
-            // Summary text
-            var summaryText = new TextBlock
+            // Add expand/collapse indicator if there's more content
+            if (hasMoreContent)
             {
-                TextWrapping = TextWrapping.Wrap,
-                Foreground = textBrush,
-                FontFamily = fontFamily,
-                FontSize = fontSize,
-                MaxWidth = maxTextWidth - 20, // Leave room for expander
-                VerticalAlignment = VerticalAlignment.Top
-            };
-
-            RenderedCommentSection summary = comment.Summary;
-            if (summary != null)
-            {
-                RenderSectionContent(summaryText, summary.ProseLines, textBrush, linkBrush, headingBrush);
+                var expanderText = isExpanded ? " ▼" : " ▶";
+                var expander = new TextBlock
+                {
+                    Text = expanderText,
+                    FontFamily = fontFamily,
+                    FontSize = fontSize * 0.85,
+                    Foreground = new SolidColorBrush(Color.FromRgb(86, 156, 214)), // Keep blue for visibility
+                    Background = bgBrush,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Cursor = Cursors.Hand,
+                    ToolTip = isExpanded ? "Collapse" : "Expand to show more",
+                    Tag = block.StartLine,
+                    Margin = new Thickness(2, 0, 0, 0)
+                };
+                expander.MouseLeftButtonDown += OnExpanderClicked;
+                innerPanel.Children.Add(expander);
             }
 
-            containerPanel.Children.Add(summaryText);
-
-            // Add expander using unicode character
-            var expander = new TextBlock
+            // Add padding at the end to fully cover the outlining "[...]" placeholder
+            var padding = new Border
             {
-                Text = "▶",  // Right-pointing triangle
-                Foreground = linkBrush,
-                FontFamily = fontFamily,
-                FontSize = fontSize * 0.85,
-                Margin = new Thickness(3, 0, 0, 0),
-                VerticalAlignment = VerticalAlignment.Top,
-                Cursor = Cursors.Hand,
-                ToolTip = "Show more",
-                Tag = startLine
+                Width = 60, // Extra width to cover any remaining outlining text
+                Background = bgBrush
             };
-            expander.MouseLeftButtonDown += OnExpanderClicked;
-            containerPanel.Children.Add(expander);
+            innerPanel.Children.Add(padding);
 
-            mainPanel.Children.Add(containerPanel);
+            container.Child = innerPanel;
+            return container;
         }
 
-        private void RenderAllSections(StackPanel mainPanel, RenderedComment comment, double maxTextWidth,
-            double fontSize, FontFamily fontFamily, double lineHeight, Brush textBrush, Brush linkBrush,
-            Brush headingBrush, bool hasExpandableContent, int startLine)
+        private void RenderAllSections(StackPanel panel, RenderedComment comment, double fontSize, 
+            FontFamily fontFamily, double lineHeight, Brush textBrush, Brush linkBrush, 
+            Brush paramBrush, Brush returnsBrush, Brush exceptionBrush, Brush bgBrush)
         {
-            var isFirstSection = true;
-
+            var isFirst = true;
             foreach (RenderedCommentSection section in comment.Sections)
             {
                 if (section.IsEmpty)
                     continue;
 
-                // Add spacing between sections (but not before the first)
-                if (!isFirstSection)
+                // Add spacing between sections
+                if (!isFirst)
                 {
-                    mainPanel.Children.Add(new Border { Height = lineHeight * 0.25 });
+                    panel.Children.Add(new Border { Height = lineHeight * 0.3, Background = bgBrush });
                 }
 
-                // For summary section with expandable content, add the collapse button
-                if (section.Type == CommentSectionType.Summary && hasExpandableContent)
+                var sectionBlock = new TextBlock
                 {
-                    var containerPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                    FontFamily = fontFamily,
+                    FontSize = fontSize,
+                    Foreground = textBrush,
+                    Background = bgBrush,
+                    TextWrapping = TextWrapping.NoWrap
+                };
 
-                    var summaryText = new TextBlock
+                // Add label for non-summary sections
+                if (section.Type != CommentSectionType.Summary)
+                {
+                    var (label, labelBrush) = GetSectionLabel(section, textBrush, paramBrush, returnsBrush, exceptionBrush, linkBrush);
+                    if (!string.IsNullOrEmpty(label))
                     {
-                        TextWrapping = TextWrapping.Wrap,
-                        Foreground = textBrush,
-                        FontFamily = fontFamily,
-                        FontSize = fontSize,
-                        MaxWidth = maxTextWidth - 20, // Leave room for collapser
-                        VerticalAlignment = VerticalAlignment.Top
-                    };
-                    RenderSectionContent(summaryText, section.Lines, textBrush, linkBrush, headingBrush);
-                    containerPanel.Children.Add(summaryText);
-
-                    // Add collapser using unicode character
-                    var collapser = new TextBlock
-                    {
-                        Text = "▼",  // Down-pointing triangle
-                        Foreground = linkBrush,
-                        FontFamily = fontFamily,
-                        FontSize = fontSize * 0.85,
-                        Margin = new Thickness(3, 0, 0, 0),
-                        VerticalAlignment = VerticalAlignment.Top,
-                        Cursor = Cursors.Hand,
-                        ToolTip = "Show less",
-                        Tag = startLine
-                    };
-                    collapser.MouseLeftButtonDown += OnExpanderClicked;
-                    containerPanel.Children.Add(collapser);
-
-                    mainPanel.Children.Add(containerPanel);
-                }
-                else if (section.Type == CommentSectionType.Summary)
-                {
-                    // Summary without expander - clean, no label needed
-                    var summaryText = new TextBlock
-                    {
-                        TextWrapping = TextWrapping.Wrap,
-                        Foreground = textBrush,
-                        FontFamily = fontFamily,
-                        FontSize = fontSize,
-                        MaxWidth = maxTextWidth,
-                        VerticalAlignment = VerticalAlignment.Top
-                    };
-                    RenderSectionContent(summaryText, section.Lines, textBrush, linkBrush, headingBrush);
-                    mainPanel.Children.Add(summaryText);
-                }
-                else
-                {
-                    // Non-summary sections - render inline with label
-                    TextBlock sectionText = CreateInlineSectionBlock(section, fontSize, fontFamily,
-                        maxTextWidth, textBrush, linkBrush, headingBrush);
-                    mainPanel.Children.Add(sectionText);
+                        sectionBlock.Inlines.Add(new Run(label) 
+                        { 
+                            Foreground = labelBrush,
+                            FontWeight = FontWeights.SemiBold
+                        });
+                    }
                 }
 
-                isFirstSection = false;
+                RenderSectionContent(sectionBlock, section.Lines, textBrush, linkBrush, paramBrush);
+                panel.Children.Add(sectionBlock);
+                isFirst = false;
             }
         }
 
-        /// <summary>
-        /// Creates an inline section block: "Label: content" all on same line(s), wrapping naturally.
-        /// This creates a clean, VS-native look similar to Quick Info tooltips.
-        /// </summary>
-        private TextBlock CreateInlineSectionBlock(RenderedCommentSection section, double fontSize,
-            FontFamily fontFamily, double maxTextWidth, Brush textBrush, Brush linkBrush, Brush headingBrush)
+        private (string label, Brush brush) GetSectionLabel(RenderedCommentSection section, 
+            Brush textBrush, Brush paramBrush, Brush returnsBrush, Brush exceptionBrush, Brush linkBrush)
         {
-            var textBlock = new TextBlock
-            {
-                TextWrapping = TextWrapping.Wrap,
-                FontFamily = fontFamily,
-                FontSize = fontSize,
-                MaxWidth = maxTextWidth,
-                Foreground = textBrush
-            };
-
-            // Add the label inline
-            (var labelText, Brush labelBrush) = GetSectionLabelInfo(section, textBrush, linkBrush);
-
-            if (!string.IsNullOrEmpty(labelText))
-            {
-                textBlock.Inlines.Add(new Run(labelText)
-                {
-                    Foreground = labelBrush,
-                    FontWeight = FontWeights.SemiBold
-                });
-            }
-
-            // Add the content inline after the label
-            RenderSectionContent(textBlock, section.Lines, textBrush, linkBrush, headingBrush);
-
-            return textBlock;
-        }
-
-        /// <summary>
-        /// Gets clean, VS-native label text for a section.
-        /// Design: Tasteful emojis for visual scannability, minimal text labels.
-        /// </summary>
-        private (string label, Brush brush) GetSectionLabelInfo(RenderedCommentSection section,
-            Brush textBrush, Brush linkBrush)
-        {
-            var paramBrush = new SolidColorBrush(Color.FromRgb(86, 156, 214)); // VS blue for params
-            var returnsBrush = new SolidColorBrush(Color.FromRgb(78, 201, 176)); // Teal for returns
-            var exceptionBrush = new SolidColorBrush(Color.FromRgb(206, 145, 120)); // Muted orange for exceptions
-
             return section.Type switch
             {
-                CommentSectionType.Param => ((string label, Brush brush))($"{section.Name}: ", paramBrush),
-                CommentSectionType.TypeParam => ((string label, Brush brush))($"〈{section.Name}〉 ", paramBrush),// Angle brackets for type params
-                CommentSectionType.Returns => ((string label, Brush brush))("↩ ", returnsBrush),// Clean return arrow
-                CommentSectionType.Exception => ((string label, Brush brush))($"⚠ {section.Name}: ", exceptionBrush),// Warning for exceptions
-                CommentSectionType.Remarks => ("✎ ", textBrush),// Pencil for remarks
-                CommentSectionType.Example => ("» ", textBrush),// Chevron for examples
-                CommentSectionType.Value => ("= ", textBrush),// Equals for value
-                CommentSectionType.SeeAlso => ("→ ", linkBrush),// Arrow for see also
+                CommentSectionType.Param => ($"{section.Name}: ", paramBrush),
+                CommentSectionType.TypeParam => ($"<{section.Name}>: ", paramBrush),
+                CommentSectionType.Returns => ("Returns: ", returnsBrush),
+                CommentSectionType.Exception => ($"Throws {section.Name}: ", exceptionBrush),
+                CommentSectionType.Remarks => ("Remarks: ", textBrush),
+                CommentSectionType.Example => ("Example: ", textBrush),
+                CommentSectionType.Value => ("Value: ", textBrush),
+                CommentSectionType.SeeAlso => ("See: ", linkBrush),
                 _ => (null, textBrush),
             };
         }
 
-        private TextBlock CreateSectionLabel(RenderedCommentSection section, double fontSize,
-            FontFamily fontFamily, Brush headingBrush, Brush linkBrush)
+        private void OnExpanderClicked(object sender, MouseButtonEventArgs e)
         {
-            // Legacy method - kept for compatibility but redesigned
-            (var labelText, Brush labelBrush) = GetSectionLabelInfo(section, headingBrush, linkBrush);
-
-            if (string.IsNullOrEmpty(labelText))
-                return null;
-
-            return new TextBlock
+            if (sender is TextBlock textBlock && textBlock.Tag is int startLine)
             {
-                Text = labelText,
-                FontFamily = fontFamily,
-                FontSize = fontSize,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = labelBrush
-            };
+                // Toggle expanded state
+                if (_expandedComments.Contains(startLine))
+                {
+                    _expandedComments.Remove(startLine);
+                }
+                else
+                {
+                    _expandedComments.Add(startLine);
+                }
+
+                // Force refresh
+                UpdateAdornments();
+                e.Handled = true;
+            }
         }
 
-        private void RenderSectionContent(TextBlock textBlock, IEnumerable<RenderedLine> lines,
-            Brush textBrush, Brush linkBrush, Brush headingBrush)
+        private void RenderSectionContent(TextBlock textBlock, IEnumerable<RenderedLine> lines, Brush textBrush, Brush linkBrush, Brush paramBrush)
         {
             var firstSegment = true;
             foreach (RenderedLine line in lines)
             {
                 if (line.IsBlank)
-                {
                     continue;
-                }
 
-                // Add space between lines (not before first)
                 if (!firstSegment)
                 {
                     textBlock.Inlines.Add(new Run(" ") { Foreground = textBrush });
@@ -586,235 +401,24 @@ namespace CommentsVS.Adornments
 
                 foreach (RenderedSegment segment in line.Segments)
                 {
-                    textBlock.Inlines.Add(CreateInline(segment, textBrush, linkBrush, headingBrush));
+                    textBlock.Inlines.Add(CreateInline(segment, textBrush, linkBrush, paramBrush));
                 }
             }
         }
 
-        private void RenderLinesToTextBlock(TextBlock textBlock, IEnumerable<RenderedLine> lines,
-            Brush textBrush, Brush linkBrush, Brush headingBrush)
-        {
-            RenderSectionContent(textBlock, lines, textBrush, linkBrush, headingBrush);
-        }
-
-
-
-        private double CalculateRenderedHeight(RenderedComment comment, bool isExpanded,
-            bool hasExpandableContent, int maxCharsPerLine, double lineHeight)
-        {
-            double totalHeight = 0;
-
-            if (!isExpanded && hasExpandableContent)
-            {
-                // Collapsed: only summary section (single line of wrapped text)
-                RenderedCommentSection summary = comment.Summary;
-                if (summary != null)
-                {
-                    var summaryChars = GetSectionCharCount(summary.Lines);
-                    // Account for expander button taking ~5 chars
-                    var effectiveMaxChars = maxCharsPerLine - 5;
-                    var summaryLines = Math.Max(1, (int)Math.Ceiling((double)summaryChars / effectiveMaxChars));
-                    totalHeight = summaryLines * lineHeight;
-                }
-                else
-                {
-                    totalHeight = lineHeight;
-                }
-            }
-            else
-            {
-                // Expanded: calculate height for each section
-                // New design: inline labels, so content and label share same line(s)
-                var isFirstSection = true;
-                foreach (RenderedCommentSection section in comment.Sections)
-                {
-                    if (section.IsEmpty)
-                        continue;
-
-                    // Add spacing between sections
-                    if (!isFirstSection)
-                    {
-                        totalHeight += lineHeight * 0.25;
-                    }
-
-                    // Calculate content height - label is inline now, not a separate line
-                    var contentChars = GetSectionCharCount(section.Lines);
-
-                    // Add label chars for non-summary sections
-                    if (section.Type != CommentSectionType.Summary)
-                    {
-                        var labelChars = GetLabelCharCount(section);
-                        contentChars += labelChars;
-                    }
-
-                    var effectiveMaxChars = section.Type == CommentSectionType.Summary && hasExpandableContent
-                        ? maxCharsPerLine - 5  // Account for expander
-                        : maxCharsPerLine;
-                    var contentLines = Math.Max(1, (int)Math.Ceiling((double)contentChars / effectiveMaxChars));
-                    totalHeight += contentLines * lineHeight;
-
-                    isFirstSection = false;
-                }
-            }
-
-            // Add a small buffer to ensure content fits
-            return Math.Max(lineHeight, totalHeight + lineHeight * 0.15);
-        }
-
-        private int GetLabelCharCount(RenderedCommentSection section)
-        {
-            // Updated to match new emoji-based labels
-            return section.Type switch
-            {
-                CommentSectionType.Param => (section.Name?.Length ?? 0) + 2,// "Name: "
-                CommentSectionType.TypeParam => (section.Name?.Length ?? 0) + 4,// "〈Name〉 "
-                CommentSectionType.Returns => 2,// "↩ "
-                CommentSectionType.Exception => 4 + (section.Name?.Length ?? 0),// "⚠ Name: "
-                CommentSectionType.Remarks => 2,// "✎ "
-                CommentSectionType.Example => 2,// "» "
-                CommentSectionType.Value => 2,// "= "
-                CommentSectionType.SeeAlso => 2,// "→ "
-                _ => 0,
-            };
-        }
-
-        private int GetSectionCharCount(IEnumerable<RenderedLine> lines)
-        {
-            var totalChars = 0;
-            foreach (RenderedLine line in lines)
-            {
-                if (!line.IsBlank)
-                {
-                    foreach (RenderedSegment segment in line.Segments)
-                    {
-                        totalChars += segment.Text?.Length ?? 0;
-                    }
-                    totalChars += 1; // space between lines
-                }
-            }
-            return totalChars;
-        }
-
-        private void OnExpanderClicked(object sender, MouseButtonEventArgs e)
-        {
-            int? startLine = null;
-            
-            if (sender is Border border && border.Tag is int borderStartLine)
-            {
-                startLine = borderStartLine;
-            }
-            else if (sender is TextBlock textBlock && textBlock.Tag is int textBlockStartLine)
-            {
-                startLine = textBlockStartLine;
-            }
-            else if (sender is FrameworkElement element && element.Tag is int elementStartLine)
-            {
-                startLine = elementStartLine;
-            }
-
-            if (startLine.HasValue)
-            {
-                // Toggle expanded state
-                if (_expandedComments.TryGetValue(startLine.Value, out var currentState))
-                {
-                    _expandedComments[startLine.Value] = !currentState;
-                }
-                else
-                {
-                    _expandedComments[startLine.Value] = true; // Default was collapsed, now expand
-                }
-
-                // Force a re-layout to update the display
-                ForceRelayout();
-                e.Handled = true;
-            }
-        }
-
-        private void OnAdornmentMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            // Only handle double-click to enter edit mode
-            if (e.ClickCount == 2 && sender is Border border && border.Tag is int startLine)
-            {
-                EnterEditMode(startLine);
-                e.Handled = true;
-            }
-            // Single clicks are ignored (no more accidental exits)
-        }
-
-
-        private void EnterEditMode(int startLine)
-        {
-            if (_disposed || _textView.IsClosed)
-            {
-                return;
-            }
-
-            // Mark this comment as being in edit mode
-            _editModeComments.Add(startLine);
-
-            // Move caret to the start of the comment to enter edit mode
-            ITextSnapshot snapshot = _textView.TextSnapshot;
-            if (startLine >= 0 && startLine < snapshot.LineCount)
-            {
-                ITextSnapshotLine line = snapshot.GetLineFromLineNumber(startLine);
-                var lineText = line.GetText();
-
-                // Position caret after the /// prefix for convenience
-                var caretPosition = line.Start.Position;
-                var prefixEnd = lineText.IndexOf("///", StringComparison.Ordinal);
-                if (prefixEnd >= 0)
-                {
-                    caretPosition = line.Start.Position + prefixEnd + 3;
-                    // Skip the space after /// if present
-                    if (caretPosition < line.End.Position &&
-                        snapshot[caretPosition] == ' ')
-                    {
-                        caretPosition++;
-                    }
-                }
-
-                _textView.Caret.MoveTo(new SnapshotPoint(snapshot, caretPosition));
-                _textView.Caret.EnsureVisible();
-            }
-
-            // Force re-layout to show raw text
-            ForceRelayout();
-        }
-
-        private void ForceRelayout()
-        {
-            if (!_disposed && _textView is { IsClosed: false, InLayout: false })
-            {
-                _textView.ViewScroller.ScrollViewportVerticallyByPixels(0.001);
-                _textView.ViewScroller.ScrollViewportVerticallyByPixels(-0.001);
-            }
-        }
-
-        private Inline CreateInline(RenderedSegment segment, Brush textBrush, Brush linkBrush, Brush headingBrush)
+        private Inline CreateInline(RenderedSegment segment, Brush textBrush, Brush linkBrush, Brush paramBrush)
         {
             switch (segment.Type)
             {
                 case RenderedSegmentType.Link:
-                    // Clean link style - just color, no underline (VS-native)
-                    return new Run(segment.Text)
-                    {
-                        Foreground = linkBrush
-                    };
+                    return new Run(segment.Text) { Foreground = linkBrush };
 
                 case RenderedSegmentType.ParamRef:
                 case RenderedSegmentType.TypeParamRef:
-                    // Parameter references - italic, slightly different color
                     return new Run(segment.Text)
                     {
-                        Foreground = new SolidColorBrush(Color.FromRgb(86, 156, 214)), // VS param blue
+                        Foreground = paramBrush,
                         FontStyle = FontStyles.Italic
-                    };
-
-                case RenderedSegmentType.Heading:
-                    return new Run(segment.Text)
-                    {
-                        FontWeight = FontWeights.SemiBold,
-                        Foreground = headingBrush
                     };
 
                 case RenderedSegmentType.Bold:
@@ -832,10 +436,9 @@ namespace CommentsVS.Adornments
                     };
 
                 case RenderedSegmentType.Code:
-                    // Inline code - subtle, clean
                     return new Run(segment.Text)
                     {
-                        Foreground = new SolidColorBrush(Color.FromRgb(214, 157, 133)), // Muted string color
+                        Foreground = new SolidColorBrush(Color.FromRgb(214, 157, 133)),
                         FontFamily = new FontFamily("Consolas")
                     };
 
@@ -844,163 +447,9 @@ namespace CommentsVS.Adornments
             }
         }
 
-        private void OnCaretPositionChanged(object sender, CaretPositionChangedEventArgs e)
-        {
-            if (!General.Instance.EnableRenderedComments || _disposed)
-            {
-                return;
-            }
-
-            // Check if caret moved out of a comment that was in edit mode
-            var newLine = e.NewPosition.BufferPosition.GetContainingLine().LineNumber;
-
-            // Find if caret left any comment that was in edit mode
-            var commentsToExitEditMode = new List<int>();
-            foreach (var startLine in _editModeComments)
-            {
-                CommentRenderInfo info = _renderInfos.FirstOrDefault(r => r.StartLine == startLine);
-                if (info != null)
-                {
-                    // If caret is no longer in this comment, exit edit mode
-                    if (newLine < info.StartLine || newLine > info.EndLine)
-                    {
-                        commentsToExitEditMode.Add(startLine);
-                    }
-                }
-            }
-
-            // Exit edit mode for comments the caret left
-            if (commentsToExitEditMode.Count > 0)
-            {
-                foreach (var startLine in commentsToExitEditMode)
-                {
-                    _editModeComments.Remove(startLine);
-                }
-                ForceRelayout();
-            }
-        }
-
-        private bool IsLineInComment(int lineNumber)
-        {
-            foreach (CommentRenderInfo info in _renderInfos)
-            {
-                if (lineNumber >= info.StartLine && lineNumber <= info.EndLine)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private CommentRenderInfo FindCommentAtLine(int lineNumber)
-        {
-            foreach (CommentRenderInfo info in _renderInfos)
-            {
-                if (lineNumber >= info.StartLine && lineNumber <= info.EndLine)
-                {
-                    return info;
-                }
-            }
-            return null;
-        }
-
-        private void OnRenderedStateChanged(object sender, EventArgs e)
-        {
-            // Force a re-layout
-            if (!_disposed && _textView is { IsClosed: false, InLayout: false })
-            {
-                IWpfTextViewLine firstLine = _textView.TextViewLines?.FirstVisibleLine;
-                if (firstLine != null)
-                {
-                    _textView.DisplayTextLineContainingBufferPosition(
-                        firstLine.Start,
-                        firstLine.Top - _textView.ViewportTop,
-                        ViewRelativePosition.Top);
-                }
-            }
-        }
-
-        private Brush GetBackgroundBrush()
-        {
-            Brush background = _textView.Background;
-            if (background is SolidColorBrush solidBrush)
-            {
-                return solidBrush;
-            }
-            return Brushes.White;
-        }
-
-        private Brush GetCommentTextBrush()
-        {
-            // Nice gray that works in both light and dark themes
-            return new SolidColorBrush(Color.FromRgb(128, 128, 128));
-        }
-
-        private Brush GetHeadingBrush()
-        {
-            // Slightly darker/more prominent for headings
-            return new SolidColorBrush(Color.FromRgb(100, 100, 100));
-        }
-
-        private Brush GetLinkBrush()
-        {
-            // Muted blue for links
-            return new SolidColorBrush(Color.FromRgb(86, 156, 214));
-        }
-
-        private Brush GetCodeBrush()
-        {
-            // Slightly different color for inline code
-            return new SolidColorBrush(Color.FromRgb(110, 110, 110));
-        }
-
         private void OnViewClosed(object sender, EventArgs e)
         {
             Dispose();
-        }
-
-        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            if (!General.Instance.EnableRenderedComments || _disposed)
-            {
-                return;
-            }
-
-            // Escape key: Enter edit mode for rendered comments
-            if (e.Key == Key.Escape)
-            {
-                var caretLine = _textView.Caret.Position.BufferPosition.GetContainingLine().LineNumber;
-
-                // First, check if caret is inside a rendered comment (not already in edit mode)
-                foreach (CommentRenderInfo info in _renderInfos)
-                {
-                    if (caretLine >= info.StartLine && caretLine <= info.EndLine && !info.IsInEditMode)
-                    {
-                        EnterEditMode(info.StartLine);
-                        e.Handled = true;
-                        return;
-                    }
-                }
-
-                // Check if we're on a line adjacent to a rendered comment
-                foreach (CommentRenderInfo info in _renderInfos)
-                {
-                    // If caret is on line just before comment, move into comment
-                    if (caretLine == info.StartLine - 1)
-                    {
-                        EnterEditMode(info.StartLine);
-                        e.Handled = true;
-                        return;
-                    }
-                    // If caret is on line just after comment, move into comment (at end)
-                    if (caretLine == info.EndLine + 1)
-                    {
-                        EnterEditMode(info.EndLine);
-                        e.Handled = true;
-                        return;
-                    }
-                }
-            }
         }
 
         public void Dispose()
@@ -1009,23 +458,16 @@ namespace CommentsVS.Adornments
             _disposed = true;
 
             _textView.LayoutChanged -= OnLayoutChanged;
-            _textView.Caret.PositionChanged -= OnCaretPositionChanged;
             _textView.Closed -= OnViewClosed;
-            _textView.VisualElement.PreviewKeyDown -= OnPreviewKeyDown;
-            ToggleRenderedCommentsCommand.RenderedCommentsStateChanged -= OnRenderedStateChanged;
-        }
 
-        private class CommentRenderInfo
-        {
-            public int StartLine { get; set; }
-            public int EndLine { get; set; }
-            public double VerticalScale { get; set; }
-            public bool IsInEditMode { get; set; }
-            public XmlDocCommentBlock Block { get; set; }
-            public RenderedComment RenderedComment { get; set; }
-            public double RenderedHeight { get; set; }
-            public bool IsExpanded { get; set; }
-            public bool HasExpandableContent { get; set; }
+            if (_outliningManager != null)
+            {
+                _outliningManager.RegionsCollapsed -= OnRegionsCollapsed;
+                _outliningManager.RegionsExpanded -= OnRegionsExpanded;
+            }
+
+            _outliningTagAggregator?.Dispose();
+            ToggleRenderedCommentsCommand.RenderedCommentsStateChanged -= OnRenderedStateChanged;
         }
     }
 }

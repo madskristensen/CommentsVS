@@ -45,11 +45,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Adornments\IntraTextAdornmentTagger.cs" />
     <Compile Include="Adornments\RenderedCommentAdornmentManager.cs" />
+    <Compile Include="Adornments\RenderedCommentIntraTextTagger.cs" />
     <Compile Include="Classification\CommentTagClassifier.cs" />
     <Compile Include="Classification\CommentTagFormatDefinitions.cs" />
     <Compile Include="Commands\ToggleCommentVisibilityCommand.cs" />
     <Compile Include="Commands\ToggleRenderedCommentsCommand.cs" />
+    <Compile Include="Handlers\EscapeKeyHandler.cs" />
     <Compile Include="Handlers\FormatDocumentHandler.cs" />
     <Compile Include="Handlers\IssueReferenceClickHandler.cs" />
     <Compile Include="Handlers\PasteHandler.cs" />

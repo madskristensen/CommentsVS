@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using CommentsVS.Commands;
 using CommentsVS.Options;
 using CommentsVS.Services;
 using Microsoft.VisualStudio.Text;
@@ -22,7 +24,9 @@ namespace CommentsVS.Tagging
     }
 
     /// <summary>
-    /// Provides outlining regions for XML documentation comments with immediate collapse support.
+    /// Provides outlining regions for XML documentation comments.
+    /// When rendered comments are enabled, outlining is disabled to avoid conflicts
+    /// with the IntraTextAdornment that replaces the comment text.
     /// </summary>
     internal sealed class XmlDocCommentOutliningTagger : ITagger<IOutliningRegionTag>
     {
@@ -34,9 +38,20 @@ namespace CommentsVS.Tagging
         {
             _buffer = buffer;
             _buffer.Changed += OnBufferChanged;
+            ToggleRenderedCommentsCommand.RenderedCommentsStateChanged += OnRenderedStateChanged;
         }
 
         private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
+        {
+            RaiseTagsChanged();
+        }
+
+        private void OnRenderedStateChanged(object sender, EventArgs e)
+        {
+            RaiseTagsChanged();
+        }
+
+        private void RaiseTagsChanged()
         {
             ITextSnapshot snapshot = _buffer.CurrentSnapshot;
             TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(
@@ -45,6 +60,13 @@ namespace CommentsVS.Tagging
 
         public IEnumerable<ITagSpan<IOutliningRegionTag>> GetTags(NormalizedSnapshotSpanCollection spans)
         {
+            // Don't provide outlining when rendered comments are enabled
+            // The IntraTextAdornment will handle the display instead
+            if (General.Instance.EnableRenderedComments)
+            {
+                yield break;
+            }
+
             if (spans.Count == 0)
             {
                 yield break;
