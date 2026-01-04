@@ -60,7 +60,7 @@ Works with C# and VB.NET XML documentation comments:
 - `/** */` block comments (C#)
 
 ### Color-coded Comment Tags
-Comment tags like TODO, HACK, NOTE, BUG, FIXME, UNDONE, and REVIEW are automatically highlighted with distinct colors, making them easy to spot in your code.
+Comment tags like TODO, HACK, NOTE, BUG, FIXME, UNDONE, and REVIEW are automatically highlighted with distinct colors, making them easy to spot in your code. Hover over any tag to see a tooltip explaining its semantic meaning.
 
 | Tag | Default Color | Description |
 |-----|---------------|-------------|
