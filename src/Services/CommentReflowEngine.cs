@@ -334,10 +334,9 @@ namespace CommentsVS.Services
                 return null;
             }
 
-            var sb = new StringBuilder();
-
             if (block.IsMultiLineStyle)
             {
+                var sb = new StringBuilder();
                 sb.Append(block.Indentation);
                 sb.AppendLine(block.CommentStyle.MultiLineDocStart);
 
@@ -346,24 +345,14 @@ namespace CommentsVS.Services
                     sb.AppendLine(line);
                 }
 
-
                 sb.Append(block.Indentation);
                 sb.Append(" ");
                 sb.Append(block.CommentStyle.MultiLineDocEnd);
-            }
-            else
-            {
-                for (var i = 0; i < lines.Count; i++)
-                {
-                    sb.Append(lines[i]);
-                    if (i < lines.Count - 1)
-                    {
-                        sb.AppendLine();
-                    }
-                }
+
+                return sb.ToString();
             }
 
-            return sb.ToString();
+            return string.Join(Environment.NewLine, lines);
         }
     }
 }

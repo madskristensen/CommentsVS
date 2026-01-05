@@ -35,10 +35,6 @@ namespace CommentsVS.QuickInfo
             @"#(?<number>\d+)\b",
             RegexOptions.Compiled);
 
-        private static readonly Regex _commentLineRegex = new(
-            @"^\s*(//|/\*|\*|')",
-            RegexOptions.Compiled);
-
         public Task<QuickInfoItem> GetQuickInfoItemAsync(
             IAsyncQuickInfoSession session,
             CancellationToken cancellationToken)
@@ -69,7 +65,7 @@ namespace CommentsVS.QuickInfo
             var lineText = line.GetText();
 
             // Check if this line is a comment
-            if (!_commentLineRegex.IsMatch(lineText))
+            if (!LanguageCommentStyle.IsCommentLine(lineText))
             {
                 return Task.FromResult<QuickInfoItem>(null);
             }

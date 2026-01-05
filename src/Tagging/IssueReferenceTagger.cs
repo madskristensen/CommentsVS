@@ -43,11 +43,6 @@ namespace CommentsVS.Tagging
             @"(?<=^|[\s\(\[\{])#(?<number>\d+)\b",
             RegexOptions.Compiled);
 
-        // Match comment patterns to ensure we're in a comment
-        private static readonly Regex _commentLineRegex = new(
-            @"^\s*(//|/\*|\*|')",
-            RegexOptions.Compiled);
-
         public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
 
         public IssueReferenceTagger(ITextBuffer buffer)
@@ -100,7 +95,7 @@ namespace CommentsVS.Tagging
                 }
 
                 // Check if this line is a comment
-                if (!IsCommentLine(text))
+                if (!LanguageCommentStyle.IsCommentLine(text))
                 {
                     continue;
                 }
@@ -128,11 +123,6 @@ namespace CommentsVS.Tagging
             {
                 _repoInfo = GitRepositoryService.GetRepositoryInfo(document.FilePath);
             }
-        }
-
-        private static bool IsCommentLine(string text)
-        {
-            return _commentLineRegex.IsMatch(text);
         }
     }
 }

@@ -141,5 +141,23 @@ namespace CommentsVS.Services
         /// Gets whether multi-line documentation comments are supported.
         /// </summary>
         public bool SupportsMultiLineDoc => !string.IsNullOrEmpty(MultiLineDocStart);
+
+        /// <summary>
+        /// Regex pattern to match comment line prefixes across all supported languages.
+        /// Matches: //, /*, *, ' (VB)
+        /// </summary>
+        public static readonly System.Text.RegularExpressions.Regex CommentLineRegex = new(
+            @"^\s*(//|/\*|\*|')",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        /// <summary>
+        /// Checks if a line of text is a comment line.
+        /// </summary>
+        /// <param name="lineText">The text of the line to check.</param>
+        /// <returns>True if the line starts with a comment prefix.</returns>
+        public static bool IsCommentLine(string lineText)
+        {
+            return !string.IsNullOrEmpty(lineText) && CommentLineRegex.IsMatch(lineText);
+        }
     }
 }

@@ -47,42 +47,47 @@ namespace CommentsVS.Services
     /// </summary>
     public static class GitRepositoryService
     {
-        // Regex to parse remote URLs
-        private static readonly Regex _gitHubHttpsRegex = new(
-            @"https?://github\.com/(?<owner>[^/]+)/(?<repo>[^/\.]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        /// <summary>
+        /// Defines a pattern for matching a Git remote URL to a hosting provider.
+        /// </summary>
+        private sealed class RemoteUrlPattern(Regex regex, GitHostingProvider provider, string baseUrl, bool usesOrgProject = false)
+        {
+            public Regex Regex { get; } = regex;
+            public GitHostingProvider Provider { get; } = provider;
+            public string BaseUrl { get; } = baseUrl;
+            public bool UsesOrgProject { get; } = usesOrgProject;
+        }
 
-        private static readonly Regex _gitHubSshRegex = new(
-            @"git@github\.com:(?<owner>[^/]+)/(?<repo>[^/\.]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly RemoteUrlPattern[] _remoteUrlPatterns =
+        [
+            // GitHub
+            new(new(@"https?://github\.com/(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+                GitHostingProvider.GitHub, "https://github.com"),
+            new(new(@"git@github\.com:(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+                GitHostingProvider.GitHub, "https://github.com"),
 
-        private static readonly Regex _gitLabHttpsRegex = new(
-            @"https?://gitlab\.com/(?<owner>[^/]+)/(?<repo>[^/\.]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            // GitLab
+            new(new(@"https?://gitlab\.com/(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+                GitHostingProvider.GitLab, "https://gitlab.com"),
+            new(new(@"git@gitlab\.com:(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+                GitHostingProvider.GitLab, "https://gitlab.com"),
 
-        private static readonly Regex _gitLabSshRegex = new(
-            @"git@gitlab\.com:(?<owner>[^/]+)/(?<repo>[^/\.]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            // Bitbucket
+            new(new(@"https?://bitbucket\.org/(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+                GitHostingProvider.Bitbucket, "https://bitbucket.org"),
+            new(new(@"git@bitbucket\.org:(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+                GitHostingProvider.Bitbucket, "https://bitbucket.org"),
 
-        private static readonly Regex _bitbucketHttpsRegex = new(
-            @"https?://bitbucket\.org/(?<owner>[^/]+)/(?<repo>[^/\.]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            // Azure DevOps (new format)
+            new(new(@"https?://dev\.azure\.com/(?<org>[^/]+)/(?<project>[^/]+)/_git/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+                GitHostingProvider.AzureDevOps, "https://dev.azure.com", usesOrgProject: true),
+            new(new(@"git@ssh\.dev\.azure\.com:v3/(?<org>[^/]+)/(?<project>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+                GitHostingProvider.AzureDevOps, "https://dev.azure.com", usesOrgProject: true),
 
-        private static readonly Regex _bitbucketSshRegex = new(
-            @"git@bitbucket\.org:(?<owner>[^/]+)/(?<repo>[^/\.]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        private static readonly Regex _azureDevOpsHttpsRegex = new(
-            @"https?://dev\.azure\.com/(?<org>[^/]+)/(?<project>[^/]+)/_git/(?<repo>[^/\.]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        private static readonly Regex _azureDevOpsSshRegex = new(
-            @"git@ssh\.dev\.azure\.com:v3/(?<org>[^/]+)/(?<project>[^/]+)/(?<repo>[^/\.]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        private static readonly Regex _azureDevOpsOldHttpsRegex = new(
-            @"https?://(?<org>[^\.]+)\.visualstudio\.com/(?<project>[^/]+)/_git/(?<repo>[^/\.]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            // Azure DevOps (old visualstudio.com format)
+            new(new(@"https?://(?<org>[^\.]+)\.visualstudio\.com/(?<project>[^/]+)/_git/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+                GitHostingProvider.AzureDevOps, "https://dev.azure.com", usesOrgProject: true),
+        ];
 
         /// <summary>
         /// Gets repository info for a file path by finding the Git repository root and parsing the remote URL.
@@ -176,99 +181,16 @@ namespace CommentsVS.Services
 
         private static GitRepositoryInfo ParseRemoteUrl(string remoteUrl)
         {
-            // GitHub
-            Match match = _gitHubHttpsRegex.Match(remoteUrl);
-            if (match.Success)
+            foreach (RemoteUrlPattern pattern in _remoteUrlPatterns)
             {
-                return new GitRepositoryInfo(
-                    GitHostingProvider.GitHub,
-                    match.Groups["owner"].Value,
-                    match.Groups["repo"].Value,
-                    "https://github.com");
-            }
+                Match match = pattern.Regex.Match(remoteUrl);
+                if (match.Success)
+                {
+                    var owner = pattern.UsesOrgProject ? match.Groups["org"].Value : match.Groups["owner"].Value;
+                    var repo = pattern.UsesOrgProject ? match.Groups["project"].Value : match.Groups["repo"].Value;
 
-            match = _gitHubSshRegex.Match(remoteUrl);
-            if (match.Success)
-            {
-                return new GitRepositoryInfo(
-                    GitHostingProvider.GitHub,
-                    match.Groups["owner"].Value,
-                    match.Groups["repo"].Value,
-                    "https://github.com");
-            }
-
-            // GitLab
-            match = _gitLabHttpsRegex.Match(remoteUrl);
-            if (match.Success)
-            {
-                return new GitRepositoryInfo(
-                    GitHostingProvider.GitLab,
-                    match.Groups["owner"].Value,
-                    match.Groups["repo"].Value,
-                    "https://gitlab.com");
-            }
-
-            match = _gitLabSshRegex.Match(remoteUrl);
-            if (match.Success)
-            {
-                return new GitRepositoryInfo(
-                    GitHostingProvider.GitLab,
-                    match.Groups["owner"].Value,
-                    match.Groups["repo"].Value,
-                    "https://gitlab.com");
-            }
-
-            // Bitbucket
-            match = _bitbucketHttpsRegex.Match(remoteUrl);
-            if (match.Success)
-            {
-                return new GitRepositoryInfo(
-                    GitHostingProvider.Bitbucket,
-                    match.Groups["owner"].Value,
-                    match.Groups["repo"].Value,
-                    "https://bitbucket.org");
-            }
-
-            match = _bitbucketSshRegex.Match(remoteUrl);
-            if (match.Success)
-            {
-                return new GitRepositoryInfo(
-                    GitHostingProvider.Bitbucket,
-                    match.Groups["owner"].Value,
-                    match.Groups["repo"].Value,
-                    "https://bitbucket.org");
-            }
-
-            // Azure DevOps (new format)
-            match = _azureDevOpsHttpsRegex.Match(remoteUrl);
-            if (match.Success)
-            {
-                return new GitRepositoryInfo(
-                    GitHostingProvider.AzureDevOps,
-                    match.Groups["org"].Value,
-                    match.Groups["project"].Value,
-                    "https://dev.azure.com");
-            }
-
-            match = _azureDevOpsSshRegex.Match(remoteUrl);
-            if (match.Success)
-            {
-                return new GitRepositoryInfo(
-                    GitHostingProvider.AzureDevOps,
-                    match.Groups["org"].Value,
-                    match.Groups["project"].Value,
-                    "https://dev.azure.com");
-            }
-
-            // Azure DevOps (old visualstudio.com format)
-            match = _azureDevOpsOldHttpsRegex.Match(remoteUrl);
-            if (match.Success)
-            {
-                return new GitRepositoryInfo(
-                    GitHostingProvider.AzureDevOps,
-                    match.Groups["org"].Value,
-                    match.Groups["project"].Value,
-                    $"https://dev.azure.com");
+                    return new GitRepositoryInfo(pattern.Provider, owner, repo, pattern.BaseUrl);
+                }
             }
 
             return null;

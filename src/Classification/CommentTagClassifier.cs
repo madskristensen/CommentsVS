@@ -92,25 +92,19 @@ namespace CommentsVS.Classification
 
         private IClassificationType GetClassificationType(string tag)
         {
-            switch (tag)
+            var typeName = tag switch
             {
-                case "TODO":
-                    return _registry.GetClassificationType(CommentTagClassificationTypes.Todo);
-                case "HACK":
-                    return _registry.GetClassificationType(CommentTagClassificationTypes.Hack);
-                case "NOTE":
-                    return _registry.GetClassificationType(CommentTagClassificationTypes.Note);
-                case "BUG":
-                    return _registry.GetClassificationType(CommentTagClassificationTypes.Bug);
-                case "FIXME":
-                    return _registry.GetClassificationType(CommentTagClassificationTypes.Fixme);
-                case "UNDONE":
-                    return _registry.GetClassificationType(CommentTagClassificationTypes.Undone);
-                case "REVIEW":
-                    return _registry.GetClassificationType(CommentTagClassificationTypes.Review);
-                default:
-                    return null;
-            }
+                "TODO" => CommentTagClassificationTypes.Todo,
+                "HACK" => CommentTagClassificationTypes.Hack,
+                "NOTE" => CommentTagClassificationTypes.Note,
+                "BUG" => CommentTagClassificationTypes.Bug,
+                "FIXME" => CommentTagClassificationTypes.Fixme,
+                "UNDONE" => CommentTagClassificationTypes.Undone,
+                "REVIEW" => CommentTagClassificationTypes.Review,
+                _ => null
+            };
+
+            return typeName != null ? _registry.GetClassificationType(typeName) : null;
         }
     }
 
