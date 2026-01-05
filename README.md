@@ -2,7 +2,7 @@
 [vsixgallery]: http://vsixgallery.com/extension/CommentsVS.38981599-e7f2-4db8-bf34-85b325aec2b6/
 [repo]: https://github.com/madskristensen/CommentsVS
 
-# Modern Comments for Visual Studio
+# Comment Studio for Visual Studio
 
 [![Build](https://github.com/madskristensen/CommentsVS/actions/workflows/build.yaml/badge.svg)](https://github.com/madskristensen/CommentsVS/actions/workflows/build.yaml)
 [![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/MadsKristensen.CommentsVS?label=VS%20Marketplace)][marketplace]
@@ -14,32 +14,43 @@ or get the [CI build][vsixgallery].
 
 --------------------------------------
 
-A Visual Studio extension that brings a modern commenting experience with automatic XML documentation comment reformatting, collapsing, and rich rendering. Keep your documentation clean, readable, and consistently formatted.
+**Stop wrestling with XML documentation comments.** Comment Studio transforms how you write, read, and maintain code documentation in Visual Studio.
+
+![Collapsed Comments](art/collapsed.png)
+
+## Why Comment Studio?
+
+XML documentation comments are essential for IntelliSense and API documentation, but they come with frustrations:
+
+- **Hard to read** – XML tags clutter the actual documentation content
+- **Tedious to format** – Manual line wrapping and alignment is time-consuming
+- **Visual noise** – Long comment blocks obscure the code you're trying to read
+- **Easy to miss important notes** – TODO and HACK comments blend into the code
+
+Comment Studio solves all of these problems, letting you focus on writing great documentation instead of fighting with formatting.
 
 ## Features
 
 ### Comment Rendering Modes
-The extension offers three rendering modes for XML documentation comments, accessible via the **Edit > Comments** menu or the code editor context menu:
+**See your documentation, not the XML.** Choose how you want to view comments:
 
 | Mode | Description |
 |------|-------------|
 | **Off** | Raw XML syntax with standard Visual Studio coloring |
-| **Compact** | Outlining with stripped XML tags when collapsed |
-| **Full** | Rich formatted rendering optimized for reading |
+| **Compact** | Collapse comments to a single line showing just the summary text |
+| **Full** | Rich formatted rendering—read documentation like a web page |
 
 Use **Ctrl+M, Ctrl+R** to cycle through rendering modes. The active mode is indicated with a checkmark in the menu.
 
 ### Comment Outlining/Collapsing
-Collapse XML documentation comments to reduce visual clutter and focus on your code. Uses Visual Studio's built-in outlining regions for XML doc comments.
+**Reduce visual clutter instantly.** Collapse XML documentation comments to focus on your code. Expand them only when you need to read or edit.
 
 Use **Ctrl+M, Ctrl+C** to toggle all XML doc comments in the current file between collapsed and expanded states. The extension remembers your preference, so newly opened files will match your last toggle state.
 
 You can also enable **Collapse XML Doc Comments by Default** from the **Edit > Comments** menu (or right-click context menu) to automatically collapse comments when opening files. This option is only available when the rendering mode is set to **Off**.
 
-![Collapsed Comments](art/collapsed.png)
-
 ### Rendered XML Doc Comments
-View XML documentation comments in a clean, rendered format without the XML syntax noise. The extension parses the XML and displays the content with proper formatting:
+**Read documentation like it was meant to be read.** The Full rendering mode strips away XML noise and displays your documentation with proper formatting:
 
 - **Bold** headings for sections like Remarks, Returns, Parameters
 - Clickable links for `<see>`, `<seealso>`, `<paramref>`, and `<typeparamref>` tags
@@ -61,16 +72,16 @@ The same menu is also available from the **Edit** menu.
 ![Context Menu](art/context-menu.png)
 
 ### Automatic Comment Reflow
-Automatically reformat XML documentation comments to fit within a configurable line length (default: 120 characters). The extension intelligently wraps text while preserving XML structure.
+**Never manually wrap lines again.** The extension automatically reformats XML documentation comments to fit within a configurable line length (default: 120 characters). It intelligently wraps text while preserving XML structure—no more tedious manual formatting.
 
 ### Format Document Integration
-When you use **Format Document** (Ctrl+K, Ctrl+D) or **Format Selection** (Ctrl+K, Ctrl+F), all XML documentation comments in scope are automatically reflowed to your configured line length.
+**Reflow happens automatically.** When you use **Format Document** (Ctrl+K, Ctrl+D) or **Format Selection** (Ctrl+K, Ctrl+F), all XML documentation comments in scope are automatically reflowed to your configured line length.
 
 ### Smart Paste
-Paste text into an XML documentation comment, and the extension automatically reflows the entire comment block to maintain proper formatting.
+**Paste without breaking formatting.** Paste text into an XML documentation comment, and the extension automatically reflows the entire comment block to maintain proper formatting.
 
 ### Auto-Reflow While Typing
-As you type in an XML documentation comment, the extension automatically reflows the text when a line exceeds the maximum length. This happens seamlessly with a slight delay (300ms) after you stop typing, ensuring no characters are swallowed.
+**Stay in flow while writing.** As you type in an XML documentation comment, the extension automatically reflows the text when a line exceeds the maximum length. This happens seamlessly with a slight delay (300ms) after you stop typing, ensuring no characters are swallowed.
 
 ### Light Bulb Action
 Place your cursor inside any XML documentation comment and press **Ctrl+.** to see the "Reflow comment" action.
@@ -100,7 +111,7 @@ Works with C# and VB.NET XML documentation comments:
 - `/** */` block comments (C#)
 
 ### Color-coded Comment Tags
-Comment tags like TODO, HACK, NOTE, BUG, FIXME, UNDONE, and REVIEW are automatically highlighted with distinct colors, making them easy to spot in your code. Hover over any tag to see a tooltip explaining its semantic meaning.
+**Never miss a TODO again.** Comment tags like TODO, HACK, NOTE, BUG, FIXME, UNDONE, and REVIEW are automatically highlighted with distinct colors, making them impossible to overlook. Hover over any tag to see a tooltip explaining its semantic meaning.
 
 | Tag | Default Color | Description |
 |-----|---------------|-------------|
@@ -117,7 +128,7 @@ Colors can be customized via **Tools > Options > Environment > Fonts and Colors*
 ![Comment Tags](art/comment-tags.png)
 
 ### Clickable Issue Links
-Issue references like `#123` in comments automatically become clickable links to the issue on your hosting provider. The extension detects the Git remote URL and supports:
+**Jump to issues instantly.** Issue references like `#123` in comments automatically become clickable links to the issue on your hosting provider. No more copying issue numbers and searching manually. The extension detects the Git remote URL and supports:
 
 | Provider | Example Link |
 |----------|-------------|
@@ -172,13 +183,9 @@ Tag colors can be customized via **Tools > Options > Environment > Fonts and Col
 
 1. Install the extension from the Visual Studio Marketplace
 2. Open any C# or VB.NET file with XML documentation comments
-3. Use any of the following to reflow comments:
-   - **Format Document** (Ctrl+K, Ctrl+D)
-   - **Format Selection** (Ctrl+K, Ctrl+F)
-   - **Light Bulb** (Ctrl+.) → "Reflow XML Documentation Comment"
-   - **Paste** text into a comment block
-4. Use **Ctrl+M, Ctrl+C** to toggle comment visibility
-5. Use **Ctrl+M, Ctrl+R** to toggle rendered comment view
+3. **Try rendering modes** – Press **Ctrl+M, Ctrl+R** to see your comments rendered beautifully
+4. **Try reflow** – Edit a comment and use **Format Document** (Ctrl+K, Ctrl+D) to see automatic formatting
+5. **Try collapsing** – Press **Ctrl+M, Ctrl+C** to collapse all comments and focus on code
 
 ## Requirements
 
