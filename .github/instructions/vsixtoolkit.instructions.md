@@ -1,21 +1,45 @@
-# Visual Studio Extension Development Guidelines
+---
+description: 'Guidelines for Visual Studio extension (VSIX) development using Community.VisualStudio.Toolkit'
+applyTo: '**/*.cs, **/*.vsct, **/*.xaml, **/source.extension.vsixmanifest'
+---
 
-This document provides guidelines for GitHub Copilot when assisting with Visual Studio extension (VSIX) development using Community.VisualStudio.Toolkit.
+# Visual Studio Extension Development with Community.VisualStudio.Toolkit
 
 ## Scope
 
 **These instructions apply ONLY to Visual Studio extensions using `Community.VisualStudio.Toolkit`.**
 
-Before applying these guidelines, verify the project uses the toolkit by checking for:
-- `Community.VisualStudio.Toolkit.17` NuGet package reference
+Verify the project uses the toolkit by checking for:
+- `Community.VisualStudio.Toolkit.*` NuGet package reference
 - `ToolkitPackage` base class (not raw `AsyncPackage`)
 - `BaseCommand<T>` pattern for commands
 
-**If the project uses raw VSSDK (`AsyncPackage` directly) or the new `VisualStudio.Extensibility` model, these instructions do not apply.** Use standard VSSDK or VisualStudio.Extensibility patterns instead.
+**If the project uses raw VSSDK (`AsyncPackage` directly) or the new `VisualStudio.Extensibility` model, do not apply these instructions.**
+
+## Goals
+
+- Generate async-first, thread-safe extension code
+- Use toolkit abstractions (`VS.*` helpers, `BaseCommand<T>`, `BaseOptionModel<T>`)
+- Ensure all UI respects Visual Studio themes
+- Follow VSSDK and VSTHRD analyzer rules
+- Produce testable, maintainable extension code
+
+## Example Prompt Behaviors
+
+### ✅ Good Suggestions
+- "Create a command that opens the current file's containing folder using `BaseCommand<T>`"
+- "Add an options page with a boolean setting using `BaseOptionModel<T>`"
+- "Write a tagger provider for C# files that highlights TODO comments"
+- "Show a status bar progress indicator while processing files"
+
+### ❌ Avoid
+- Suggesting raw `AsyncPackage` instead of `ToolkitPackage`
+- Using `OleMenuCommandService` directly instead of `BaseCommand<T>`
+- Creating WPF elements without switching to UI thread first
+- Using `.Result`, `.Wait()`, or `Task.Run` for UI work
+- Hardcoding colors instead of using VS theme colors
 
 ## Project Structure
-
-Visual Studio extensions typically follow this structure:
 
 ```
 src/
@@ -54,7 +78,7 @@ global using Task = System.Threading.Tasks.Task;
 [InstalledProductRegistration(Vsix.Name, Vsix.Description, Vsix.Version)]
 [ProvideMenuResource("Menus.ctmenu", 1)]
 [Guid(PackageGuids.YourExtensionString)]
-[ProvideOptionPage(typeof(OptionsProvider.GeneralOptions), "ExtensionName", "General", 0, 0, true, SupportsProfiles = true)]
+[ProvideOptionPage(typeof(OptionsProvider.GeneralOptions), Vsix.Name, "General", 0, 0, true, SupportsProfiles = true)]
 public sealed class YourPackage : ToolkitPackage
 {
     protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
@@ -276,8 +300,6 @@ In VSCT:
 <CommandFlag>IconIsMoniker</CommandFlag>
 ```
 
-For custom icons, use **SVG** with `fill="currentColor"` for automatic theme tinting.
-
 ## Common VS SDK APIs
 
 ### VS Helper Methods (Community.VisualStudio.Toolkit)
@@ -486,37 +508,56 @@ In VSCT:
 
 ## Testing
 
-Extensions can use MSTest, xUnit, or NUnit. Key points:
-
 - Use `[VsTestMethod]` for tests requiring VS context
 - Mock VS services when possible
 - Test business logic separately from VS integration
 
-## Common Pitfalls to Avoid
+## Common Pitfalls
 
-1. **Don't block the UI thread** - Always use async/await
-2. **Don't create WPF elements on background threads** - Switch to UI thread first
-3. **Don't ignore cancellation tokens** - Pass them through async chains
-4. **Don't forget to update VSCommandTable.cs** - Must match VSCT symbols
-5. **Don't use hardcoded GUIDs** - Use `PackageGuids` and `PackageIds` constants
-6. **Don't swallow exceptions silently** - Log them appropriately
-7. **Don't forget DynamicVisibility** - Required for BeforeQueryStatus to work
-8. **Never use `.Result`, `.Wait()`, or `Task.Run` for UI work** - Causes deadlocks
-9. **Don't hardcode colors** - Use VS theme colors for all UI
-10. **Don't use `async void`** - Always use `async Task`
+| Pitfall | Solution |
+|---------|----------|
+| Blocking UI thread | Always use `async`/`await` |
+| Creating WPF on background thread | Call `SwitchToMainThreadAsync()` first |
+| Ignoring cancellation tokens | Pass them through async chains |
+| VSCommandTable.cs mismatch | Regenerate after VSCT changes |
+| Hardcoded GUIDs | Use `PackageGuids` and `PackageIds` constants |
+| Swallowing exceptions | Log with `await ex.LogAsync()` |
+| Missing DynamicVisibility | Required for `BeforeQueryStatus` to work |
+| Using `.Result`, `.Wait()` | Causes deadlocks; always `await` |
+| Hardcoded colors | Use VS theme colors (`EnvironmentColors`) |
+| `async void` methods | Use `async Task` instead |
 
-## Useful NuGet Packages
+## Validation
 
-- `Community.VisualStudio.Toolkit.17` - Simplifies VS extension development
-- `Microsoft.VisualStudio.SDK` - Core VS SDK
-- `Microsoft.VSSDK.BuildTools` - Build tools for VSIX
-- `Microsoft.VisualStudio.Threading.Analyzers` - Threading analyzers
-- `Microsoft.VisualStudio.SDK.Analyzers` - VSSDK analyzers
+Build and verify the extension:
+
+```bash
+msbuild /t:rebuild
+```
+
+Ensure analyzers are enabled in `.editorconfig`:
+
+```ini
+dotnet_diagnostic.VSSDK*.severity = error
+dotnet_diagnostic.VSTHRD*.severity = error
+```
+
+Test in VS Experimental Instance before release.
+
+## NuGet Packages
+
+| Package | Purpose |
+|---------|---------|
+| `Community.VisualStudio.Toolkit.17` | Simplifies VS extension development |
+| `Microsoft.VisualStudio.SDK` | Core VS SDK |
+| `Microsoft.VSSDK.BuildTools` | Build tools for VSIX |
+| `Microsoft.VisualStudio.Threading.Analyzers` | Threading analyzers |
+| `Microsoft.VisualStudio.SDK.Analyzers` | VSSDK analyzers |
 
 ## Resources
 
-- [Community.VisualStudio.Toolkit Documentation](https://github.com/VsixCommunity/Community.VisualStudio.Toolkit)
-- [Visual Studio Extensibility Documentation](https://learn.microsoft.com/en-us/visualstudio/extensibility/)
+- [Community.VisualStudio.Toolkit](https://github.com/VsixCommunity/Community.VisualStudio.Toolkit)
+- [VS Extensibility Docs](https://learn.microsoft.com/en-us/visualstudio/extensibility/)
 - [VSIX Community Samples](https://github.com/VsixCommunity/Samples)
 
 ## README and Marketplace Presentation
