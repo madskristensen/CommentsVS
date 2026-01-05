@@ -1,29 +1,41 @@
 {
   "$schema": "http://json.schemastore.org/vsix-publish",
-  "categories": [ "other" ],
+  "categories": [ "coding" ],
   "identity": {
-    "internalName": "Toon",
-    "tags": [ "toon", "AI", "copilot" ]
+    "internalName": "CommentsVS",
+    "tags": [ "comments", "xml", "documentation", "reflow", "outlining", "rendering" ]
   },
   "assetFiles": [
     {
-      "pathOnDisk": "art/colorizer.png",
-      "targetPath": "art/colorizer.png"
+      "pathOnDisk": "art/collapsed.png",
+      "targetPath": "art/collapsed.png"
     },
     {
-      "pathOnDisk": "art/error.png",
-      "targetPath": "art/error.png"
+      "pathOnDisk": "art/rendered-comments.png",
+      "targetPath": "art/rendered-comments.png"
     },
     {
-      "pathOnDisk": "art/nested.png",
-      "targetPath": "art/nested.png"
+      "pathOnDisk": "art/context-menu.png",
+      "targetPath": "art/context-menu.png"
     },
     {
-      "pathOnDisk": "art/sync.png",
-      "targetPath": "art/sync.png"
+      "pathOnDisk": "art/lightbulb.png",
+      "targetPath": "art/lightbulb.png"
+    },
+    {
+      "pathOnDisk": "art/comment-tags.png",
+      "targetPath": "art/comment-tags.png"
+    },
+    {
+      "pathOnDisk": "art/issue-links.png",
+      "targetPath": "art/issue-links.png"
+    },
+    {
+      "pathOnDisk": "art/options.png",
+      "targetPath": "art/options.png"
     }
   ],
   "overview": "README.md",
   "publisher": "MadsKristensen",
-  "repo": "https://github.com/MadsKristensen/ToonVS"
+  "repo": "https://github.com/madskristensen/CommentsVS"
 }

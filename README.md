@@ -5,6 +5,9 @@
 # Modern Comments for Visual Studio
 
 [![Build](https://github.com/madskristensen/CommentsVS/actions/workflows/build.yaml/badge.svg)](https://github.com/madskristensen/CommentsVS/actions/workflows/build.yaml)
+[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/MadsKristensen.CommentsVS?label=VS%20Marketplace)][marketplace]
+[![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/MadsKristensen.CommentsVS)][marketplace]
+[![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/MadsKristensen.CommentsVS)][marketplace]
 
 Download this extension from the [Visual Studio Marketplace][marketplace]
 or get the [CI build][vsixgallery].
@@ -46,12 +49,16 @@ View XML documentation comments in a clean, rendered format without the XML synt
 
 Use **Ctrl+M, Ctrl+R** to toggle between rendering modes. This is great for reading documentation without the visual clutter of XML tags.
 
+![Rendered Comments](art/rendered-comments.png)
+
 ### Context Menu Access
 Right-click in any C#, VB, or C++ code editor to access the **Comments** submenu with quick access to:
 - **Collapse XML Doc Comments by Default** - Toggle automatic collapsing (only when rendering is Off)
 - **Rendering: Off / Compact / Full** - Switch between rendering modes
 
 The same menu is also available from the **Edit** menu.
+
+![Context Menu](art/context-menu.png)
 
 ### Automatic Comment Reflow
 Automatically reformat XML documentation comments to fit within a configurable line length (default: 120 characters). The extension intelligently wraps text while preserving XML structure.
@@ -72,11 +79,13 @@ Place your cursor inside any XML documentation comment and press **Ctrl+.** to s
 
 ### Compact Style Formatting
 Short summaries stay on a single line for compactness:
+
 ```csharp
 /// <summary>Gets the name.</summary>
 ```
 
 Longer content automatically expands to multi-line format:
+
 ```csharp
 /// <summary>
 /// Gets the full name of the user including first name, middle name,
@@ -105,6 +114,8 @@ Comment tags like TODO, HACK, NOTE, BUG, FIXME, UNDONE, and REVIEW are automatic
 
 Colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - [TAG]" entries.
 
+![Comment Tags](art/comment-tags.png)
+
 ### Clickable Issue Links
 Issue references like `#123` in comments automatically become clickable links to the issue on your hosting provider. The extension detects the Git remote URL and supports:
 
@@ -116,6 +127,8 @@ Issue references like `#123` in comments automatically become clickable links to
 | Azure DevOps | `https://dev.azure.com/org/project/_workitems/edit/123` |
 
 **Ctrl+Click** on any `#123` reference in a comment to open the issue in your browser. Hover over the reference to see a tooltip with the full URL.
+
+![Issue Links](art/issue-links.png)
 
 ## Options
 
@@ -147,6 +160,8 @@ Configure the extension behavior via **Tools > Options > CommentsVS**.
 | Enable Comment Tag Highlighting | On | Enable/disable tag highlighting |
 
 Tag colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - [TAG]" entries.
+
+![Options](art/options.png)
 
 ### Issue Links
 | Setting | Default | Description |
