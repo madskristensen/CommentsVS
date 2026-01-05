@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -11,6 +12,7 @@ using CommentsVS.Options;
 using CommentsVS.Services;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Outlining;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
@@ -42,6 +44,9 @@ namespace CommentsVS.Adornments
     [TextViewRole(PredefinedTextViewRoles.Document)]
     internal sealed class RenderedCommentIntraTextTaggerProvider : IViewTaggerProvider
     {
+        [Import]
+        internal IOutliningManagerService OutliningManagerService { get; set; }
+
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
             if (textView == null || !(textView is IWpfTextView wpfTextView))
@@ -50,23 +55,35 @@ namespace CommentsVS.Adornments
             if (textView.TextBuffer != buffer)
                 return null;
 
+            var outliningManager = OutliningManagerService?.GetOutliningManager(textView);
+
             return wpfTextView.Properties.GetOrCreateSingletonProperty(
-                () => new RenderedCommentIntraTextTagger(wpfTextView)) as ITagger<T>;
+                () => new RenderedCommentIntraTextTagger(wpfTextView, outliningManager)) as ITagger<T>;
         }
     }
 
     internal sealed class RenderedCommentIntraTextTagger : IntraTextAdornmentTagger<XmlDocCommentBlock, FrameworkElement>
     {
         private readonly HashSet<int> _temporarilyHiddenComments = new HashSet<int>();
+        private readonly IOutliningManager _outliningManager;
         private int? _lastCaretLine;
 
-        public RenderedCommentIntraTextTagger(IWpfTextView view) : base(view)
+        public RenderedCommentIntraTextTagger(IWpfTextView view, IOutliningManager outliningManager) : base(view)
         {
+            _outliningManager = outliningManager;
+
             ToggleRenderedCommentsCommand.RenderedCommentsStateChanged += OnRenderedStateChanged;
             view.Caret.PositionChanged += OnCaretPositionChanged;
 
             // Listen for zoom level changes to refresh adornments with new font size
             view.ZoomLevelChanged += OnZoomLevelChanged;
+
+            // Listen for outlining expand/collapse to toggle raw source view
+            if (_outliningManager != null)
+            {
+                _outliningManager.RegionsExpanded += OnRegionsExpanded;
+                _outliningManager.RegionsCollapsed += OnRegionsCollapsed;
+            }
 
             // Hook into keyboard events at multiple levels
             view.VisualElement.PreviewKeyDown += OnViewKeyDown;
@@ -80,6 +97,89 @@ namespace CommentsVS.Adornments
 
             // Store tagger in view properties so command handler can find it
             view.Properties[typeof(RenderedCommentIntraTextTagger)] = this;
+        }
+
+        private void OnRegionsExpanded(object sender, RegionsExpandedEventArgs e)
+        {
+            var renderingMode = General.Instance.CommentRenderingMode;
+            if (renderingMode != RenderingMode.Compact && renderingMode != RenderingMode.Full)
+            {
+                return;
+            }
+
+            // When outlining region is expanded, show raw source (hide rendered adornment)
+            var snapshot = view.TextBuffer.CurrentSnapshot;
+            var commentStyle = LanguageCommentStyle.GetForContentType(snapshot.ContentType);
+            if (commentStyle == null)
+            {
+                return;
+            }
+
+            var parser = new XmlDocCommentParser(commentStyle);
+            var blocks = parser.FindAllCommentBlocks(snapshot);
+
+            foreach (var region in e.ExpandedRegions)
+            {
+                var regionSpan = region.Extent.GetSpan(snapshot);
+                foreach (var block in blocks)
+                {
+                    var blockSpan = new SnapshotSpan(snapshot, block.Span);
+                    if (regionSpan.IntersectsWith(blockSpan))
+                    {
+                        _temporarilyHiddenComments.Add(block.StartLine);
+                    }
+                }
+            }
+
+            DeferredRefreshTags();
+        }
+
+        private void OnRegionsCollapsed(object sender, RegionsCollapsedEventArgs e)
+        {
+            var renderingMode = General.Instance.CommentRenderingMode;
+            if (renderingMode != RenderingMode.Compact && renderingMode != RenderingMode.Full)
+            {
+                return;
+            }
+
+            // When outlining region is collapsed, re-show rendered adornment
+            var snapshot = view.TextBuffer.CurrentSnapshot;
+            var commentStyle = LanguageCommentStyle.GetForContentType(snapshot.ContentType);
+            if (commentStyle == null)
+            {
+                return;
+            }
+
+            var parser = new XmlDocCommentParser(commentStyle);
+            var blocks = parser.FindAllCommentBlocks(snapshot);
+
+            foreach (var region in e.CollapsedRegions)
+            {
+                var regionSpan = region.Extent.GetSpan(snapshot);
+                foreach (var block in blocks)
+                {
+                    var blockSpan = new SnapshotSpan(snapshot, block.Span);
+                    if (regionSpan.IntersectsWith(blockSpan))
+                    {
+                        _temporarilyHiddenComments.Remove(block.StartLine);
+                    }
+                }
+            }
+
+            DeferredRefreshTags();
+        }
+
+        private void DeferredRefreshTags()
+        {
+#pragma warning disable VSTHRD001, VSTHRD110 // Intentional fire-and-forget for UI update
+            view.VisualElement.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!view.IsClosed)
+                {
+                    RefreshTags();
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+#pragma warning restore VSTHRD001, VSTHRD110
         }
 
         private void OnZoomLevelChanged(object sender, ZoomLevelChangedEventArgs e)
@@ -179,8 +279,8 @@ namespace CommentsVS.Adornments
                         var blocks = parser.FindAllCommentBlocks(snapshot);
 
                         // Find which comments should be re-enabled
-                        var toReEnable = new List<int>();
-                        foreach (var hiddenLine in _temporarilyHiddenComments)
+                        var blocksToReEnable = new List<XmlDocCommentBlock>();
+                        foreach (var hiddenLine in _temporarilyHiddenComments.ToList())
                         {
                             var block = blocks.FirstOrDefault(b => b.StartLine == hiddenLine);
                             if (block != null)
@@ -188,29 +288,22 @@ namespace CommentsVS.Adornments
                                 // Check if caret is outside this comment's range
                                 if (currentLine < block.StartLine || currentLine > block.EndLine)
                                 {
-                                    toReEnable.Add(hiddenLine);
+                                    blocksToReEnable.Add(block);
+                                    _temporarilyHiddenComments.Remove(hiddenLine);
                                 }
                             }
                         }
 
                         // Re-enable rendering for comments the caret moved away from
-                        if (toReEnable.Count > 0)
+                        if (blocksToReEnable.Count > 0)
                         {
-                            foreach (var line in toReEnable)
+                            // Collapse any expanded outlining regions for these comments
+                            foreach (var block in blocksToReEnable)
                             {
-                                _temporarilyHiddenComments.Remove(line);
+                                CollapseOutliningRegion(block, snapshot);
                             }
 
-                            // Defer the refresh to avoid layout exceptions
-#pragma warning disable VSTHRD001, VSTHRD110 // Intentional fire-and-forget for UI update
-                            view.VisualElement.Dispatcher.BeginInvoke(new Action(() =>
-                            {
-                                if (!view.IsClosed)
-                                {
-                                    RefreshTags();
-                                }
-                            }), System.Windows.Threading.DispatcherPriority.Background);
-#pragma warning restore VSTHRD001, VSTHRD110
+                            DeferredRefreshTags();
                         }
                     }
                 }
@@ -344,11 +437,15 @@ namespace CommentsVS.Adornments
         private FrameworkElement CreateCompactModeAdornment(XmlDocCommentBlock block, double fontSize,
             FontFamily fontFamily, Brush textBrush, double indentMargin)
         {
-            // Compact: single line with stripped summary
+            // Compact: single line with stripped summary, truncated at 100 chars
             var strippedSummary = XmlDocCommentRenderer.GetStrippedSummary(block);
             if (string.IsNullOrWhiteSpace(strippedSummary))
             {
                 strippedSummary = "...";
+            }
+            else if (strippedSummary.Length > 100)
+            {
+                strippedSummary = strippedSummary.Substring(0, 97) + "...";
             }
 
             var textBlock = new TextBlock
@@ -361,8 +458,12 @@ namespace CommentsVS.Adornments
                 TextWrapping = TextWrapping.NoWrap,
                 VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(indentMargin, 0, 0, 0),
-                ToolTip = CreateTooltip(block)
+                ToolTip = CreateTooltip(block),
+                Cursor = Cursors.Hand
             };
+
+            // Double-click to switch to raw source mode for editing
+            AttachDoubleClickHandler(textBlock, block);
 
             return textBlock;
         }
@@ -389,20 +490,24 @@ namespace CommentsVS.Adornments
                 Margin = new Thickness(indentMargin, 0, 0, 0)
             };
 
-            // Summary line (semibold for emphasis)
+            // Summary lines (semibold for emphasis), word wrapped at 100 chars
             var summary = XmlDocCommentRenderer.GetStrippedSummary(block);
             if (!string.IsNullOrWhiteSpace(summary))
             {
-                panel.Children.Add(new TextBlock
+                var wrappedLines = WordWrap(summary, 100);
+                for (int i = 0; i < wrappedLines.Count; i++)
                 {
-                    Text = summary,
-                    FontFamily = fontFamily,
-                    FontSize = fontSize,
-                    FontWeight = FontWeights.SemiBold,
-                    Foreground = textBrush,
-                    TextWrapping = TextWrapping.NoWrap,
-                    Margin = new Thickness(0, 0, 0, lineHeight * 0.3) // Spacing after summary
-                });
+                    panel.Children.Add(new TextBlock
+                    {
+                        Text = wrappedLines[i],
+                        FontFamily = fontFamily,
+                        FontSize = fontSize,
+                        FontWeight = FontWeights.SemiBold,
+                        Foreground = textBrush,
+                        TextWrapping = TextWrapping.NoWrap,
+                        Margin = new Thickness(0, 0, 0, i == wrappedLines.Count - 1 ? lineHeight * 0.3 : 0)
+                    });
+                }
             }
 
             // Group params and type params
@@ -450,7 +555,51 @@ namespace CommentsVS.Adornments
                 AddSectionLine(panel, otherSections[i], fontSize, fontFamily, textBrush, headingBrush, lineHeight);
             }
 
+            // Double-click anywhere on the panel to switch to raw source mode for editing
+            panel.Cursor = Cursors.Hand;
+            AttachDoubleClickHandler(panel, block);
+
             return panel;
+        }
+
+        /// <summary>
+        /// Word wraps text at the specified maximum line length.
+        /// </summary>
+        private static List<string> WordWrap(string text, int maxLineLength)
+        {
+            var lines = new List<string>();
+            if (string.IsNullOrEmpty(text))
+            {
+                return lines;
+            }
+
+            var words = text.Split(' ');
+            var currentLine = new StringBuilder();
+
+            foreach (var word in words)
+            {
+                if (currentLine.Length == 0)
+                {
+                    currentLine.Append(word);
+                }
+                else if (currentLine.Length + 1 + word.Length <= maxLineLength)
+                {
+                    currentLine.Append(' ').Append(word);
+                }
+                else
+                {
+                    lines.Add(currentLine.ToString());
+                    currentLine.Clear();
+                    currentLine.Append(word);
+                }
+            }
+
+            if (currentLine.Length > 0)
+            {
+                lines.Add(currentLine.ToString());
+            }
+
+            return lines;
         }
 
         private static FrameworkElement CreateSpacer(double height)
@@ -462,26 +611,54 @@ namespace CommentsVS.Adornments
             double fontSize, FontFamily fontFamily, Brush textBrush, Brush headingBrush, double lineHeight)
         {
             var content = GetSectionContent(section);
+            var name = section.Name ?? "";
+            var prefix = "• " + name + " — ";
+            var fullText = prefix + content;
 
-            var textBlock = new TextBlock
+            // Word wrap at 100 chars
+            var wrappedLines = WordWrap(fullText, 100);
+            
+            for (int i = 0; i < wrappedLines.Count; i++)
             {
-                FontFamily = fontFamily,
-                FontSize = fontSize,
-                Foreground = textBrush,
-                TextWrapping = TextWrapping.NoWrap,
-                Margin = new Thickness(0, 0, 0, lineHeight * 0.1) // Small spacing between params
-            };
+                var textBlock = new TextBlock
+                {
+                    FontFamily = fontFamily,
+                    FontSize = fontSize,
+                    Foreground = textBrush,
+                    TextWrapping = TextWrapping.NoWrap,
+                    Margin = new Thickness(i > 0 ? fontSize * 1.5 : 0, 0, 0, i == wrappedLines.Count - 1 ? lineHeight * 0.1 : 0)
+                };
 
-            // Bullet + name (bold) + description
-            textBlock.Inlines.Add(new Run("• ") { Foreground = textBrush });
-            textBlock.Inlines.Add(new Run(section.Name ?? "")
-            {
-                Foreground = headingBrush,
-                FontWeight = FontWeights.SemiBold
-            });
-            textBlock.Inlines.Add(new Run(" — " + content) { Foreground = textBrush });
+                var lineText = wrappedLines[i];
+                
+                if (i == 0)
+                {
+                    // First line has bullet, name (bold), and start of content
+                    textBlock.Inlines.Add(new Run("• ") { Foreground = textBrush });
+                    textBlock.Inlines.Add(new Run(name)
+                    {
+                        Foreground = headingBrush,
+                        FontWeight = FontWeights.SemiBold
+                    });
+                    // Get the content part after the prefix
+                    var contentStart = prefix.Length;
+                    if (lineText.Length > contentStart)
+                    {
+                        textBlock.Inlines.Add(new Run(" — " + lineText.Substring(contentStart)) { Foreground = textBrush });
+                    }
+                    else if (content.Length > 0)
+                    {
+                        textBlock.Inlines.Add(new Run(" — ") { Foreground = textBrush });
+                    }
+                }
+                else
+                {
+                    // Continuation lines are plain text
+                    textBlock.Text = lineText;
+                }
 
-            panel.Children.Add(textBlock);
+                panel.Children.Add(textBlock);
+            }
         }
 
         private static void AddSectionLine(StackPanel panel, RenderedCommentSection section,
@@ -489,25 +666,46 @@ namespace CommentsVS.Adornments
         {
             var content = GetSectionContent(section);
             var heading = GetSectionHeading(section);
+            var fullText = heading + " " + content;
 
-            var textBlock = new TextBlock
+            // Word wrap at 100 chars
+            var wrappedLines = WordWrap(fullText, 100);
+
+            for (int i = 0; i < wrappedLines.Count; i++)
             {
-                FontFamily = fontFamily,
-                FontSize = fontSize,
-                Foreground = textBrush,
-                TextWrapping = TextWrapping.NoWrap,
-                Margin = new Thickness(0, 0, 0, lineHeight * 0.1) // Small spacing between sections
-            };
+                var textBlock = new TextBlock
+                {
+                    FontFamily = fontFamily,
+                    FontSize = fontSize,
+                    Foreground = textBrush,
+                    TextWrapping = TextWrapping.NoWrap,
+                    Margin = new Thickness(i > 0 ? fontSize * 1.5 : 0, 0, 0, i == wrappedLines.Count - 1 ? lineHeight * 0.1 : 0)
+                };
 
-            // Heading (bold) + content
-            textBlock.Inlines.Add(new Run(heading)
-            {
-                Foreground = headingBrush,
-                FontWeight = FontWeights.SemiBold
-            });
-            textBlock.Inlines.Add(new Run(" " + content) { Foreground = textBrush });
+                var lineText = wrappedLines[i];
 
-            panel.Children.Add(textBlock);
+                if (i == 0 && !string.IsNullOrEmpty(heading))
+                {
+                    // First line has heading (bold) and start of content
+                    textBlock.Inlines.Add(new Run(heading)
+                    {
+                        Foreground = headingBrush,
+                        FontWeight = FontWeights.SemiBold
+                    });
+                    var contentStart = heading.Length + 1; // +1 for space
+                    if (lineText.Length > contentStart)
+                    {
+                        textBlock.Inlines.Add(new Run(" " + lineText.Substring(contentStart)) { Foreground = textBrush });
+                    }
+                }
+                else
+                {
+                    // Continuation lines or lines without heading
+                    textBlock.Text = lineText;
+                }
+
+                panel.Children.Add(textBlock);
+            }
         }
 
         private static string GetSectionHeading(RenderedCommentSection section)
@@ -542,6 +740,116 @@ namespace CommentsVS.Adornments
         {
             // Always recreate to pick up font size changes
             return false;
+        }
+
+        /// <summary>
+        /// Attaches a double-click handler to switch the comment into raw source mode for editing.
+        /// </summary>
+        private void AttachDoubleClickHandler(FrameworkElement element, XmlDocCommentBlock block)
+        {
+            element.MouseLeftButtonDown += (sender, e) =>
+            {
+                if (e.ClickCount == 2)
+                {
+                    e.Handled = true;
+                    SwitchToRawSourceMode(block);
+                }
+            };
+        }
+
+        /// <summary>
+        /// Switches a specific comment to raw source mode and positions the caret at the start.
+        /// </summary>
+        private void SwitchToRawSourceMode(XmlDocCommentBlock block)
+        {
+            // Hide the rendered adornment
+            HideCommentRendering(block.StartLine);
+
+            // Position the caret at the start of the comment block
+            var snapshot = view.TextBuffer.CurrentSnapshot;
+            var startLine = snapshot.GetLineFromLineNumber(block.StartLine);
+            var caretPosition = new SnapshotPoint(snapshot, startLine.Start.Position + block.Indentation.Length);
+
+            // Expand any collapsed outlining regions that contain this comment
+            ExpandOutliningRegion(block, snapshot);
+
+            // Defer caret positioning to ensure the adornment is removed first
+#pragma warning disable VSTHRD001, VSTHRD110 // Intentional fire-and-forget for UI update
+            view.VisualElement.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!view.IsClosed)
+                {
+                    view.Caret.MoveTo(caretPosition);
+                    view.ViewScroller.EnsureSpanVisible(new SnapshotSpan(caretPosition, 0));
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+#pragma warning restore VSTHRD001, VSTHRD110
+        }
+
+        /// <summary>
+        /// Expands any collapsed outlining regions that contain the comment block.
+        /// </summary>
+        private void ExpandOutliningRegion(XmlDocCommentBlock block, ITextSnapshot snapshot)
+        {
+            if (_outliningManager == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var blockSpan = new SnapshotSpan(snapshot, block.Span);
+                var collapsedRegions = _outliningManager.GetCollapsedRegions(blockSpan);
+
+                foreach (var region in collapsedRegions)
+                {
+                    _outliningManager.Expand(region);
+                }
+            }
+            catch
+            {
+                // Ignore errors when expanding regions
+            }
+        }
+
+        /// <summary>
+        /// Collapses any expanded outlining regions that correspond to the comment block.
+        /// </summary>
+        private void CollapseOutliningRegion(XmlDocCommentBlock block, ITextSnapshot snapshot)
+        {
+            if (_outliningManager == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var blockSpan = new SnapshotSpan(snapshot, block.Span);
+                var allRegions = _outliningManager.GetAllRegions(blockSpan);
+
+                foreach (var region in allRegions)
+                {
+                    // Only collapse regions that match the comment block (not parent regions like class/method)
+                    var regionSpan = region.Extent.GetSpan(snapshot);
+                    
+                    // Check if this region approximately matches the comment block
+                    // (allowing for slight differences in span boundaries)
+                    var regionStartLine = snapshot.GetLineNumberFromPosition(regionSpan.Start);
+                    var regionEndLine = snapshot.GetLineNumberFromPosition(regionSpan.End);
+                    
+                    if (regionStartLine == block.StartLine && regionEndLine == block.EndLine)
+                    {
+                        if (!region.IsCollapsed)
+                        {
+                            _outliningManager.TryCollapse(region);
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors when collapsing regions
+            }
         }
 
         private void HideCommentRendering(int startLine)
