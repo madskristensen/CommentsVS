@@ -172,7 +172,7 @@ namespace CommentsVS.QuickInfo
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 await VS.Commands.ExecuteAsync("View.TaskList");
-            }).FireAndForget();
+            });
         }
     }
 }
