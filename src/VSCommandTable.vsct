@@ -7,12 +7,35 @@
   <Include href="VSGlobals.vsct"/>
 
   <Commands package="CommentsVS">
+    <Menus>
+      <!-- Submenu flyout for Comments settings -->
+      <Menu guid="CommentsVS" id="CommentsSubMenu" priority="0x0100" type="Menu">
+        <Parent guid="CommentsVS" id="CommentsSubMenuGroup"/>
+        <Strings>
+          <ButtonText>Comments</ButtonText>
+          <CommandName>Comments</CommandName>
+        </Strings>
+      </Menu>
+    </Menus>
+
     <Groups>
       <Group guid="CommentsVS" id="MyMenuGroup" priority="0x0900">
         <Parent guid="VSEditor" id="Edit.LanguageInfoGroup.Advanced"/>
       </Group>
       <Group guid="CommentsVS" id="ToolbarGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_TOOL_STANDARD"/>
+      </Group>
+      <!-- Group containing the submenu - placed in context menus -->
+      <Group guid="CommentsVS" id="CommentsSubMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN"/>
+      </Group>
+      <!-- Group for toggle commands inside submenu -->
+      <Group guid="CommentsVS" id="CommentsToggleGroup" priority="0x0100">
+        <Parent guid="CommentsVS" id="CommentsSubMenu"/>
+      </Group>
+      <!-- Group for rendering mode commands inside submenu -->
+      <Group guid="CommentsVS" id="CommentsRenderingGroup" priority="0x0200">
+        <Parent guid="CommentsVS" id="CommentsSubMenu"/>
       </Group>
     </Groups>
 
@@ -41,12 +64,56 @@
           <ToolTipText>Toggle rendered view of XML documentation comments (Ctrl+M, Ctrl+R)</ToolTipText>
         </Strings>
       </Button>
+      <!-- Collapse by Default toggle in submenu -->
+      <Button guid="CommentsVS" id="ToggleCollapseByDefault" priority="0x0100" type="Button">
+        <Parent guid="CommentsVS" id="CommentsToggleGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Collapse XML Doc Comments by Default</ButtonText>
+          <CanonicalName>.CommentsVS.ToggleCollapseByDefault</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ToggleCollapseByDefault</LocCanonicalName>
+        </Strings>
+      </Button>
+      <!-- Rendering Mode: Off -->
+      <Button guid="CommentsVS" id="SetRenderingModeOff" priority="0x0100" type="Button">
+        <Parent guid="CommentsVS" id="CommentsRenderingGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Rendering: Off</ButtonText>
+          <CanonicalName>.CommentsVS.SetRenderingModeOff</CanonicalName>
+          <LocCanonicalName>.CommentsVS.SetRenderingModeOff</LocCanonicalName>
+        </Strings>
+      </Button>
+      <!-- Rendering Mode: Compact -->
+      <Button guid="CommentsVS" id="SetRenderingModeCompact" priority="0x0101" type="Button">
+        <Parent guid="CommentsVS" id="CommentsRenderingGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Rendering: Compact</ButtonText>
+          <CanonicalName>.CommentsVS.SetRenderingModeCompact</CanonicalName>
+          <LocCanonicalName>.CommentsVS.SetRenderingModeCompact</LocCanonicalName>
+        </Strings>
+      </Button>
+      <!-- Rendering Mode: Full -->
+      <Button guid="CommentsVS" id="SetRenderingModeFull" priority="0x0102" type="Button">
+        <Parent guid="CommentsVS" id="CommentsRenderingGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Rendering: Full</ButtonText>
+          <CanonicalName>.CommentsVS.SetRenderingModeFull</CanonicalName>
+          <LocCanonicalName>.CommentsVS.SetRenderingModeFull</LocCanonicalName>
+        </Strings>
+      </Button>
     </Buttons>
   </Commands>
 
   <CommandPlacements>
     <CommandPlacement guid="CommentsVS" id="ToggleCommentVisibility" priority="0x0100">
       <Parent guid="CommentsVS" id="ToolbarGroup"/>
+    </CommandPlacement>
+    <!-- Place the submenu group on Edit menu -->
+    <CommandPlacement guid="CommentsVS" id="CommentsSubMenuGroup" priority="0x0900">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_EDIT"/>
     </CommandPlacement>
   </CommandPlacements>
 
@@ -59,8 +126,16 @@
     <GuidSymbol name="CommentsVS" value="{77a569d5-61e8-47ce-9e0f-9477ca6922d4}">
       <IDSymbol name="MyMenuGroup" value="0x0001" />
       <IDSymbol name="ToolbarGroup" value="0x0002" />
+      <IDSymbol name="CommentsSubMenu" value="0x0003" />
+      <IDSymbol name="CommentsSubMenuGroup" value="0x0004" />
+      <IDSymbol name="CommentsToggleGroup" value="0x0005" />
+      <IDSymbol name="CommentsRenderingGroup" value="0x0006" />
       <IDSymbol name="ToggleCommentVisibility" value="0x0200" />
       <IDSymbol name="ToggleRenderedComments" value="0x0201" />
+      <IDSymbol name="ToggleCollapseByDefault" value="0x0202" />
+      <IDSymbol name="SetRenderingModeOff" value="0x0203" />
+      <IDSymbol name="SetRenderingModeCompact" value="0x0204" />
+      <IDSymbol name="SetRenderingModeFull" value="0x0205" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

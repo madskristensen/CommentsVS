@@ -58,7 +58,7 @@ namespace CommentsVS.Commands
         /// if the "Collapsed by Default" setting is enabled. This forces VS to regenerate
         /// the collapsed text based on the current rendering mode.
         /// </summary>
-        private static async Task ExpandAndRecollapseXmlDocCommentsAsync()
+        internal static async Task ExpandAndRecollapseXmlDocCommentsAsync()
         {
             DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();
             if (docView?.TextView == null)

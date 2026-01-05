@@ -50,6 +50,8 @@
     <Compile Include="Adornments\RenderedCommentIntraTextTagger.cs" />
     <Compile Include="Classification\CommentTagClassifier.cs" />
     <Compile Include="Classification\CommentTagFormatDefinitions.cs" />
+    <Compile Include="Commands\SetRenderingModeCommand.cs" />
+    <Compile Include="Commands\ToggleCollapseByDefaultCommand.cs" />
     <Compile Include="Commands\ToggleCommentVisibilityCommand.cs" />
     <Compile Include="Commands\ToggleRenderedCommentsCommand.cs" />
     <Compile Include="Handlers\EscapeKeyHandler.cs" />
