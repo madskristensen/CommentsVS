@@ -83,9 +83,19 @@ namespace CommentsVS.QuickInfo
             // Render the comment in full format
             RenderedComment renderedComment = XmlDocCommentRenderer.Render(block);
             
-            // Only show tooltip if there's meaningful content beyond just a summary
-            // (single-line summaries are already fully visible in the inline display)
-            if (!renderedComment.HasAdditionalSections)
+            // Only show tooltip if there's content not visible in compact inline view:
+            // 1. Additional sections beyond summary (params, returns, remarks, etc.)
+            // 2. Summary was truncated (>100 chars in compact mode)
+            // 3. Summary has list content not shown inline
+            bool hasAdditionalSections = renderedComment.HasAdditionalSections;
+            
+            string strippedSummary = XmlDocCommentRenderer.GetStrippedSummary(block);
+            bool summaryTruncated = !string.IsNullOrEmpty(strippedSummary) && strippedSummary.Length > 100;
+            
+            RenderedCommentSection summarySection = renderedComment.Summary;
+            bool summaryHasListContent = summarySection != null && summarySection.ListContentStartIndex >= 0;
+
+            if (!hasAdditionalSections && !summaryTruncated && !summaryHasListContent)
             {
                 return Task.FromResult<QuickInfoItem>(null);
             }
