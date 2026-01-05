@@ -181,17 +181,31 @@ namespace CommentsVS.Services
 
         private static void PopulateLinesFromSections(RenderedComment result)
         {
-            var first = true;
+            var isFirst = true;
+            RenderedCommentSection previousSection = null;
+
             foreach (RenderedCommentSection section in result.Sections)
             {
                 if (section.IsEmpty)
                     continue;
 
-                if (!first)
+                if (!isFirst)
                 {
-                    result.Lines.Add(new RenderedLine()); // blank line between sections
+                    // Add extra padding between sections for better readability
+                    // More space before major sections like Remarks, Example
+                    var needsExtraPadding = section.Type == CommentSectionType.Remarks
+                        || section.Type == CommentSectionType.Example
+                        || section.Type == CommentSectionType.SeeAlso
+                        || (previousSection != null && previousSection.Type == CommentSectionType.Summary);
+
+                    result.Lines.Add(new RenderedLine()); // First blank line
+                    if (needsExtraPadding)
+                    {
+                        result.Lines.Add(new RenderedLine()); // Extra blank line for visual separation
+                    }
                 }
-                first = false;
+
+                isFirst = false;
 
                 // Add heading if present (but not for summary)
                 if (!string.IsNullOrEmpty(section.Heading) && section.Type != CommentSectionType.Summary)
@@ -199,12 +213,20 @@ namespace CommentsVS.Services
                     var headingLine = new RenderedLine();
                     headingLine.Segments.Add(new RenderedSegment(section.Heading, RenderedSegmentType.Heading));
                     result.Lines.Add(headingLine);
+
+                    // Add a small gap after the heading before content
+                    if (section.Lines.Count > 0 && !section.Lines[0].IsBlank)
+                    {
+                        result.Lines.Add(new RenderedLine());
+                    }
                 }
 
                 foreach (RenderedLine line in section.Lines)
                 {
                     result.Lines.Add(line);
                 }
+
+                previousSection = section;
             }
         }
 
@@ -567,6 +589,12 @@ namespace CommentsVS.Services
                 section.ListContentStartIndex = section.Lines.Count;
             }
 
+            // Add blank line before list for visual separation (if there's preceding content)
+            if (section.Lines.Count > 0 && !section.Lines[section.Lines.Count - 1].IsBlank)
+            {
+                section.Lines.Add(new RenderedLine());
+            }
+
             var listType = element.GetAttribute("type");
             var itemNumber = 1;
 
@@ -575,7 +603,7 @@ namespace CommentsVS.Services
                 if (child is System.Xml.XmlElement itemElement && itemElement.Name.ToLowerInvariant() == "item")
                 {
                     var line = new RenderedLine();
-                    var bullet = listType == "number" ? $"{itemNumber++}. " : "• ";
+                    var bullet = listType == "number" ? $"{itemNumber++}. " : "  • ";
                     line.Segments.Add(new RenderedSegment(bullet));
 
                     // Get term and description if present
@@ -599,6 +627,9 @@ namespace CommentsVS.Services
                     section.Lines.Add(line);
                 }
             }
+
+            // Add blank line after list for visual separation
+            section.Lines.Add(new RenderedLine());
         }
 
         private static void RenderBold(System.Xml.XmlElement element, RenderedCommentSection section)
