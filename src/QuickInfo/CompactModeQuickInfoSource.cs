@@ -69,17 +69,14 @@ namespace CommentsVS.QuickInfo
 
             // Only show tooltip if there's content not visible in compact inline view:
             // 1. Additional sections beyond summary (params, returns, remarks, etc.)
-            // 2. Summary was truncated (>100 chars in compact mode)
-            // 3. Summary has list content not shown inline
+            // 2. Summary has list content not shown inline
+            // Note: Summary is no longer truncated - it word-wraps in compact mode
             var hasAdditionalSections = renderedComment.HasAdditionalSections;
-
-            var strippedSummary = XmlDocCommentRenderer.GetStrippedSummary(block);
-            var summaryTruncated = !string.IsNullOrEmpty(strippedSummary) && strippedSummary.Length > 100;
 
             RenderedCommentSection summarySection = renderedComment.Summary;
             var summaryHasListContent = summarySection != null && summarySection.ListContentStartIndex >= 0;
 
-            if (!hasAdditionalSections && !summaryTruncated && !summaryHasListContent)
+            if (!hasAdditionalSections && !summaryHasListContent)
             {
                 return null;
             }

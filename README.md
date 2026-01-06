@@ -18,6 +18,18 @@ or get the [CI build][vsixgallery].
 
 ![Collapsed Comments](art/collapsed.png)
 
+## ✨ Key Features at a Glance
+
+- **Rendered Comments** — View XML docs as clean, formatted text (no XML noise)
+- **Markdown Support** — Use `**bold**`, `*italic*`, `` `code` ``, and `[links](url)` in comments
+- **Auto-Reflow** — Automatically wrap comments to your preferred line length
+- **Collapse/Expand** — Hide comment blocks to focus on code, expand when needed
+- **Color-coded Tags** — TODO, HACK, BUG, FIXME, NOTE highlighted in distinct colors
+- **Clickable Issues** — `#123` links directly to GitHub/GitLab/Azure DevOps issues
+- **Theme-aware** — Works with light and dark Visual Studio themes
+
+**Supports:** C# (`///`), VB.NET (`'''`), and block comments (`/** */`)
+
 ## Why Comment Studio?
 
 XML documentation comments are essential for IntelliSense and API documentation, but they come with frustrations:

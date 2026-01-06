@@ -374,15 +374,11 @@ namespace CommentsVS.Adornments
         private FrameworkElement CreateCompactModeAdornment(XmlDocCommentBlock block, double fontSize,
             FontFamily fontFamily, Brush textBrush)
         {
-            // Compact: single line with stripped summary, truncated at 100 chars
+            // Compact: show summary with word wrap (no truncation)
             var strippedSummary = XmlDocCommentRenderer.GetStrippedSummary(block);
             if (string.IsNullOrWhiteSpace(strippedSummary))
             {
                 strippedSummary = "...";
-            }
-            else if (strippedSummary.Length > 100)
-            {
-                strippedSummary = strippedSummary.Substring(0, 97) + "...";
             }
 
             var textBlock = new TextBlock
@@ -391,13 +387,23 @@ namespace CommentsVS.Adornments
                 FontSize = fontSize,
                 Foreground = textBrush,
                 Background = Brushes.Transparent,
-                TextWrapping = TextWrapping.NoWrap,
+                TextWrapping = TextWrapping.Wrap,
                 VerticalAlignment = VerticalAlignment.Top,
                 // Small top padding to align baseline with code below
                 Padding = new Thickness(0, 1, 0, 0),
                 ToolTip = CreateTooltip(block),
                 Cursor = Cursors.Hand
             };
+
+            // Set max width based on viewport to enable proper word wrapping
+            // Use 80% of viewport width minus some margin for the comment indentation
+            var viewportWidth = view.ViewportWidth;
+            if (viewportWidth > 100)
+            {
+                // Account for indentation and some margin
+                var indentWidth = block.Indentation.Length * fontSize * 0.6; // Approximate char width
+                textBlock.MaxWidth = Math.Max(viewportWidth - indentWidth - 50, 200);
+            }
 
             // Process markdown in the summary text and create formatted inlines
             var segments = XmlDocCommentRenderer.ProcessMarkdownInText(strippedSummary);
