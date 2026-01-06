@@ -10,9 +10,7 @@ using System.Windows.Media;
 using CommentsVS.Commands;
 using CommentsVS.Options;
 using CommentsVS.Services;
-using Microsoft.VisualStudio.Language.StandardClassification;
 using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
@@ -88,10 +86,10 @@ namespace CommentsVS.Adornments
             foreach (ITextChange change in e.Changes)
             {
                 // Get the line numbers affected by this change
-                int startLine = e.After.GetLineFromPosition(change.NewPosition).LineNumber;
-                int endLine = e.After.GetLineFromPosition(change.NewEnd).LineNumber;
+                var startLine = e.After.GetLineFromPosition(change.NewPosition).LineNumber;
+                var endLine = e.After.GetLineFromPosition(change.NewEnd).LineNumber;
 
-                for (int line = startLine; line <= endLine; line++)
+                for (var line = startLine; line <= endLine; line++)
                 {
                     _recentlyEditedLines.Add(line);
                 }
@@ -228,13 +226,13 @@ namespace CommentsVS.Adornments
                         // Find which comment block (if any) we moved away from
                         foreach (XmlDocCommentBlock block in blocks)
                         {
-                            bool wasInComment = _lastCaretLine.Value >= block.StartLine && _lastCaretLine.Value <= block.EndLine;
-                            bool nowInComment = currentLine >= block.StartLine && currentLine <= block.EndLine;
+                            var wasInComment = _lastCaretLine.Value >= block.StartLine && _lastCaretLine.Value <= block.EndLine;
+                            var nowInComment = currentLine >= block.StartLine && currentLine <= block.EndLine;
 
                             // If we moved out of a comment, clear the edit tracking for those lines
                             if (wasInComment && !nowInComment)
                             {
-                                for (int line = block.StartLine; line <= block.EndLine; line++)
+                                for (var line = block.StartLine; line <= block.EndLine; line++)
                                 {
                                     _recentlyEditedLines.Remove(line);
                                 }
@@ -314,9 +312,9 @@ namespace CommentsVS.Adornments
                 // Skip comments that are being actively edited:
                 // - Caret is inside the comment AND
                 // - The comment was recently modified (user is typing, not just navigating)
-                bool caretInComment = caretLine >= block.StartLine && caretLine <= block.EndLine;
-                bool commentWasEdited = false;
-                for (int line = block.StartLine; line <= block.EndLine; line++)
+                var caretInComment = caretLine >= block.StartLine && caretLine <= block.EndLine;
+                var commentWasEdited = false;
+                for (var line = block.StartLine; line <= block.EndLine; line++)
                 {
                     if (_recentlyEditedLines.Contains(line))
                     {
@@ -389,8 +387,9 @@ namespace CommentsVS.Adornments
                 Background = Brushes.Transparent,
                 TextWrapping = TextWrapping.Wrap,
                 VerticalAlignment = VerticalAlignment.Top,
-                // Small top padding to align baseline with code below
-                Padding = new Thickness(0, 1, 0, 0),
+                // No padding - align text tightly to top of adornment space
+                Padding = new Thickness(0),
+                Margin = new Thickness(0, -1, 0, 0), // Slight negative margin to align with code
                 ToolTip = CreateTooltip(block),
                 Cursor = Cursors.Hand
             };
@@ -406,12 +405,12 @@ namespace CommentsVS.Adornments
             }
 
             // Process markdown in the summary text and create formatted inlines
-            var segments = XmlDocCommentRenderer.ProcessMarkdownInText(strippedSummary);
+            List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText(strippedSummary);
             var headingBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100));
 
-            foreach (var segment in segments)
+            foreach (RenderedSegment segment in segments)
             {
-                var inline = CreateInlineForSegment(segment, textBrush, headingBrush, fontFamily);
+                Inline inline = CreateInlineForSegment(segment, textBrush, headingBrush);
                 textBlock.Inlines.Add(inline);
             }
 
@@ -449,8 +448,8 @@ namespace CommentsVS.Adornments
             {
                 Orientation = Orientation.Vertical,
                 Background = Brushes.Transparent,
-                // Small top margin to align with code below
-                Margin = new Thickness(0, 1, 0, 0)
+                // Slight negative margin to align text tightly with code
+                Margin = new Thickness(0, -1, 0, 0)
             };
 
             // Render summary section with full content (including lists)
@@ -630,7 +629,7 @@ namespace CommentsVS.Adornments
 
                     foreach (RenderedSegment segment in line.Segments)
                     {
-                        var inline = CreateInlineForSegment(segment, textBrush, headingBrush, fontFamily);
+                        Inline inline = CreateInlineForSegment(segment, textBrush, headingBrush);
                         textBlock.Inlines.Add(inline);
                     }
 
@@ -678,7 +677,7 @@ namespace CommentsVS.Adornments
         /// Creates an Inline element for a rendered segment with appropriate formatting.
         /// Returns a Hyperlink for links, Run for other types.
         /// </summary>
-        private static Inline CreateInlineForSegment(RenderedSegment segment, Brush textBrush, Brush headingBrush, FontFamily fontFamily)
+        private static Inline CreateInlineForSegment(RenderedSegment segment, Brush textBrush, Brush headingBrush)
         {
             switch (segment.Type)
             {
@@ -759,7 +758,7 @@ namespace CommentsVS.Adornments
                 return null;
 
             // Try to create URI directly
-            if (Uri.TryCreate(linkTarget, UriKind.Absolute, out var uri))
+            if (Uri.TryCreate(linkTarget, UriKind.Absolute, out Uri uri))
                 return uri;
 
             // If it looks like a URL but failed, try adding https://
@@ -892,7 +891,7 @@ namespace CommentsVS.Adornments
 
                     foreach (RenderedSegment segment in line.Segments)
                     {
-                        var inline = CreateInlineForSegment(segment, textBrush, headingBrush, fontFamily);
+                        Inline inline = CreateInlineForSegment(segment, textBrush, headingBrush);
                         textBlock.Inlines.Add(inline);
                     }
 
@@ -975,7 +974,7 @@ namespace CommentsVS.Adornments
         private static object CreateTooltip(XmlDocCommentBlock block)
         {
             // Create a WPF-based tooltip with VS theme colors
-            var lines = block.XmlContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var lines = block.XmlContent.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
 
             var panel = new StackPanel();
 

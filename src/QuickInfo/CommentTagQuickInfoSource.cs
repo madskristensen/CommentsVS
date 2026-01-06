@@ -250,7 +250,7 @@ namespace CommentsVS.QuickInfo
             }
         }
 
-        private static IReadOnlyList<CommentTagMetadataItem>? TryParseMetadata(string lineText, Match tagMatch)
+        private static IReadOnlyList<CommentTagMetadataItem> TryParseMetadata(string lineText, Match tagMatch)
         {
             // Attempt to find a prefixed metadata section immediately after the tag token.
             // Examples:

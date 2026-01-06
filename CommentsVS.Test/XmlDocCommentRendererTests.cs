@@ -10,9 +10,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithBold_DoubleAsterisk_CreatesBoldSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is **bold** text");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is **bold** text");
 
-        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, bold, after");
+        Assert.HasCount(3, segments, "Expected 3 segments: before, bold, after");
         Assert.AreEqual("This is ", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
         Assert.AreEqual("bold", segments[1].Text);
@@ -24,9 +24,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithBold_DoubleUnderscore_CreatesBoldSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is __bold__ text");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is __bold__ text");
 
-        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, bold, after");
+        Assert.HasCount(3, segments, "Expected 3 segments: before, bold, after");
         Assert.AreEqual("This is ", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
         Assert.AreEqual("bold", segments[1].Text);
@@ -42,9 +42,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithItalic_SingleAsterisk_CreatesItalicSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is *italic* text");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is *italic* text");
 
-        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, italic, after");
+        Assert.HasCount(3, segments, "Expected 3 segments: before, italic, after");
         Assert.AreEqual("This is ", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
         Assert.AreEqual("italic", segments[1].Text);
@@ -56,9 +56,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithItalic_InSentence_CreatesItalicSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("Represents a user with *basic* contact information.");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("Represents a user with *basic* contact information.");
 
-        var italicSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Italic);
+        RenderedSegment italicSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Italic);
         Assert.IsNotNull(italicSegment, "Expected an italic segment for *basic*");
         Assert.AreEqual("basic", italicSegment.Text);
     }
@@ -66,9 +66,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithItalic_ReturnsItalicSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("with *basic* contact");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("with *basic* contact");
 
-        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, italic, after");
+        Assert.HasCount(3, segments, "Expected 3 segments: before, italic, after");
         Assert.AreEqual("with ", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
         Assert.AreEqual("basic", segments[1].Text);
@@ -80,9 +80,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithItalic_SingleUnderscore_CreatesItalicSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is _italic_ text");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is _italic_ text");
 
-        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, italic, after");
+        Assert.HasCount(3, segments, "Expected 3 segments: before, italic, after");
         Assert.AreEqual("This is ", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
         Assert.AreEqual("italic", segments[1].Text);
@@ -98,9 +98,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithInlineCode_CreatesCodeSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("Use the `GetValue` method");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("Use the `GetValue` method");
 
-        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, code, after");
+        Assert.HasCount(3, segments, "Expected 3 segments: before, code, after");
         Assert.AreEqual("Use the ", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
         Assert.AreEqual("GetValue", segments[1].Text);
@@ -112,13 +112,13 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_BoldInsideCode_CodeTakesPrecedence()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("Use `**not bold**` for emphasis");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("Use `**not bold**` for emphasis");
 
-        var codeSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Code);
+        RenderedSegment codeSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Code);
         Assert.IsNotNull(codeSegment, "Expected a code segment");
         Assert.AreEqual("**not bold**", codeSegment.Text);
 
-        var boldSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
+        RenderedSegment boldSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
         Assert.IsNull(boldSegment, "Should not have a bold segment when ** is inside code");
     }
 
@@ -129,9 +129,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithStrikethrough_CreatesStrikethroughSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is ~~removed~~ text");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is ~~removed~~ text");
 
-        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, strikethrough, after");
+        Assert.HasCount(3, segments, "Expected 3 segments: before, strikethrough, after");
         Assert.AreEqual("This is ", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
         Assert.AreEqual("removed", segments[1].Text);
@@ -147,11 +147,11 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithMultipleFormats_CreatesCorrectSegments()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is **bold** and *italic* and `code`");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is **bold** and *italic* and `code`");
 
-        var boldSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
-        var italicSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Italic);
-        var codeSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Code);
+        RenderedSegment boldSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
+        RenderedSegment italicSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Italic);
+        RenderedSegment codeSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Code);
 
         Assert.IsNotNull(boldSegment, "Expected a bold segment");
         Assert.AreEqual("bold", boldSegment.Text);
@@ -170,9 +170,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithNoMarkdown_CreatesTextSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is plain text");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is plain text");
 
-        Assert.AreEqual(1, segments.Count);
+        Assert.HasCount(1, segments);
         Assert.AreEqual("This is plain text", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
     }
@@ -180,17 +180,17 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithEmptyString_ReturnsEmptyList()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("");
 
-        Assert.AreEqual(0, segments.Count);
+        Assert.IsEmpty(segments);
     }
 
     [TestMethod]
     public void ProcessMarkdownInText_WithNull_ReturnsEmptyList()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText(null!);
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText(null!);
 
-        Assert.AreEqual(0, segments.Count);
+        Assert.IsEmpty(segments);
     }
 
     #endregion
@@ -200,9 +200,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithLink_CreatesLinkSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("See the [API docs](https://example.com/api) for details");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("See the [API docs](https://example.com/api) for details");
 
-        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, link, after");
+        Assert.HasCount(3, segments, "Expected 3 segments: before, link, after");
         Assert.AreEqual("See the ", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
         Assert.AreEqual("API docs", segments[1].Text);
@@ -215,9 +215,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithAutoLink_CreatesLinkSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("Visit <https://example.com> for more info");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("Visit <https://example.com> for more info");
 
-        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, link, after");
+        Assert.HasCount(3, segments, "Expected 3 segments: before, link, after");
         Assert.AreEqual("Visit ", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
         Assert.AreEqual("https://example.com", segments[1].Text);
@@ -230,9 +230,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithLinkInMiddle_CreatesLinkSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("See the [docs](https://example.com) here");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("See the [docs](https://example.com) here");
 
-        var linkSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Link);
+        RenderedSegment linkSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Link);
         Assert.IsNotNull(linkSegment, "Expected a link segment");
         Assert.AreEqual("docs", linkSegment.Text);
         Assert.AreEqual("https://example.com", linkSegment.LinkTarget);
@@ -245,9 +245,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithBoldAtStart_CreatesBoldSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("**bold** at start");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("**bold** at start");
 
-        Assert.AreEqual(2, segments.Count);
+        Assert.HasCount(2, segments);
         Assert.AreEqual("bold", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Bold, segments[0].Type);
         Assert.AreEqual(" at start", segments[1].Text);
@@ -256,9 +256,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithBoldAtEnd_CreatesBoldSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("ends with **bold**");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("ends with **bold**");
 
-        Assert.AreEqual(2, segments.Count);
+        Assert.HasCount(2, segments);
         Assert.AreEqual("ends with ", segments[0].Text);
         Assert.AreEqual("bold", segments[1].Text);
         Assert.AreEqual(RenderedSegmentType.Bold, segments[1].Type);
@@ -267,9 +267,9 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithOnlyBold_CreatesBoldSegment()
     {
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("**bold**");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("**bold**");
 
-        Assert.AreEqual(1, segments.Count);
+        Assert.HasCount(1, segments);
         Assert.AreEqual("bold", segments[0].Text);
         Assert.AreEqual(RenderedSegmentType.Bold, segments[0].Type);
     }
@@ -279,9 +279,9 @@ public sealed class XmlDocCommentRendererTests
     {
         // Markdown doesn't support nested formatting like **_text_**
         // but we should handle it gracefully
-        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("Text with **bold text** here");
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText("Text with **bold text** here");
 
-        var boldSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
+        RenderedSegment boldSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
         Assert.IsNotNull(boldSegment);
         Assert.AreEqual("bold text", boldSegment.Text);
     }

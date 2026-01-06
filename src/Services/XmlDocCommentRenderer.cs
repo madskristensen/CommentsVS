@@ -247,8 +247,8 @@ namespace CommentsVS.Services
                     }
                     RenderedLine line = GetOrCreateCurrentLine(summary);
                     // Process markdown patterns in the text
-                    var segments = ProcessMarkdownInText(text);
-                    foreach (var segment in segments)
+                    List<RenderedSegment> segments = ProcessMarkdownInText(text);
+                    foreach (RenderedSegment segment in segments)
                     {
                         line.Segments.Add(segment);
                     }
@@ -381,8 +381,8 @@ namespace CommentsVS.Services
                 {
                     RenderedLine line = GetOrCreateCurrentLine(section);
                     // Process markdown patterns in the text
-                    var segments = ProcessMarkdownInText(text);
-                    foreach (var segment in segments)
+                    List<RenderedSegment> segments = ProcessMarkdownInText(text);
+                    foreach (RenderedSegment segment in segments)
                     {
                         line.Segments.Add(segment);
                     }
@@ -769,12 +769,12 @@ namespace CommentsVS.Services
             }
 
             // Process inline code and links first (to prevent other processing inside them)
-            var codeMatches = _markdownCodeRegex.Matches(text);
-            var linkMatches = _markdownLinkRegex.Matches(text);
-            var autoLinkMatches = _markdownAutoLinkRegex.Matches(text);
-            var boldMatches = _markdownBoldRegex.Matches(text);
-            var italicMatches = _markdownItalicRegex.Matches(text);
-            var strikethroughMatches = _markdownStrikethroughRegex.Matches(text);
+            MatchCollection codeMatches = _markdownCodeRegex.Matches(text);
+            MatchCollection linkMatches = _markdownLinkRegex.Matches(text);
+            MatchCollection autoLinkMatches = _markdownAutoLinkRegex.Matches(text);
+            MatchCollection boldMatches = _markdownBoldRegex.Matches(text);
+            MatchCollection italicMatches = _markdownItalicRegex.Matches(text);
+            MatchCollection strikethroughMatches = _markdownStrikethroughRegex.Matches(text);
 
             // Combine all matches and sort by position
             // Tuple: (Start, Length, Content, Type, LinkTarget)
@@ -839,7 +839,7 @@ namespace CommentsVS.Services
 
             // Build segments
             var currentPos = 0;
-            foreach (var match in allMatches)
+            foreach ((int Start, int Length, string Content, RenderedSegmentType Type, string LinkTarget) match in allMatches)
             {
                 // Add text before this match
                 if (match.Start > currentPos)
@@ -881,7 +881,7 @@ namespace CommentsVS.Services
         private static bool OverlapsWithExisting(List<(int Start, int Length, string Content, RenderedSegmentType Type, string LinkTarget)> existing, int start, int length)
         {
             var end = start + length;
-            foreach (var match in existing)
+            foreach ((int Start, int Length, string Content, RenderedSegmentType Type, string LinkTarget) match in existing)
             {
                 var matchEnd = match.Start + match.Length;
                 // Check for any overlap
