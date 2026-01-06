@@ -1,16 +1,16 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
 using CommentsVS.Options;
+using CommentsVS.Services;
 using Microsoft.VisualStudio.Language.Intellisense;
+using Microsoft.VisualStudio.Language.StandardClassification;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Utilities;
 
 namespace CommentsVS.QuickInfo
@@ -86,10 +86,9 @@ namespace CommentsVS.QuickInfo
                         ITrackingSpan trackingSpan = textBuffer.CurrentSnapshot.CreateTrackingSpan(
                             span, SpanTrackingMode.EdgeInclusive);
 
-                        // Switch to UI thread to create WPF elements
-                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-                        var metadata = TryParseMetadata(lineText, match);
-                        var content = new CommentTagQuickInfoContent(title, description, metadata);
+                        IReadOnlyList<CommentTagMetadataItem> metadata = TryParseMetadata(lineText, match);
+                        GitRepositoryInfo repoInfo = GetRepoInfo();
+                        ContainerElement content = CreateQuickInfoContent(title, description, metadata, repoInfo);
 
                         return new QuickInfoItem(trackingSpan, content);
                     }
@@ -132,6 +131,125 @@ namespace CommentsVS.QuickInfo
         {
         }
 
+        private GitRepositoryInfo GetRepoInfo()
+        {
+            if (textBuffer.Properties.TryGetProperty(typeof(ITextDocument), out ITextDocument document))
+            {
+                return GitRepositoryService.GetRepositoryInfo(document.FilePath);
+            }
+
+            return null;
+        }
+
+        private static ContainerElement CreateQuickInfoContent(string title, string description, IReadOnlyList<CommentTagMetadataItem> metadata, GitRepositoryInfo repoInfo)
+        {
+            const int MaxLineLength = 60;
+
+            var elements = new List<object>
+            {
+                new ClassifiedTextElement(
+                    new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, title, ClassifiedTextRunStyle.Bold))
+            };
+
+            if (metadata != null && metadata.Count > 0)
+            {
+                // Blank line before metadata
+                elements.Add(new ClassifiedTextElement(
+                    new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, string.Empty)));
+
+                foreach (CommentTagMetadataItem item in metadata)
+                {
+                    var label = item.Kind switch
+                    {
+                        CommentTagMetadataKind.Owner => "Owner",
+                        CommentTagMetadataKind.Issue => "Issue",
+                        CommentTagMetadataKind.DueDate => "Due",
+                        _ => "Meta",
+                    };
+
+                    // For issue references, make the value clickable if we can resolve the URL
+                    if (item.Kind == CommentTagMetadataKind.Issue &&
+                        repoInfo != null &&
+                        int.TryParse(item.Value, out var issueNumber))
+                    {
+                        var issueUrl = repoInfo.GetIssueUrl(issueNumber);
+                        if (!string.IsNullOrEmpty(issueUrl))
+                        {
+                            elements.Add(new ClassifiedTextElement(
+                                new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, $"{label}: ", ClassifiedTextRunStyle.Bold),
+                                new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, item.Value, () =>
+                                {
+                                    Process.Start(new ProcessStartInfo(issueUrl) { UseShellExecute = true });
+                                })));
+                            continue;
+                        }
+                    }
+
+                    elements.Add(new ClassifiedTextElement(
+                        new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, $"{label}: ", ClassifiedTextRunStyle.Bold),
+                        new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, item.Value)));
+                }
+            }
+
+            // Blank line before description
+            elements.Add(new ClassifiedTextElement(
+                new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, string.Empty)));
+
+            // Wrap description text at max line length for readability
+            foreach (var line in WrapText(description, MaxLineLength))
+            {
+                elements.Add(new ClassifiedTextElement(
+                    new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, line)));
+            }
+
+            // Blank line before link
+            elements.Add(new ClassifiedTextElement(
+                new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, string.Empty)));
+
+            // Add clickable "Open Task List" link
+            elements.Add(new ClassifiedTextElement(
+                new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, "Open Task List", () =>
+                {
+                    VS.Commands.ExecuteAsync("View.TaskList").FireAndForget();
+                })));
+
+            return new ContainerElement(ContainerElementStyle.Stacked, elements);
+        }
+
+        private static IEnumerable<string> WrapText(string text, int maxLength)
+        {
+            if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+            {
+                yield return text ?? string.Empty;
+                yield break;
+            }
+
+            var words = text.Split(' ');
+            var currentLine = string.Empty;
+
+            foreach (var word in words)
+            {
+                if (currentLine.Length == 0)
+                {
+                    currentLine = word;
+                }
+                else if (currentLine.Length + 1 + word.Length <= maxLength)
+                {
+                    currentLine += " " + word;
+                }
+                else
+                {
+                    yield return currentLine;
+                    currentLine = word;
+                }
+            }
+
+            if (currentLine.Length > 0)
+            {
+                yield return currentLine;
+            }
+        }
+
         private static IReadOnlyList<CommentTagMetadataItem>? TryParseMetadata(string lineText, Match tagMatch)
         {
             // Attempt to find a prefixed metadata section immediately after the tag token.
@@ -142,7 +260,7 @@ namespace CommentsVS.QuickInfo
             //   TODO(@user, #1234, 2026-02-01): message
             //   TODO[@user #1234 2026-02-01]: message
 
-            var match = _metadataRegex.Match(lineText, tagMatch.Index);
+            Match match = _metadataRegex.Match(lineText, tagMatch.Index);
             if (!match.Success || match.Index != tagMatch.Index)
             {
                 return null;
@@ -195,89 +313,6 @@ namespace CommentsVS.QuickInfo
             }
 
             return items;
-        }
-    }
-
-    /// <summary>
-    /// Interactive QuickInfo content for comment tags with a clickable link to open the Task List.
-    /// </summary>
-    internal sealed class CommentTagQuickInfoContent : StackPanel, IInteractiveQuickInfoContent
-    {
-        public CommentTagQuickInfoContent(string title, string description, IReadOnlyList<CommentTagMetadataItem>? metadata)
-        {
-            // Title
-            var titleBlock = new TextBlock
-            {
-                Text = title,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 4)
-            };
-            Children.Add(titleBlock);
-
-            if (metadata is { Count: > 0 })
-            {
-                var metadataBlock = new TextBlock
-                {
-                    TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(0, 0, 0, 6),
-                    MaxWidth = 400
-                };
-
-                LineBreak trailingLineBreak = null;
-
-                foreach (var item in metadata)
-                {
-                    var label = item.Kind switch
-                    {
-                        CommentTagMetadataKind.Owner => "Owner",
-                        CommentTagMetadataKind.Issue => "Issue",
-                        CommentTagMetadataKind.DueDate => "Due",
-                        _ => "Meta",
-                    };
-
-                    metadataBlock.Inlines.Add(new Run($"{label}: ") { FontWeight = FontWeights.SemiBold });
-                    metadataBlock.Inlines.Add(new Run(item.Value));
-                    trailingLineBreak = new LineBreak();
-                    metadataBlock.Inlines.Add(trailingLineBreak);
-                }
-
-                // Remove the last line break.
-                if (trailingLineBreak != null)
-                {
-                    metadataBlock.Inlines.Remove(trailingLineBreak);
-                }
-
-                Children.Add(metadataBlock);
-            }
-
-            // Description
-            var descriptionBlock = new TextBlock
-            {
-                Text = description,
-                TextWrapping = TextWrapping.Wrap,
-                MaxWidth = 400
-            };
-            Children.Add(descriptionBlock);
-
-            // Link to Task List
-            var linkBlock = new TextBlock
-            {
-                Margin = new Thickness(0, 8, 0, 0)
-            };
-
-            var hyperlink = new Hyperlink(new Run("Open Task List"));
-            hyperlink.Click += OnTaskListLinkClicked;
-            linkBlock.Inlines.Add(hyperlink);
-            Children.Add(linkBlock);
-        }
-
-        public bool KeepQuickInfoOpen { get; set; }
-
-        public bool IsMouseOverAggregated { get; set; }
-
-        private static void OnTaskListLinkClicked(object sender, RoutedEventArgs e)
-        {
-            VS.Commands.ExecuteAsync("View.TaskList").FireAndForget();
         }
     }
 

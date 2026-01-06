@@ -1,14 +1,13 @@
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Media;
 using CommentsVS.Options;
 using CommentsVS.Services;
 using Microsoft.VisualStudio.Language.Intellisense;
+using Microsoft.VisualStudio.Language.StandardClassification;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Utilities;
 
 namespace CommentsVS.QuickInfo
@@ -85,11 +84,8 @@ namespace CommentsVS.QuickInfo
                 return null;
             }
 
-            // Switch to UI thread to create WPF elements
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-
-            // Create the tooltip content
-            FrameworkElement tooltipContent = CreateFullRenderingTooltip(renderedComment);
+            // Create the tooltip content using ContainerElement for proper theme support
+            ContainerElement tooltipContent = CreateFullRenderingTooltip(renderedComment);
 
             if (tooltipContent == null)
             {
@@ -103,25 +99,14 @@ namespace CommentsVS.QuickInfo
         /// <summary>
         /// Creates a formatted tooltip showing the full rendered view of the comment.
         /// </summary>
-        private FrameworkElement CreateFullRenderingTooltip(RenderedComment renderedComment)
+        private static ContainerElement CreateFullRenderingTooltip(RenderedComment renderedComment)
         {
             if (renderedComment?.Sections == null || renderedComment.Sections.Count == 0)
             {
                 return null;
             }
 
-            var panel = new StackPanel
-            {
-                Orientation = Orientation.Vertical,
-                MaxWidth = 600
-            };
-
-            // Color scheme matching Visual Studio tooltips
-            var textBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
-            var headingBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100));
-            var linkBrush = new SolidColorBrush(Color.FromRgb(86, 156, 214));
-            var codeBrush = new SolidColorBrush(Color.FromRgb(180, 180, 180));
-            var paramBrush = new SolidColorBrush(Color.FromRgb(150, 150, 150));
+            var elements = new List<object>();
 
             var isFirst = true;
             foreach (RenderedCommentSection section in renderedComment.Sections)
@@ -133,22 +118,17 @@ namespace CommentsVS.QuickInfo
 
                 if (!isFirst)
                 {
-                    panel.Children.Add(new TextBlock { Height = 8 }); // Spacing between sections
+                    // Spacing between sections
+                    elements.Add(new ClassifiedTextElement(
+                        new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, string.Empty)));
                 }
                 isFirst = false;
 
                 // Add section heading (except for summary)
                 if (!string.IsNullOrEmpty(section.Heading) && section.Type != CommentSectionType.Summary)
                 {
-                    var headingBlock = new TextBlock
-                    {
-                        FontWeight = FontWeights.Bold,
-                        Foreground = headingBrush,
-                        Margin = new Thickness(0, 0, 0, 4),
-                        TextWrapping = TextWrapping.Wrap
-                    };
-                    headingBlock.Inlines.Add(new Run(section.Heading));
-                    panel.Children.Add(headingBlock);
+                    elements.Add(new ClassifiedTextElement(
+                        new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, section.Heading, ClassifiedTextRunStyle.Bold)));
                 }
 
                 // Add section content
@@ -156,70 +136,41 @@ namespace CommentsVS.QuickInfo
                 {
                     if (line.IsBlank)
                     {
-                        panel.Children.Add(new TextBlock { Height = 4 }); // Blank line spacing
+                        elements.Add(new ClassifiedTextElement(
+                            new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, string.Empty)));
                         continue;
                     }
 
-                    var textBlock = new TextBlock
-                    {
-                        Foreground = textBrush,
-                        TextWrapping = TextWrapping.Wrap,
-                        Margin = new Thickness(0, 0, 0, 2)
-                    };
-
+                    var runs = new List<ClassifiedTextRun>();
                     foreach (RenderedSegment segment in line.Segments)
                     {
-                        textBlock.Inlines.Add(CreateInline(segment, textBrush, linkBrush, codeBrush, paramBrush));
+                        runs.Add(CreateClassifiedTextRun(segment));
                     }
 
-                    panel.Children.Add(textBlock);
+                    elements.Add(new ClassifiedTextElement(runs));
                 }
             }
 
-            return panel;
+            return new ContainerElement(ContainerElementStyle.Stacked, elements);
         }
 
-        private Inline CreateInline(RenderedSegment segment, Brush defaultBrush, Brush linkBrush,
-            Brush codeBrush, Brush paramBrush)
+        private static ClassifiedTextRun CreateClassifiedTextRun(RenderedSegment segment)
         {
             return segment.Type switch
             {
-                RenderedSegmentType.Heading => new Run(segment.Text)
-                {
-                    FontWeight = FontWeights.Bold,
-                    Foreground = defaultBrush
-                },
-                RenderedSegmentType.Link => new Run(segment.Text)
-                {
-                    Foreground = linkBrush,
-                    TextDecorations = TextDecorations.Underline
-                },
-                RenderedSegmentType.ParamRef or RenderedSegmentType.TypeParamRef =>
-                    new Run(segment.Text)
-                    {
-                        Foreground = paramBrush,
-                        FontStyle = FontStyles.Italic
-                    },
-                RenderedSegmentType.Bold =>
-                    new Run(segment.Text)
-                    {
-                        FontWeight = FontWeights.Bold,
-                        Foreground = defaultBrush
-                    },
-                RenderedSegmentType.Italic =>
-                    new Run(segment.Text)
-                    {
-                        FontStyle = FontStyles.Italic,
-                        Foreground = defaultBrush
-                    },
-                RenderedSegmentType.Code =>
-                    new Run(segment.Text)
-                    {
-                        Foreground = codeBrush,
-                        FontFamily = new FontFamily("Consolas"),
-                        Background = new SolidColorBrush(Color.FromArgb(20, 128, 128, 128))
-                    },
-                _ => new Run(segment.Text) { Foreground = defaultBrush }
+                RenderedSegmentType.Heading => new ClassifiedTextRun(
+                    PredefinedClassificationTypeNames.Text, segment.Text, ClassifiedTextRunStyle.Bold),
+                RenderedSegmentType.Link => new ClassifiedTextRun(
+                    PredefinedClassificationTypeNames.Text, segment.Text, ClassifiedTextRunStyle.Underline),
+                RenderedSegmentType.ParamRef or RenderedSegmentType.TypeParamRef => new ClassifiedTextRun(
+                    PredefinedClassificationTypeNames.Identifier, segment.Text, ClassifiedTextRunStyle.Italic),
+                RenderedSegmentType.Bold => new ClassifiedTextRun(
+                    PredefinedClassificationTypeNames.Text, segment.Text, ClassifiedTextRunStyle.Bold),
+                RenderedSegmentType.Italic => new ClassifiedTextRun(
+                    PredefinedClassificationTypeNames.Text, segment.Text, ClassifiedTextRunStyle.Italic),
+                RenderedSegmentType.Code => new ClassifiedTextRun(
+                    PredefinedClassificationTypeNames.String, segment.Text),
+                _ => new ClassifiedTextRun(PredefinedClassificationTypeNames.Text, segment.Text)
             };
         }
 

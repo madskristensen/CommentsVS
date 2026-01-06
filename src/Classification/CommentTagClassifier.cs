@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
@@ -34,13 +33,13 @@ namespace CommentsVS.Classification
         private readonly IClassificationType _metadataType;
 
         // Regex to match comment tags - looks for tag keywords after comment prefixes
-        private static readonly Regex TagRegex = new(
+        private static readonly Regex _tagRegex = new(
             @"(?<=//.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?)|" +
             @"(?<=/\*.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?)|" +
             @"(?<='.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        private static readonly Regex TagWithMetadataRegex = new(
+        private static readonly Regex _tagWithMetadataRegex = new(
             @"\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -76,7 +75,7 @@ namespace CommentsVS.Classification
             var text = span.GetText();
             var lineStart = span.Start.Position;
 
-            foreach (Match match in TagRegex.Matches(text))
+            foreach (Match match in _tagRegex.Matches(text))
             {
                 Group tagGroup = match.Groups["tag"];
                 if (!tagGroup.Success)
@@ -97,7 +96,7 @@ namespace CommentsVS.Classification
                 {
                     // Classify the optional metadata right after the tag.
                     // Examples: TODO(@mads): ...  TODO[#123]: ...
-                    var metaMatch = TagWithMetadataRegex.Match(text, tagGroup.Index);
+                    Match metaMatch = _tagWithMetadataRegex.Match(text, tagGroup.Index);
                     if (metaMatch.Success && metaMatch.Index == tagGroup.Index)
                     {
                         Group metaGroup = metaMatch.Groups["metadata"];
