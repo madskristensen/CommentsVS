@@ -5,81 +5,60 @@ namespace CommentsVS.Test;
 [TestClass]
 public sealed class XmlDocCommentRendererTests
 {
+    #region Markdown Bold Tests
+
     [TestMethod]
-    public void Render_WithMarkdownBold_DoubleAsterisk_CreatesBoldSegment()
+    public void ProcessMarkdownInText_WithBold_DoubleAsterisk_CreatesBoldSegment()
     {
-        var block = CreateCommentBlock("<summary>This is **bold** text</summary>");
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is **bold** text");
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        Assert.IsTrue(result.Sections.Count > 0);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        // Find the bold segment
-        var boldSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
-
-        Assert.IsNotNull(boldSegment, "Expected a bold segment");
-        Assert.AreEqual("bold", boldSegment.Text);
+        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, bold, after");
+        Assert.AreEqual("This is ", segments[0].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
+        Assert.AreEqual("bold", segments[1].Text);
+        Assert.AreEqual(RenderedSegmentType.Bold, segments[1].Type);
+        Assert.AreEqual(" text", segments[2].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[2].Type);
     }
 
     [TestMethod]
-    public void Render_WithMarkdownBold_DoubleUnderscore_CreatesBoldSegment()
+    public void ProcessMarkdownInText_WithBold_DoubleUnderscore_CreatesBoldSegment()
     {
-        var block = CreateCommentBlock("<summary>This is __bold__ text</summary>");
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is __bold__ text");
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
+        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, bold, after");
+        Assert.AreEqual("This is ", segments[0].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
+        Assert.AreEqual("bold", segments[1].Text);
+        Assert.AreEqual(RenderedSegmentType.Bold, segments[1].Type);
+        Assert.AreEqual(" text", segments[2].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[2].Type);
+    }
 
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
+    #endregion
 
-        var boldSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
+    #region Markdown Italic Tests
 
-        Assert.IsNotNull(boldSegment, "Expected a bold segment");
-        Assert.AreEqual("bold", boldSegment.Text);
+    [TestMethod]
+    public void ProcessMarkdownInText_WithItalic_SingleAsterisk_CreatesItalicSegment()
+    {
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is *italic* text");
+
+        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, italic, after");
+        Assert.AreEqual("This is ", segments[0].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
+        Assert.AreEqual("italic", segments[1].Text);
+        Assert.AreEqual(RenderedSegmentType.Italic, segments[1].Type);
+        Assert.AreEqual(" text", segments[2].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[2].Type);
     }
 
     [TestMethod]
-    public void Render_WithMarkdownItalic_SingleAsterisk_CreatesItalicSegment()
+    public void ProcessMarkdownInText_WithItalic_InSentence_CreatesItalicSegment()
     {
-        var block = CreateCommentBlock("<summary>This is *italic* text</summary>");
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("Represents a user with *basic* contact information.");
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        var italicSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Italic);
-
-        Assert.IsNotNull(italicSegment, "Expected an italic segment");
-        Assert.AreEqual("italic", italicSegment.Text);
-    }
-
-    [TestMethod]
-    public void Render_WithMarkdownItalic_InSentence_CreatesItalicSegment()
-    {
-        // This tests the exact scenario from the user's screenshot
-        var block = CreateCommentBlock("<summary>Represents a user with *basic* contact information.</summary>");
-
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        var italicSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Italic);
-
+        var italicSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Italic);
         Assert.IsNotNull(italicSegment, "Expected an italic segment for *basic*");
         Assert.AreEqual("basic", italicSegment.Text);
     }
@@ -87,7 +66,6 @@ public sealed class XmlDocCommentRendererTests
     [TestMethod]
     public void ProcessMarkdownInText_WithItalic_ReturnsItalicSegment()
     {
-        // Direct test of the markdown processing method
         var segments = XmlDocCommentRenderer.ProcessMarkdownInText("with *basic* contact");
 
         Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, italic, after");
@@ -100,74 +78,76 @@ public sealed class XmlDocCommentRendererTests
     }
 
     [TestMethod]
-    public void Render_WithMarkdownItalic_SingleUnderscore_CreatesItalicSegment()
+    public void ProcessMarkdownInText_WithItalic_SingleUnderscore_CreatesItalicSegment()
     {
-        var block = CreateCommentBlock("<summary>This is _italic_ text</summary>");
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is _italic_ text");
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
+        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, italic, after");
+        Assert.AreEqual("This is ", segments[0].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
+        Assert.AreEqual("italic", segments[1].Text);
+        Assert.AreEqual(RenderedSegmentType.Italic, segments[1].Type);
+        Assert.AreEqual(" text", segments[2].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[2].Type);
+    }
 
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
+    #endregion
 
-        var italicSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Italic);
+    #region Markdown Code Tests
 
-        Assert.IsNotNull(italicSegment, "Expected an italic segment");
-        Assert.AreEqual("italic", italicSegment.Text);
+    [TestMethod]
+    public void ProcessMarkdownInText_WithInlineCode_CreatesCodeSegment()
+    {
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("Use the `GetValue` method");
+
+        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, code, after");
+        Assert.AreEqual("Use the ", segments[0].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
+        Assert.AreEqual("GetValue", segments[1].Text);
+        Assert.AreEqual(RenderedSegmentType.Code, segments[1].Type);
+        Assert.AreEqual(" method", segments[2].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[2].Type);
     }
 
     [TestMethod]
-    public void Render_WithMarkdownInlineCode_CreatesCodeSegment()
+    public void ProcessMarkdownInText_BoldInsideCode_CodeTakesPrecedence()
     {
-        var block = CreateCommentBlock("<summary>Use the `GetValue` method</summary>");
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("Use `**not bold**` for emphasis");
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        var codeSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Code);
-
+        var codeSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Code);
         Assert.IsNotNull(codeSegment, "Expected a code segment");
-        Assert.AreEqual("GetValue", codeSegment.Text);
+        Assert.AreEqual("**not bold**", codeSegment.Text);
+
+        var boldSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
+        Assert.IsNull(boldSegment, "Should not have a bold segment when ** is inside code");
     }
 
+    #endregion
+
+    #region Markdown Strikethrough Tests
+
     [TestMethod]
-    public void Render_WithMarkdownStrikethrough_CreatesStrikethroughSegment()
+    public void ProcessMarkdownInText_WithStrikethrough_CreatesStrikethroughSegment()
     {
-        var block = CreateCommentBlock("<summary>This is ~~removed~~ text</summary>");
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is ~~removed~~ text");
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        var strikethroughSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Strikethrough);
-
-        Assert.IsNotNull(strikethroughSegment, "Expected a strikethrough segment");
-        Assert.AreEqual("removed", strikethroughSegment.Text);
+        Assert.AreEqual(3, segments.Count, "Expected 3 segments: before, strikethrough, after");
+        Assert.AreEqual("This is ", segments[0].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
+        Assert.AreEqual("removed", segments[1].Text);
+        Assert.AreEqual(RenderedSegmentType.Strikethrough, segments[1].Type);
+        Assert.AreEqual(" text", segments[2].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[2].Type);
     }
 
+    #endregion
+
+    #region Multiple Markdown Formats Tests
+
     [TestMethod]
-    public void Render_WithMultipleMarkdownFormats_CreatesCorrectSegments()
+    public void ProcessMarkdownInText_WithMultipleFormats_CreatesCorrectSegments()
     {
-        var block = CreateCommentBlock("<summary>This is **bold** and *italic* and `code`</summary>");
-
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        var segments = summary.Lines.SelectMany(l => l.Segments).ToList();
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is **bold** and *italic* and `code`");
 
         var boldSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
         var italicSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Italic);
@@ -183,86 +163,39 @@ public sealed class XmlDocCommentRendererTests
         Assert.AreEqual("code", codeSegment.Text);
     }
 
+    #endregion
+
+    #region Plain Text Tests
+
     [TestMethod]
-    public void Render_WithXmlBoldTag_CreatesBoldSegment()
+    public void ProcessMarkdownInText_WithNoMarkdown_CreatesTextSegment()
     {
-        var block = CreateCommentBlock("<summary>This is <b>bold</b> text</summary>");
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("This is plain text");
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        var boldSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
-
-        Assert.IsNotNull(boldSegment, "Expected a bold segment from <b> tag");
-        Assert.AreEqual("bold", boldSegment.Text);
+        Assert.AreEqual(1, segments.Count);
+        Assert.AreEqual("This is plain text", segments[0].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, segments[0].Type);
     }
 
     [TestMethod]
-    public void Render_WithXmlItalicTag_CreatesItalicSegment()
+    public void ProcessMarkdownInText_WithEmptyString_ReturnsEmptyList()
     {
-        var block = CreateCommentBlock("<summary>This is <i>italic</i> text</summary>");
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("");
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        var italicSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Italic);
-
-        Assert.IsNotNull(italicSegment, "Expected an italic segment from <i> tag");
-        Assert.AreEqual("italic", italicSegment.Text);
+        Assert.AreEqual(0, segments.Count);
     }
 
     [TestMethod]
-    public void Render_WithNoMarkdown_CreatesTextSegment()
+    public void ProcessMarkdownInText_WithNull_ReturnsEmptyList()
     {
-        var block = CreateCommentBlock("<summary>This is plain text</summary>");
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText(null!);
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        var segments = summary.Lines.SelectMany(l => l.Segments).ToList();
-        Assert.IsTrue(segments.Count > 0);
-        Assert.IsTrue(segments.All(s => s.Type == RenderedSegmentType.Text));
+        Assert.AreEqual(0, segments.Count);
     }
 
-    [TestMethod]
-    public void Render_BoldDoesNotMatchInsideCode_CodeTakesPrecedence()
-    {
-        var block = CreateCommentBlock("<summary>Use `**not bold**` for emphasis</summary>");
+    #endregion
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        // The **not bold** should be inside code, not rendered as bold
-        var codeSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Code);
-
-        Assert.IsNotNull(codeSegment, "Expected a code segment");
-        Assert.AreEqual("**not bold**", codeSegment.Text);
-
-        // There should be no bold segment
-        var boldSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
-
-        Assert.IsNull(boldSegment, "Should not have a bold segment when ** is inside code");
-    }
+    #region Markdown Link Tests
 
     [TestMethod]
     public void ProcessMarkdownInText_WithLink_CreatesLinkSegment()
@@ -295,35 +228,63 @@ public sealed class XmlDocCommentRendererTests
     }
 
     [TestMethod]
-    public void Render_WithMarkdownLink_CreatesLinkSegment()
+    public void ProcessMarkdownInText_WithLinkInMiddle_CreatesLinkSegment()
     {
-        var block = CreateCommentBlock("<summary>See the [docs](https://example.com) here</summary>");
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("See the [docs](https://example.com) here");
 
-        RenderedComment result = XmlDocCommentRenderer.Render(block);
-
-        Assert.IsNotNull(result);
-        var summary = result.Summary;
-        Assert.IsNotNull(summary);
-
-        var linkSegment = summary.Lines
-            .SelectMany(l => l.Segments)
-            .FirstOrDefault(s => s.Type == RenderedSegmentType.Link);
-
+        var linkSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Link);
         Assert.IsNotNull(linkSegment, "Expected a link segment");
         Assert.AreEqual("docs", linkSegment.Text);
         Assert.AreEqual("https://example.com", linkSegment.LinkTarget);
     }
 
-    private static XmlDocCommentBlock CreateCommentBlock(string xmlContent)
+    #endregion
+
+    #region Edge Case Tests
+
+    [TestMethod]
+    public void ProcessMarkdownInText_WithBoldAtStart_CreatesBoldSegment()
     {
-        var commentStyle = LanguageCommentStyle.GetForContentType("CSharp");
-        return new XmlDocCommentBlock(
-            span: new Microsoft.VisualStudio.Text.Span(0, xmlContent.Length),
-            startLine: 0,
-            endLine: 0,
-            indentation: "",
-            xmlContent: xmlContent,
-            commentStyle: commentStyle,
-            isMultiLineStyle: false);
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("**bold** at start");
+
+        Assert.AreEqual(2, segments.Count);
+        Assert.AreEqual("bold", segments[0].Text);
+        Assert.AreEqual(RenderedSegmentType.Bold, segments[0].Type);
+        Assert.AreEqual(" at start", segments[1].Text);
     }
+
+    [TestMethod]
+    public void ProcessMarkdownInText_WithBoldAtEnd_CreatesBoldSegment()
+    {
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("ends with **bold**");
+
+        Assert.AreEqual(2, segments.Count);
+        Assert.AreEqual("ends with ", segments[0].Text);
+        Assert.AreEqual("bold", segments[1].Text);
+        Assert.AreEqual(RenderedSegmentType.Bold, segments[1].Type);
+    }
+
+    [TestMethod]
+    public void ProcessMarkdownInText_WithOnlyBold_CreatesBoldSegment()
+    {
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("**bold**");
+
+        Assert.AreEqual(1, segments.Count);
+        Assert.AreEqual("bold", segments[0].Text);
+        Assert.AreEqual(RenderedSegmentType.Bold, segments[0].Type);
+    }
+
+    [TestMethod]
+    public void ProcessMarkdownInText_WithNestedFormatting_HandlesCorrectly()
+    {
+        // Markdown doesn't support nested formatting like **_text_**
+        // but we should handle it gracefully
+        var segments = XmlDocCommentRenderer.ProcessMarkdownInText("Text with **bold text** here");
+
+        var boldSegment = segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
+        Assert.IsNotNull(boldSegment);
+        Assert.AreEqual("bold text", boldSegment.Text);
+    }
+
+    #endregion
 }
