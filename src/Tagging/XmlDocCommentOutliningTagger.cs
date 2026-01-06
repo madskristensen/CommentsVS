@@ -41,7 +41,7 @@ namespace CommentsVS.Tagging
         {
             _buffer = buffer;
             _buffer.Changed += OnBufferChanged;
-            ToggleRenderedCommentsCommand.RenderedCommentsStateChanged += OnRenderedStateChanged;
+            SetRenderingModeHelper.RenderedCommentsStateChanged += OnRenderedStateChanged;
         }
 
         private void OnBufferChanged(object sender, TextContentChangedEventArgs e)

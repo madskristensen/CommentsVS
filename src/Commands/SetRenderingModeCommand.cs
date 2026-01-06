@@ -1,4 +1,10 @@
+using System.Collections.Generic;
+using System.Linq;
 using CommentsVS.Options;
+using Microsoft.VisualStudio.ComponentModelHost;
+using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Outlining;
 
 namespace CommentsVS.Commands
 {
@@ -58,6 +64,11 @@ namespace CommentsVS.Commands
     /// </summary>
     internal static class SetRenderingModeHelper
     {
+        /// <summary>
+        /// Event raised when the rendered comments state changes.
+        /// </summary>
+        public static event EventHandler RenderedCommentsStateChanged;
+
         public static async Task SetModeAsync(RenderingMode mode)
         {
             RenderingMode previousMode = General.Instance.CommentRenderingMode;
@@ -71,13 +82,13 @@ namespace CommentsVS.Commands
             await General.Instance.SaveAsync();
 
             // Notify that rendered comments state changed
-            ToggleRenderedCommentsCommand.RaiseStateChanged();
+            RenderedCommentsStateChanged?.Invoke(null, EventArgs.Empty);
 
             // When switching to/from Compact mode, expand all XML doc comments so they can
             // re-collapse with the correct collapsed text.
             if (mode == RenderingMode.Compact || previousMode == RenderingMode.Compact)
             {
-                await ToggleRenderedCommentsCommand.ExpandAndRecollapseXmlDocCommentsAsync();
+                await ExpandAndRecollapseXmlDocCommentsAsync();
             }
 
             var modeName = mode switch
@@ -89,6 +100,73 @@ namespace CommentsVS.Commands
             };
 
             await VS.StatusBar.ShowMessageAsync($"Comment rendering mode: {modeName}");
+        }
+
+        /// <summary>
+        /// Expands and re-collapses all XML doc comment regions to refresh their collapsed text.
+        /// </summary>
+        private static async Task ExpandAndRecollapseXmlDocCommentsAsync()
+        {
+            DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();
+            if (docView?.TextView == null)
+            {
+                return;
+            }
+
+            IWpfTextView textView = docView.TextView;
+            ITextSnapshot snapshot = textView.TextSnapshot;
+
+            IComponentModel2 componentModel = await VS.Services.GetComponentModelAsync();
+            IOutliningManagerService outliningManagerService = componentModel.GetService<IOutliningManagerService>();
+            IOutliningManager outliningManager = outliningManagerService?.GetOutliningManager(textView);
+
+            if (outliningManager == null)
+            {
+                return;
+            }
+
+            var fullSpan = new SnapshotSpan(snapshot, 0, snapshot.Length);
+            var commentRegions = outliningManager
+                .GetAllRegions(fullSpan)
+                .Where(r => IsXmlDocCommentRegion(r, snapshot))
+                .ToList();
+
+            if (commentRegions.Count == 0)
+            {
+                return;
+            }
+
+            // First expand all collapsed regions
+            var collapsedRegions = commentRegions.OfType<ICollapsed>().ToList();
+            foreach (ICollapsed collapsed in collapsedRegions)
+            {
+                outliningManager.Expand(collapsed);
+            }
+
+            // Small delay to let the outlining manager update
+            await Task.Delay(50);
+
+            // Re-collapse all regions that were collapsed
+            ITextSnapshot currentSnapshot = textView.TextSnapshot;
+            var currentFullSpan = new SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length);
+            IEnumerable<ICollapsible> currentRegions = outliningManager
+                .GetAllRegions(currentFullSpan)
+                .Where(r => IsXmlDocCommentRegion(r, currentSnapshot));
+
+            foreach (ICollapsible region in currentRegions)
+            {
+                if (!region.IsCollapsed)
+                {
+                    outliningManager.TryCollapse(region);
+                }
+            }
+        }
+
+        private static bool IsXmlDocCommentRegion(ICollapsible region, ITextSnapshot snapshot)
+        {
+            SnapshotSpan extent = region.Extent.GetSpan(snapshot);
+            var text = extent.GetText().TrimStart();
+            return text.StartsWith("///") || text.StartsWith("'''");
         }
     }
 }

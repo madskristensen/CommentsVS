@@ -20,9 +20,6 @@
     </Menus>
 
     <Groups>
-      <Group guid="CommentsVS" id="MyMenuGroup" priority="0x0900">
-        <Parent guid="VSEditor" id="Edit.LanguageInfoGroup.Advanced"/>
-      </Group>
       <Group guid="CommentsVS" id="ToolbarGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_TOOL_STANDARD"/>
       </Group>
@@ -45,32 +42,20 @@
     </Groups>
 
     <Buttons>
+      <!-- Toggle XML Comment Visibility -->
       <Button guid="CommentsVS" id="ToggleCommentVisibility" priority="0x0100" type="Button">
-        <Parent guid="CommentsVS" id="MyMenuGroup" />
+        <Parent guid="CommentsVS" id="CommentsToggleGroup"/>
         <Icon guid="ImageCatalogGuid" id="CommentGroup" />
         <CommandFlag>IconIsMoniker</CommandFlag>
         <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings>
-          <ButtonText>Toggle XML Comment Visibility</ButtonText>
+          <ButtonText>Expand/collapse XML Doc Comments</ButtonText>
           <CanonicalName>.CommentsVS.ToggleCommentVisibility</CanonicalName>
           <LocCanonicalName>.CommentsVS.ToggleCommentVisibility</LocCanonicalName>
-          <ToolTipText>Toggle visibility of XML documentation comments (Ctrl+M, Ctrl+C)</ToolTipText>
-        </Strings>
-      </Button>
-      <Button guid="CommentsVS" id="ToggleRenderedComments" priority="0x0101" type="Button">
-        <Parent guid="CommentsVS" id="MyMenuGroup" />
-        <Icon guid="ImageCatalogGuid" id="XMLCommentTag" />
-        <CommandFlag>IconIsMoniker</CommandFlag>
-        <CommandFlag>DynamicVisibility</CommandFlag>
-        <Strings>
-          <ButtonText>Toggle Rendered Comments</ButtonText>
-          <CanonicalName>.CommentsVS.ToggleRenderedComments</CanonicalName>
-          <LocCanonicalName>.CommentsVS.ToggleRenderedComments</LocCanonicalName>
-          <ToolTipText>Toggle rendered view of XML documentation comments (Ctrl+M, Ctrl+R)</ToolTipText>
         </Strings>
       </Button>
       <!-- Collapse by Default toggle in submenu -->
-      <Button guid="CommentsVS" id="ToggleCollapseByDefault" priority="0x0100" type="Button">
+      <Button guid="CommentsVS" id="ToggleCollapseByDefault" priority="0x0101" type="Button">
         <Parent guid="CommentsVS" id="CommentsToggleGroup"/>
         <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings>
@@ -128,19 +113,17 @@
       <Parent guid="CommentsVS" id="ToolbarGroup"/>
     </CommandPlacement>
     <!-- Place the submenu group on Edit menu -->
-    <CommandPlacement guid="CommentsVS" id="CommentsSubMenu" priority="0x9999">
+    <CommandPlacement guid="CommentsVS" id="CommentsSubMenu" priority="0xFF81">
       <Parent guid="VSEditor" id="Edit.LanguageInfoGroup"/>
     </CommandPlacement>
   </CommandPlacements>
 
   <KeyBindings>
     <KeyBinding guid="CommentsVS" id="ToggleCommentVisibility" editor="guidVSStd97" key1="M" mod1="Control" key2="C" mod2="Control" />
-    <KeyBinding guid="CommentsVS" id="ToggleRenderedComments" editor="guidVSStd97" key1="M" mod1="Control" key2="R" mod2="Control" />
   </KeyBindings>
 
   <Symbols>
     <GuidSymbol name="CommentsVS" value="{77a569d5-61e8-47ce-9e0f-9477ca6922d4}">
-      <IDSymbol name="MyMenuGroup" value="0x0001" />
       <IDSymbol name="ToolbarGroup" value="0x0002" />
       <IDSymbol name="CommentsSubMenu" value="0x0003" />
       <IDSymbol name="CommentsSubMenuGroup" value="0x0004" />
@@ -148,7 +131,6 @@
       <IDSymbol name="CommentsRenderingGroup" value="0x0006" />
       <IDSymbol name="CommentsSettingsGroup" value="0x0007" />
       <IDSymbol name="ToggleCommentVisibility" value="0x0200" />
-      <IDSymbol name="ToggleRenderedComments" value="0x0201" />
       <IDSymbol name="ToggleCollapseByDefault" value="0x0202" />
       <IDSymbol name="SetRenderingModeOff" value="0x0203" />
       <IDSymbol name="SetRenderingModeCompact" value="0x0204" />

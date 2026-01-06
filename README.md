@@ -40,14 +40,14 @@ Comment Studio solves all of these problems, letting you focus on writing great 
 | **Compact** | Collapse comments to a single line showing just the summary text |
 | **Full** | Rich formatted rendering—read documentation like a web page |
 
-Use **Ctrl+M, Ctrl+R** to cycle through rendering modes. The active mode is indicated with a checkmark in the menu.
+Select your preferred mode from the **Edit > Comments** menu or right-click context menu. The active mode is indicated with a checkmark.
 
 ### Comment Outlining/Collapsing
 **Reduce visual clutter instantly.** Collapse XML documentation comments to focus on your code. Expand them only when you need to read or edit.
 
-Use **Ctrl+M, Ctrl+C** to toggle all XML doc comments in the current file between collapsed and expanded states. The extension remembers your preference, so newly opened files will match your last toggle state.
+Use **Ctrl+M, Ctrl+C** to toggle all XML doc comments in the current file between collapsed and expanded states.
 
-You can also enable **Collapse XML Doc Comments by Default** from the **Edit > Comments** menu (or right-click context menu) to automatically collapse comments when opening files. This option is only available when the rendering mode is set to **Off**.
+You can also enable **Collapse XML Doc Comments by Default** from the **Edit > Comments** menu (or right-click context menu) to automatically collapse comments when opening files.
 
 ### Rendered XML Doc Comments
 **Read documentation like it was meant to be read.** The Full rendering mode strips away XML noise and displays your documentation with proper formatting:
@@ -58,14 +58,14 @@ You can also enable **Collapse XML Doc Comments by Default** from the **Edit > C
 - Proper list rendering for `<list>` elements
 - Gray text color that matches Visual Studio's comment styling (works with light and dark themes)
 
-Use **Ctrl+M, Ctrl+R** to toggle between rendering modes. This is great for reading documentation without the visual clutter of XML tags.
-
 ![Rendered Comments](art/rendered-comments.png)
 
 ### Context Menu Access
 Right-click in any C#, VB, or C++ code editor to access the **Comments** submenu with quick access to:
-- **Collapse XML Doc Comments by Default** - Toggle automatic collapsing (only when rendering is Off)
+- **Expand/collapse XML Doc Comments** - Toggle visibility of all XML doc comments (**Ctrl+M, Ctrl+C**)
+- **Collapse XML Doc Comments by Default** - Toggle automatic collapsing
 - **Rendering: Off / Compact / Full** - Switch between rendering modes
+- **Settings...** - Open extension settings
 
 The same menu is also available from the **Edit** menu.
 
@@ -183,7 +183,7 @@ Tag colors can be customized via **Tools > Options > Environment > Fonts and Col
 
 1. Install the extension from the Visual Studio Marketplace
 2. Open any C# or VB.NET file with XML documentation comments
-3. **Try rendering modes** – Press **Ctrl+M, Ctrl+R** to see your comments rendered beautifully
+3. **Try rendering modes** – Use **Edit > Comments** to switch between Off, Compact, and Full rendering
 4. **Try reflow** – Edit a comment and use **Format Document** (Ctrl+K, Ctrl+D) to see automatic formatting
 5. **Try collapsing** – Press **Ctrl+M, Ctrl+C** to collapse all comments and focus on code
 

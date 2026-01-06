@@ -58,7 +58,7 @@ namespace CommentsVS.Adornments
 
         public RenderedCommentIntraTextTagger(IWpfTextView view) : base(view)
         {
-            ToggleRenderedCommentsCommand.RenderedCommentsStateChanged += OnRenderedStateChanged;
+            SetRenderingModeHelper.RenderedCommentsStateChanged += OnRenderedStateChanged;
             view.Caret.PositionChanged += OnCaretPositionChanged;
 
             // Listen for zoom level changes to refresh adornments with new font size

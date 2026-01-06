@@ -22,7 +22,6 @@ namespace CommentsVS
     /// </summary>
     internal sealed partial class PackageIds
     {
-        public const int MyMenuGroup = 0x0001;
         public const int ToolbarGroup = 0x0002;
         public const int CommentsSubMenu = 0x0003;
         public const int CommentsSubMenuGroup = 0x0004;
@@ -30,7 +29,6 @@ namespace CommentsVS
         public const int CommentsRenderingGroup = 0x0006;
         public const int CommentsSettingsGroup = 0x0007;
         public const int ToggleCommentVisibility = 0x0200;
-        public const int ToggleRenderedComments = 0x0201;
         public const int ToggleCollapseByDefault = 0x0202;
         public const int SetRenderingModeOff = 0x0203;
         public const int SetRenderingModeCompact = 0x0204;

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using CommentsVS.Options;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -15,12 +14,6 @@ namespace CommentsVS.Commands
     [Command(PackageIds.ToggleCommentVisibility)]
     internal sealed class ToggleCommentVisibilityCommand : BaseCommand<ToggleCommentVisibilityCommand>
     {
-        protected override void BeforeQueryStatus(EventArgs e)
-        {
-            // Set checked state based on the option value
-            Command.Checked = General.Instance.CollapseCommentsOnFileOpen;
-        }
-
         protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
         {
             DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();
@@ -52,7 +45,7 @@ namespace CommentsVS.Commands
                 return;
             }
 
-            // Check if majority are collapsed
+            // Check if majority are collapsed - if so, expand; otherwise collapse
             var collapsedCount = commentRegions.Count(r => r.IsCollapsed);
             var shouldExpand = collapsedCount > commentRegions.Count / 2;
 
@@ -67,10 +60,6 @@ namespace CommentsVS.Commands
                     }
                 }
 
-                // Update setting so new files open with comments expanded
-                General.Instance.CollapseCommentsOnFileOpen = false;
-                await General.Instance.SaveAsync();
-
                 await VS.StatusBar.ShowMessageAsync("XML documentation comments expanded");
             }
             else
@@ -80,10 +69,6 @@ namespace CommentsVS.Commands
                 {
                     outliningManager.TryCollapse(region);
                 }
-
-                // Update setting so new files open with comments collapsed
-                General.Instance.CollapseCommentsOnFileOpen = true;
-                await General.Instance.SaveAsync();
 
                 await VS.StatusBar.ShowMessageAsync("XML documentation comments collapsed");
             }
