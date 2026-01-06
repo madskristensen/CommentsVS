@@ -387,7 +387,6 @@ namespace CommentsVS.Adornments
 
             var textBlock = new TextBlock
             {
-                Text = strippedSummary,
                 FontFamily = fontFamily,
                 FontSize = fontSize,
                 Foreground = textBrush,
@@ -399,6 +398,16 @@ namespace CommentsVS.Adornments
                 ToolTip = CreateTooltip(block),
                 Cursor = Cursors.Hand
             };
+
+            // Process markdown in the summary text and create formatted inlines
+            var segments = XmlDocCommentRenderer.ProcessMarkdownInText(strippedSummary);
+            var headingBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100));
+
+            foreach (var segment in segments)
+            {
+                var inline = CreateInlineForSegment(segment, textBrush, headingBrush, fontFamily);
+                textBlock.Inlines.Add(inline);
+            }
 
             // Double-click to switch to raw source mode for editing
             AttachDoubleClickHandler(textBlock, block);
@@ -581,58 +590,180 @@ namespace CommentsVS.Adornments
                 var isListItem = lineText.TrimStart().StartsWith("•") ||
                                   (lineText.TrimStart().Length > 0 && char.IsDigit(lineText.TrimStart()[0]) && lineText.Contains(". "));
 
-                // Word wrap the line at 100 chars
-                List<string> wrappedLines = WordWrap(lineText, 100);
+                // Check if line has special formatting segments
+                var hasFormattedSegments = line.Segments.Any(s =>
+                    s.Type == RenderedSegmentType.Bold ||
+                    s.Type == RenderedSegmentType.Italic ||
+                    s.Type == RenderedSegmentType.Code ||
+                    s.Type == RenderedSegmentType.Strikethrough ||
+                    s.Type == RenderedSegmentType.Link ||
+                    s.Type == RenderedSegmentType.ParamRef ||
+                    s.Type == RenderedSegmentType.TypeParamRef);
 
-                for (var i = 0; i < wrappedLines.Count; i++)
+                if (hasFormattedSegments)
                 {
+                    // Render with formatting
                     var textBlock = new TextBlock
                     {
                         FontFamily = fontFamily,
                         FontSize = fontSize,
                         Foreground = textBrush,
-                        TextWrapping = TextWrapping.NoWrap,
-                        // Use consistent indentation: list items get full indent, continuation lines get more
+                        TextWrapping = TextWrapping.Wrap,
+                        MaxWidth = 800,
                         Margin = new Thickness(
-                            i > 0 ? listIndent * 1.5 : (isListItem ? listIndent * 0.3 : 0),
+                            isListItem ? listIndent * 0.3 : 0,
                             0, 0,
                             itemSpacing)
                     };
 
-                    var wrappedText = wrappedLines[i];
-
                     // For summary, make the first non-list line bold
-                    if (isSummary && i == 0 && !isListItem && isFirstLine)
+                    if (isSummary && !isListItem && isFirstLine)
                     {
                         textBlock.FontWeight = FontWeights.SemiBold;
                     }
 
-                    // Check if line has special segments (bold terms in list items)
-                    if (i == 0 && line.Segments.Any(s => s.Type == RenderedSegmentType.Bold))
+                    foreach (RenderedSegment segment in line.Segments)
                     {
-                        // Render with formatting
-                        foreach (RenderedSegment segment in line.Segments)
-                        {
-                            var run = new Run(segment.Text) { Foreground = textBrush };
-                            if (segment.Type == RenderedSegmentType.Bold)
-                            {
-                                run.FontWeight = FontWeights.SemiBold;
-                                run.Foreground = headingBrush;
-                            }
-                            textBlock.Inlines.Add(run);
-                        }
-                    }
-                    else
-                    {
-                        textBlock.Text = wrappedText;
+                        var inline = CreateInlineForSegment(segment, textBrush, headingBrush, fontFamily);
+                        textBlock.Inlines.Add(inline);
                     }
 
                     panel.Children.Add(textBlock);
+                }
+                else
+                {
+                    // Word wrap the line at 100 chars
+                    List<string> wrappedLines = WordWrap(lineText, 100);
+
+                    for (var i = 0; i < wrappedLines.Count; i++)
+                    {
+                        var textBlock = new TextBlock
+                        {
+                            FontFamily = fontFamily,
+                            FontSize = fontSize,
+                            Foreground = textBrush,
+                            TextWrapping = TextWrapping.NoWrap,
+                            // Use consistent indentation: list items get full indent, continuation lines get more
+                            Margin = new Thickness(
+                                i > 0 ? listIndent * 1.5 : (isListItem ? listIndent * 0.3 : 0),
+                                0, 0,
+                                itemSpacing)
+                        };
+
+                        var wrappedText = wrappedLines[i];
+
+                        // For summary, make the first non-list line bold
+                        if (isSummary && i == 0 && !isListItem && isFirstLine)
+                        {
+                            textBlock.FontWeight = FontWeights.SemiBold;
+                        }
+
+                        textBlock.Text = wrappedText;
+                        panel.Children.Add(textBlock);
+                    }
                 }
 
                 isFirstLine = false;
                 previousWasListItem = isListItem;
             }
+        }
+
+        /// <summary>
+        /// Creates an Inline element for a rendered segment with appropriate formatting.
+        /// Returns a Hyperlink for links, Run for other types.
+        /// </summary>
+        private static Inline CreateInlineForSegment(RenderedSegment segment, Brush textBrush, Brush headingBrush, FontFamily fontFamily)
+        {
+            switch (segment.Type)
+            {
+                case RenderedSegmentType.Link:
+                    var hyperlink = new Hyperlink(new Run(segment.Text))
+                    {
+                        Foreground = new SolidColorBrush(Color.FromRgb(86, 156, 214)), // Blue link color
+                        TextDecorations = TextDecorations.Underline
+                    };
+
+                    // Make the link clickable if we have a URL
+                    if (!string.IsNullOrEmpty(segment.LinkTarget))
+                    {
+                        hyperlink.NavigateUri = CreateUri(segment.LinkTarget);
+                        hyperlink.RequestNavigate += (sender, e) =>
+                        {
+                            try
+                            {
+                                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                                {
+                                    FileName = e.Uri.AbsoluteUri,
+                                    UseShellExecute = true
+                                });
+                            }
+                            catch
+                            {
+                                // Ignore failures to open URL
+                            }
+                            e.Handled = true;
+                        };
+                    }
+                    return hyperlink;
+
+                default:
+                    var run = new Run(segment.Text) { Foreground = textBrush };
+
+                    switch (segment.Type)
+                    {
+                        case RenderedSegmentType.Bold:
+                            run.FontWeight = FontWeights.Bold;
+                            break;
+
+                        case RenderedSegmentType.Italic:
+                            run.FontStyle = FontStyles.Italic;
+                            break;
+
+                        case RenderedSegmentType.Code:
+                            run.FontFamily = new FontFamily("Consolas");
+                            run.Foreground = new SolidColorBrush(Color.FromRgb(156, 120, 100)); // Brownish code color
+                            break;
+
+                        case RenderedSegmentType.Strikethrough:
+                            run.TextDecorations = TextDecorations.Strikethrough;
+                            break;
+
+                        case RenderedSegmentType.ParamRef:
+                        case RenderedSegmentType.TypeParamRef:
+                            run.FontStyle = FontStyles.Italic;
+                            run.Foreground = new SolidColorBrush(Color.FromRgb(86, 156, 214)); // Blue for refs
+                            break;
+
+                        case RenderedSegmentType.Heading:
+                            run.FontWeight = FontWeights.SemiBold;
+                            run.Foreground = headingBrush;
+                            break;
+                    }
+
+                    return run;
+            }
+        }
+
+        /// <summary>
+        /// Creates a URI from a link target string, handling relative and absolute URLs.
+        /// </summary>
+        private static Uri CreateUri(string linkTarget)
+        {
+            if (string.IsNullOrEmpty(linkTarget))
+                return null;
+
+            // Try to create URI directly
+            if (Uri.TryCreate(linkTarget, UriKind.Absolute, out var uri))
+                return uri;
+
+            // If it looks like a URL but failed, try adding https://
+            if (linkTarget.Contains(".") && !linkTarget.Contains(" "))
+            {
+                if (Uri.TryCreate("https://" + linkTarget, UriKind.Absolute, out uri))
+                    return uri;
+            }
+
+            return null;
         }
 
         private static FrameworkElement CreateSpacer(double height)
@@ -755,7 +886,8 @@ namespace CommentsVS.Adornments
 
                     foreach (RenderedSegment segment in line.Segments)
                     {
-                        textBlock.Inlines.Add(new Run(segment.Text) { Foreground = textBrush });
+                        var inline = CreateInlineForSegment(segment, textBrush, headingBrush, fontFamily);
+                        textBlock.Inlines.Add(inline);
                     }
 
                     panel.Children.Add(textBlock);

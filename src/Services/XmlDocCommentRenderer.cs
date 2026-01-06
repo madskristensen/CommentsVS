@@ -25,7 +25,8 @@ namespace CommentsVS.Services
         Link,
         ParamRef,
         TypeParamRef,
-        Heading
+        Heading,
+        Strikethrough
     }
 
     /// <summary>
@@ -245,7 +246,12 @@ namespace CommentsVS.Services
                         result.Sections.Insert(0, summary);
                     }
                     RenderedLine line = GetOrCreateCurrentLine(summary);
-                    line.Segments.Add(new RenderedSegment(text));
+                    // Process markdown patterns in the text
+                    var segments = ProcessMarkdownInText(text);
+                    foreach (var segment in segments)
+                    {
+                        line.Segments.Add(segment);
+                    }
                 }
                 return;
             }
@@ -374,7 +380,12 @@ namespace CommentsVS.Services
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     RenderedLine line = GetOrCreateCurrentLine(section);
-                    line.Segments.Add(new RenderedSegment(text));
+                    // Process markdown patterns in the text
+                    var segments = ProcessMarkdownInText(text);
+                    foreach (var segment in segments)
+                    {
+                        line.Segments.Add(segment);
+                    }
                 }
                 return;
             }
@@ -697,6 +708,189 @@ namespace CommentsVS.Services
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Regex for markdown bold (**text** or __text__).
+        /// Matches ** or __ delimiters with non-whitespace content.
+        /// </summary>
+        private static readonly Regex _markdownBoldRegex = new(
+            @"(\*\*|__)(?=\S)(.+?)(?<=\S)\1",
+            RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regex for markdown italic (*text* or _text_).
+        /// Uses negative lookbehind/lookahead to avoid matching bold patterns.
+        /// </summary>
+        private static readonly Regex _markdownItalicRegex = new(
+            @"(?<!\*)\*(?!\*)(\S(?:[^*]*\S)?)\*(?!\*)|(?<!_)_(?!_)(\S(?:[^_]*\S)?)_(?!_)",
+            RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regex for markdown inline code (`code`).
+        /// </summary>
+        private static readonly Regex _markdownCodeRegex = new(
+            @"`([^`]+)`",
+            RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regex for markdown strikethrough (~~text~~).
+        /// </summary>
+        private static readonly Regex _markdownStrikethroughRegex = new(
+            @"~~(\S(?:[^~]*\S)?)~~",
+            RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regex for markdown links [text](url).
+        /// </summary>
+        private static readonly Regex _markdownLinkRegex = new(
+            @"\[([^\]]+)\]\(([^)]+)\)",
+            RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regex for auto-links &lt;url&gt;.
+        /// Matches URLs wrapped in angle brackets.
+        /// </summary>
+        private static readonly Regex _markdownAutoLinkRegex = new(
+            @"<(https?://[^>]+)>",
+            RegexOptions.Compiled);
+
+        /// <summary>
+        /// Processes markdown patterns in text and returns a list of segments.
+        /// Supports **bold**, __bold__, *italic*, _italic_, `code`, ~~strikethrough~~, [text](url), and &lt;url&gt;.
+        /// </summary>
+        public static List<RenderedSegment> ProcessMarkdownInText(string text)
+        {
+            var segments = new List<RenderedSegment>();
+
+            if (string.IsNullOrEmpty(text))
+            {
+                return segments;
+            }
+
+            // Process inline code and links first (to prevent other processing inside them)
+            var codeMatches = _markdownCodeRegex.Matches(text);
+            var linkMatches = _markdownLinkRegex.Matches(text);
+            var autoLinkMatches = _markdownAutoLinkRegex.Matches(text);
+            var boldMatches = _markdownBoldRegex.Matches(text);
+            var italicMatches = _markdownItalicRegex.Matches(text);
+            var strikethroughMatches = _markdownStrikethroughRegex.Matches(text);
+
+            // Combine all matches and sort by position
+            // Tuple: (Start, Length, Content, Type, LinkTarget)
+            var allMatches = new List<(int Start, int Length, string Content, RenderedSegmentType Type, string LinkTarget)>();
+
+            foreach (Match match in codeMatches)
+            {
+                allMatches.Add((match.Index, match.Length, match.Groups[1].Value, RenderedSegmentType.Code, null));
+            }
+
+            // Links: [text](url)
+            foreach (Match match in linkMatches)
+            {
+                if (!OverlapsWithExisting(allMatches, match.Index, match.Length))
+                {
+                    var linkText = match.Groups[1].Value;
+                    var linkUrl = match.Groups[2].Value;
+                    allMatches.Add((match.Index, match.Length, linkText, RenderedSegmentType.Link, linkUrl));
+                }
+            }
+
+            // Auto-links: <url>
+            foreach (Match match in autoLinkMatches)
+            {
+                if (!OverlapsWithExisting(allMatches, match.Index, match.Length))
+                {
+                    var url = match.Groups[1].Value;
+                    allMatches.Add((match.Index, match.Length, url, RenderedSegmentType.Link, url));
+                }
+            }
+
+            foreach (Match match in boldMatches)
+            {
+                // Check if this match overlaps with any code match
+                if (!OverlapsWithExisting(allMatches, match.Index, match.Length))
+                {
+                    allMatches.Add((match.Index, match.Length, match.Groups[2].Value, RenderedSegmentType.Bold, null));
+                }
+            }
+
+            foreach (Match match in italicMatches)
+            {
+                // Check if this match overlaps with any existing match
+                if (!OverlapsWithExisting(allMatches, match.Index, match.Length))
+                {
+                    // Group 1 is for * delimiters, Group 2 is for _ delimiters
+                    var content = !string.IsNullOrEmpty(match.Groups[1].Value) ? match.Groups[1].Value : match.Groups[2].Value;
+                    allMatches.Add((match.Index, match.Length, content, RenderedSegmentType.Italic, null));
+                }
+            }
+
+            foreach (Match match in strikethroughMatches)
+            {
+                if (!OverlapsWithExisting(allMatches, match.Index, match.Length))
+                {
+                    allMatches.Add((match.Index, match.Length, match.Groups[1].Value, RenderedSegmentType.Strikethrough, null));
+                }
+            }
+
+            // Sort by position
+            allMatches.Sort((a, b) => a.Start.CompareTo(b.Start));
+
+            // Build segments
+            var currentPos = 0;
+            foreach (var match in allMatches)
+            {
+                // Add text before this match
+                if (match.Start > currentPos)
+                {
+                    var beforeText = text.Substring(currentPos, match.Start - currentPos);
+                    if (!string.IsNullOrEmpty(beforeText))
+                    {
+                        segments.Add(new RenderedSegment(beforeText));
+                    }
+                }
+
+                // Add the formatted segment (with link target if applicable)
+                segments.Add(new RenderedSegment(match.Content, match.Type, match.LinkTarget));
+                currentPos = match.Start + match.Length;
+            }
+
+            // Add remaining text after last match
+            if (currentPos < text.Length)
+            {
+                var remainingText = text.Substring(currentPos);
+                if (!string.IsNullOrEmpty(remainingText))
+                {
+                    segments.Add(new RenderedSegment(remainingText));
+                }
+            }
+
+            // If no matches were found, return the original text as a single segment
+            if (segments.Count == 0)
+            {
+                segments.Add(new RenderedSegment(text));
+            }
+
+            return segments;
+        }
+
+        /// <summary>
+        /// Checks if a range overlaps with any existing match.
+        /// </summary>
+        private static bool OverlapsWithExisting(List<(int Start, int Length, string Content, RenderedSegmentType Type, string LinkTarget)> existing, int start, int length)
+        {
+            var end = start + length;
+            foreach (var match in existing)
+            {
+                var matchEnd = match.Start + match.Length;
+                // Check for any overlap
+                if (start < matchEnd && end > match.Start)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static string CleanText(string text)

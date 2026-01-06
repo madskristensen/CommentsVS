@@ -60,6 +60,31 @@ You can also enable **Collapse XML Doc Comments by Default** from the **Edit > C
 
 ![Rendered Comments](art/rendered-comments.png)
 
+### Markdown Formatting in Comments
+**Write expressive documentation with familiar syntax.** Comment Studio supports basic Markdown formatting within your XML documentation comments:
+
+| Syntax | Renders As |
+|--------|------------|
+| `**bold**` or `__bold__` | **bold** |
+| `*italic*` or `_italic_` | *italic* |
+| `` `code` `` | `code` |
+| `~~strikethrough~~` | ~~strikethrough~~ |
+| `[text](url)` | clickable link |
+| `<https://...>` | auto-link |
+
+Links are clickable and open in your default browser.
+
+You can also use standard XML formatting tags (`<b>`, `<i>`, `<c>`, `<see href="...">`) which are rendered the same way.
+
+Example:
+```csharp
+/// <summary>
+/// Represents a user with *basic* contact information.
+/// See the [API docs](https://example.com/api) for more details.
+/// Use the **FullUser** class for ~~deprecated~~ `extended` properties.
+/// </summary>
+```
+
 ### Context Menu Access
 Right-click in any C#, VB, or C++ code editor to access the **Comments** submenu with quick access to:
 - **Expand/collapse XML Doc Comments** - Toggle visibility of all XML doc comments (**Ctrl+M, Ctrl+C**)
