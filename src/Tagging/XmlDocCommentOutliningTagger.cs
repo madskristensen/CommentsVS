@@ -76,18 +76,14 @@ namespace CommentsVS.Tagging
                 yield break;
             }
 
-            ITextSnapshot snapshot = spans[0].Snapshot;
-            IContentType contentType = snapshot.ContentType;
-            var commentStyle = LanguageCommentStyle.GetForContentType(contentType);
-
-            if (commentStyle == null)
+            // Use cached blocks for performance - includes large file check
+            IReadOnlyList<XmlDocCommentBlock> commentBlocks = XmlDocCommentParser.GetCachedCommentBlocks(_buffer);
+            if (commentBlocks == null)
             {
                 yield break;
             }
 
-            var parser = new XmlDocCommentParser(commentStyle);
-            IReadOnlyList<XmlDocCommentBlock> commentBlocks = parser.FindAllCommentBlocks(snapshot);
-
+            ITextSnapshot snapshot = spans[0].Snapshot;
             var collapseByDefault = General.Instance.CollapseCommentsOnFileOpen;
 
             foreach (XmlDocCommentBlock block in commentBlocks)

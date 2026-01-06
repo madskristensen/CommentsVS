@@ -60,6 +60,31 @@ namespace CommentsVS.Services
         private readonly LanguageCommentStyle _commentStyle = commentStyle ?? throw new ArgumentNullException(nameof(commentStyle));
 
         /// <summary>
+        /// Gets cached comment blocks for a text buffer, parsing only if the cache is stale.
+        /// This is the preferred method for taggers and other components that need comment blocks.
+        /// Returns null if the file is too large to process.
+        /// </summary>
+        /// <param name="buffer">The text buffer.</param>
+        /// <returns>Cached comment blocks, or null if file is too large or unsupported.</returns>
+        public static IReadOnlyList<XmlDocCommentBlock> GetCachedCommentBlocks(ITextBuffer buffer)
+        {
+            if (buffer == null)
+            {
+                return null;
+            }
+
+            ITextSnapshot snapshot = buffer.CurrentSnapshot;
+            var commentStyle = LanguageCommentStyle.GetForContentType(snapshot.ContentType);
+            if (commentStyle == null)
+            {
+                return null;
+            }
+
+            var cache = XmlDocCommentCache.GetOrCreate(buffer);
+            return cache?.GetCommentBlocks(snapshot, commentStyle);
+        }
+
+        /// <summary>
         /// Finds all XML documentation comment blocks in the given text snapshot.
         /// </summary>
         /// <param name="snapshot">The text snapshot to search.</param>

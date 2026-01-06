@@ -68,6 +68,7 @@
     <Compile Include="Services\CommentReflowEngine.cs" />
     <Compile Include="Services\GitRepositoryService.cs" />
     <Compile Include="Services\LanguageCommentStyles.cs" />
+    <Compile Include="Services\XmlDocCommentCache.cs" />
     <Compile Include="Services\XmlDocCommentParser.cs" />
     <Compile Include="Services\XmlDocCommentRenderer.cs" />
     <Compile Include="source.extension.cs">

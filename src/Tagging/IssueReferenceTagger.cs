@@ -28,6 +28,7 @@ namespace CommentsVS.Tagging
         }
     }
 
+
     /// <summary>
     /// Creates clickable links for issue references like #123 in comments.
     /// </summary>
@@ -36,6 +37,11 @@ namespace CommentsVS.Tagging
         private readonly ITextBuffer _buffer;
         private GitRepositoryInfo _repoInfo;
         private bool _repoInfoInitialized;
+
+        /// <summary>
+        /// Maximum file size (in characters) to process. Files larger than this are skipped for performance.
+        /// </summary>
+        private const int _maxFileSize = 150_000;
 
         // Match #123 pattern (issue/PR number) - must be preceded by whitespace or start of line
         // and followed by word boundary
@@ -69,6 +75,12 @@ namespace CommentsVS.Tagging
             }
 
             if (spans.Count == 0)
+            {
+                yield break;
+            }
+
+            // Skip large files for performance
+            if (spans[0].Snapshot.Length > _maxFileSize)
             {
                 yield break;
             }

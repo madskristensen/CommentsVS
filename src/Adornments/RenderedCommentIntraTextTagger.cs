@@ -137,21 +137,20 @@ namespace CommentsVS.Adornments
                 return;
 
             var caretLine = view.Caret.Position.BufferPosition.GetContainingLine().LineNumber;
-            ITextSnapshot snapshot = view.TextBuffer.CurrentSnapshot;
-            var commentStyle = LanguageCommentStyle.GetForContentType(snapshot.ContentType);
 
-            if (commentStyle != null)
+            // Use cached blocks for performance
+            IReadOnlyList<XmlDocCommentBlock> blocks = XmlDocCommentParser.GetCachedCommentBlocks(view.TextBuffer);
+            if (blocks == null)
             {
-                var parser = new XmlDocCommentParser(commentStyle);
-                IReadOnlyList<XmlDocCommentBlock> blocks = parser.FindAllCommentBlocks(snapshot);
+                return;
+            }
 
-                foreach (XmlDocCommentBlock block in blocks)
+            foreach (XmlDocCommentBlock block in blocks)
+            {
+                if (caretLine >= block.StartLine && caretLine <= block.EndLine)
                 {
-                    if (caretLine >= block.StartLine && caretLine <= block.EndLine)
-                    {
-                        HandleEscapeKey(block.StartLine);
-                        return;
-                    }
+                    HandleEscapeKey(block.StartLine);
+                    return;
                 }
             }
         }
@@ -162,14 +161,11 @@ namespace CommentsVS.Adornments
             {
                 // Check if caret is on a rendered comment line
                 var caretLine = view.Caret.Position.BufferPosition.GetContainingLine().LineNumber;
-                ITextSnapshot snapshot = view.TextBuffer.CurrentSnapshot;
-                var commentStyle = LanguageCommentStyle.GetForContentType(snapshot.ContentType);
 
-                if (commentStyle != null)
+                // Use cached blocks for performance
+                IReadOnlyList<XmlDocCommentBlock> blocks = XmlDocCommentParser.GetCachedCommentBlocks(view.TextBuffer);
+                if (blocks != null)
                 {
-                    var parser = new XmlDocCommentParser(commentStyle);
-                    IReadOnlyList<XmlDocCommentBlock> blocks = parser.FindAllCommentBlocks(snapshot);
-
                     // Find if caret is within any rendered comment
                     foreach (XmlDocCommentBlock block in blocks)
                     {
@@ -197,14 +193,12 @@ namespace CommentsVS.Adornments
             {
                 var shouldRefresh = false;
 
-                ITextSnapshot snapshot = view.TextBuffer.CurrentSnapshot;
-                var commentStyle = LanguageCommentStyle.GetForContentType(snapshot.ContentType);
 
-                if (commentStyle != null)
+                // Use cached blocks for performance - avoids full document parse on every caret move
+                IReadOnlyList<XmlDocCommentBlock> blocks = XmlDocCommentParser.GetCachedCommentBlocks(view.TextBuffer);
+
+                if (blocks != null)
                 {
-                    var parser = new XmlDocCommentParser(commentStyle);
-                    IReadOnlyList<XmlDocCommentBlock> blocks = parser.FindAllCommentBlocks(snapshot);
-
                     // Check if we moved away from any temporarily hidden comments (ESC key)
                     foreach (var hiddenLine in _temporarilyHiddenComments.ToList())
                     {
@@ -287,19 +281,17 @@ namespace CommentsVS.Adornments
                 yield break;
             }
 
-            ITextSnapshot snapshot = spans[0].Snapshot;
-            var commentStyle = LanguageCommentStyle.GetForContentType(snapshot.ContentType);
-
-            if (commentStyle == null)
+            // Use cached blocks for performance - includes large file check
+            IReadOnlyList<XmlDocCommentBlock> commentBlocks = XmlDocCommentParser.GetCachedCommentBlocks(view.TextBuffer);
+            if (commentBlocks == null)
             {
                 yield break;
             }
 
+            ITextSnapshot snapshot = spans[0].Snapshot;
+
             // Get current caret line
             var caretLine = view.Caret.Position.BufferPosition.GetContainingLine().LineNumber;
-
-            var parser = new XmlDocCommentParser(commentStyle);
-            IReadOnlyList<XmlDocCommentBlock> commentBlocks = parser.FindAllCommentBlocks(snapshot);
 
             foreach (XmlDocCommentBlock block in commentBlocks)
             {

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -48,6 +49,12 @@ namespace CommentsVS.Services
     public static class GitRepositoryService
     {
         /// <summary>
+        /// Cache of repository info by git directory path.
+        /// Using ConcurrentDictionary for thread-safety since multiple taggers may access simultaneously.
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, GitRepositoryInfo> _repoCache = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
         /// Defines a pattern for matching a Git remote URL to a hosting provider.
         /// </summary>
         private sealed class RemoteUrlPattern(Regex regex, GitHostingProvider provider, string baseUrl, bool usesOrgProject = false)
@@ -91,6 +98,7 @@ namespace CommentsVS.Services
 
         /// <summary>
         /// Gets repository info for a file path by finding the Git repository root and parsing the remote URL.
+        /// Results are cached by git directory for performance.
         /// </summary>
         public static GitRepositoryInfo GetRepositoryInfo(string filePath)
         {
@@ -107,13 +115,25 @@ namespace CommentsVS.Services
                     return null;
                 }
 
+                // Check cache first
+                if (_repoCache.TryGetValue(gitDir, out GitRepositoryInfo cachedInfo))
+                {
+                    return cachedInfo;
+                }
+
+                // Parse and cache
                 var remoteUrl = GetOriginRemoteUrl(gitDir);
                 if (string.IsNullOrEmpty(remoteUrl))
                 {
                     return null;
                 }
 
-                return ParseRemoteUrl(remoteUrl);
+                GitRepositoryInfo repoInfo = ParseRemoteUrl(remoteUrl);
+
+                // Cache even if null to avoid repeated lookups
+                _repoCache.TryAdd(gitDir, repoInfo);
+
+                return repoInfo;
             }
             catch
             {

@@ -32,6 +32,16 @@ namespace CommentsVS.Classification
 
         private readonly IClassificationType _metadataType;
 
+        /// <summary>
+        /// Maximum file size (in characters) to process. Files larger than this are skipped for performance.
+        /// </summary>
+        private const int _maxFileSize = 150_000;
+
+        /// <summary>
+        /// Tag keywords for fast pre-check before running regex.
+        /// </summary>
+        private static readonly string[] _tagKeywords = ["TODO", "HACK", "NOTE", "BUG", "FIXME", "UNDONE", "REVIEW"];
+
         // Regex to match comment tags - looks for tag keywords after comment prefixes
         private static readonly Regex _tagRegex = new(
             @"(?<=//.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?)|" +
@@ -72,7 +82,29 @@ namespace CommentsVS.Classification
                 return result;
             }
 
+            // Skip large files for performance
+            if (span.Snapshot.Length > _maxFileSize)
+            {
+                return result;
+            }
+
             var text = span.GetText();
+
+            // Fast pre-check: skip regex if no tag keywords are present (case-insensitive)
+            var hasAnyTag = false;
+            foreach (var keyword in _tagKeywords)
+            {
+                if (text.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    hasAnyTag = true;
+                    break;
+                }
+            }
+            if (!hasAnyTag)
+            {
+                return result;
+            }
+
             var lineStart = span.Start.Position;
 
             foreach (Match match in _tagRegex.Matches(text))
