@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Linq;
 using CommentsVS.Adornments;
 using CommentsVS.Options;
 using CommentsVS.Services;
@@ -21,22 +20,22 @@ namespace CommentsVS.Handlers
     [ContentType("Basic")]
     [Name(nameof(RenderedCommentNavigationHandler))]
     [TextViewRole(PredefinedTextViewRoles.Document)]
-    internal sealed class RenderedCommentNavigationHandler : 
-        ICommandHandler<DownKeyCommandArgs>
+    internal sealed class RenderedCommentNavigationHandler :
+        ICommandHandler<EscapeKeyCommandArgs>
     {
         public string DisplayName => "Handle Down Arrow Key in Rendered Comments";
 
         // Down Arrow: Hide rendering
-        public bool ExecuteCommand(DownKeyCommandArgs args, CommandExecutionContext executionContext)
+        public bool ExecuteCommand(EscapeKeyCommandArgs args, CommandExecutionContext executionContext)
         {
             // Only handle if in Full rendering mode
-            if (General.Instance.CommentRenderingMode != RenderingMode.Full)
+            if (General.Instance.CommentRenderingMode == RenderingMode.Off)
             {
                 return false; // Let VS handle arrow key normally
             }
 
             // Cast to IWpfTextView if possible
-            if (!(args.TextView is IWpfTextView wpfTextView))
+            if (args.TextView is not IWpfTextView wpfTextView)
             {
                 return false;
             }
@@ -73,7 +72,7 @@ namespace CommentsVS.Handlers
             return false; // Let VS handle arrow key normally
         }
 
-        public CommandState GetCommandState(DownKeyCommandArgs args)
+        public CommandState GetCommandState(EscapeKeyCommandArgs args)
         {
             return CommandState.Unspecified;
         }

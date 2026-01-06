@@ -147,9 +147,19 @@ namespace CommentsVS.Adornments
 
             foreach (XmlDocCommentBlock block in blocks)
             {
-                if (caretLine >= block.StartLine && caretLine <= block.EndLine)
+                // When rendered, the adornment appears on StartLine only (the block is collapsed).
+                // Check if caret is on the start line of a rendered (not hidden) comment.
+                if (caretLine == block.StartLine && !_temporarilyHiddenComments.Contains(block.StartLine))
                 {
                     HandleEscapeKey(block.StartLine);
+                    return;
+                }
+
+                // Also check if caret is within an already-hidden comment (raw source view)
+                if (_temporarilyHiddenComments.Contains(block.StartLine) &&
+                    caretLine >= block.StartLine && caretLine <= block.EndLine)
+                {
+                    // Already hidden, ESC shouldn't do anything for this block
                     return;
                 }
             }
@@ -166,18 +176,16 @@ namespace CommentsVS.Adornments
                 IReadOnlyList<XmlDocCommentBlock> blocks = XmlDocCommentParser.GetCachedCommentBlocks(view.TextBuffer);
                 if (blocks != null)
                 {
-                    // Find if caret is within any rendered comment
+                    // Find if caret is on the start line of a rendered comment
                     foreach (XmlDocCommentBlock block in blocks)
                     {
-                        if (caretLine >= block.StartLine && caretLine <= block.EndLine)
+                        // When rendered, the adornment appears on StartLine only (the block is collapsed).
+                        // Check if caret is on the start line of a rendered (not hidden) comment.
+                        if (caretLine == block.StartLine && !_temporarilyHiddenComments.Contains(block.StartLine))
                         {
-                            // If comment is rendered (not temporarily hidden), hide it
-                            if (!_temporarilyHiddenComments.Contains(block.StartLine))
-                            {
-                                HideCommentRendering(block.StartLine);
-                                e.Handled = true;
-                                return;
-                            }
+                            HideCommentRendering(block.StartLine);
+                            e.Handled = true;
+                            return;
                         }
                     }
                 }

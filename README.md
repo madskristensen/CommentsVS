@@ -70,6 +70,8 @@ You can also enable **Collapse XML Doc Comments by Default** from the **Edit > C
 - Proper list rendering for `<list>` elements
 - Gray text color that matches Visual Studio's comment styling (works with light and dark themes)
 
+**Quick editing:** Double-click a rendered comment or press **ESC** when the caret is on a rendered comment line to temporarily switch it to raw source view for editing. Move the caret away from the comment to restore the rendered view.
+
 ![Rendered Comments](art/rendered-comments.png)
 
 ### Markdown Formatting in Comments
