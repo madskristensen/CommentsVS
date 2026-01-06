@@ -48,7 +48,9 @@
     <Compile Include="Adornments\IntraTextAdornmentTagger.cs" />
     <Compile Include="Adornments\RenderedCommentAdornmentManager.cs" />
     <Compile Include="Adornments\RenderedCommentIntraTextTagger.cs" />
+    <Compile Include="Classification\CommentTagClassificationTypes.cs" />
     <Compile Include="Classification\CommentTagClassifier.cs" />
+    <Compile Include="Classification\CommentTagClassifierProvider.cs" />
     <Compile Include="Classification\CommentTagFormatDefinitions.cs" />
     <Compile Include="Commands\NextAnchorCommand.cs" />
     <Compile Include="Commands\OpenSettingsCommand.cs" />
@@ -71,6 +73,8 @@
     <Compile Include="QuickInfo\CompactModeQuickInfoSource.cs" />
     <Compile Include="QuickInfo\IssueReferenceQuickInfoSource.cs" />
     <Compile Include="Services\CommentReflowEngine.cs" />
+    <Compile Include="Services\GitHostingProvider.cs" />
+    <Compile Include="Services\GitRepositoryInfo.cs" />
     <Compile Include="Services\GitRepositoryService.cs" />
     <Compile Include="Services\LanguageCommentStyles.cs" />
     <Compile Include="Services\XmlDocCommentCache.cs" />
@@ -91,7 +95,9 @@
     <Compile Include="ToolWindows\CodeAnchorsControl.xaml.cs">
       <DependentUpon>CodeAnchorsControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ToolWindows\CodeAnchorsSearchTask.cs" />
     <Compile Include="ToolWindows\CodeAnchorsToolWindow.cs" />
+    <Compile Include="ToolWindows\CodeAnchorsToolWindowPane.cs" />
     <Compile Include="VSCommandTable.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

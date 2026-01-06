@@ -21,6 +21,7 @@
     <Menu guid="CommentsVS" id="CodeAnchorsToolbar" type="ToolWindowToolbar">
       <Strings>
         <ButtonText>Code Anchors Toolbar</ButtonText>
+        <CanonicalName>.CommentsVS.CodeAnchorsToolbar</CanonicalName>
       </Strings>
     </Menu>
   </Menus>
@@ -35,6 +36,10 @@
     </Group>
     <!-- Group for toggle commands inside submenu -->
     <Group guid="CommentsVS" id="CommentsToggleGroup" priority="0x0100">
+      <Parent guid="CommentsVS" id="CommentsSubMenu"/>
+    </Group>
+    <!-- Group for anchor navigation commands inside submenu -->
+    <Group guid="CommentsVS" id="CommentsAnchorNavGroup" priority="0x0150">
       <Parent guid="CommentsVS" id="CommentsSubMenu"/>
     </Group>
     <!-- Group for rendering mode commands inside submenu -->
@@ -128,7 +133,7 @@
       </Button>
       <!-- Navigate to Next Anchor -->
       <Button guid="CommentsVS" id="NextAnchor" priority="0x0100" type="Button">
-        <Parent guid="CommentsVS" id="CommentsToggleGroup"/>
+        <Parent guid="CommentsVS" id="CommentsAnchorNavGroup"/>
         <Icon guid="ImageCatalogGuid" id="NextBookmark" />
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings>
@@ -139,7 +144,7 @@
       </Button>
       <!-- Navigate to Previous Anchor -->
       <Button guid="CommentsVS" id="PreviousAnchor" priority="0x0101" type="Button">
-        <Parent guid="CommentsVS" id="CommentsToggleGroup"/>
+        <Parent guid="CommentsVS" id="CommentsAnchorNavGroup"/>
         <Icon guid="ImageCatalogGuid" id="PreviousBookmark" />
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings>
@@ -198,6 +203,7 @@
       <IDSymbol name="CommentsSubMenu" value="0x0003" />
       <IDSymbol name="CommentsSubMenuGroup" value="0x0004" />
       <IDSymbol name="CommentsToggleGroup" value="0x0005" />
+      <IDSymbol name="CommentsAnchorNavGroup" value="0x000A" />
       <IDSymbol name="CommentsRenderingGroup" value="0x0006" />
       <IDSymbol name="CommentsSettingsGroup" value="0x0007" />
       <IDSymbol name="CodeAnchorsToolbar" value="0x0008" />

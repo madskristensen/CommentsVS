@@ -1,27 +1,12 @@
+using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
 using CommentsVS.Options;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
-using Microsoft.VisualStudio.Utilities;
 
 namespace CommentsVS.Classification
 {
-    [Export(typeof(IClassifierProvider))]
-    [ContentType("code")]
-    internal sealed class CommentTagClassifierProvider : IClassifierProvider
-    {
-        [Import]
-        internal IClassificationTypeRegistryService ClassificationRegistry { get; set; }
-
-        public IClassifier GetClassifier(ITextBuffer buffer)
-        {
-            return buffer.Properties.GetOrCreateSingletonProperty(
-                () => new CommentTagClassifier(buffer, ClassificationRegistry));
-        }
-    }
-
     /// <summary>
     /// Classifies comment tags (TODO, HACK, NOTE, etc.) for syntax highlighting.
     /// </summary>
@@ -161,22 +146,5 @@ namespace CommentsVS.Classification
 
             return typeName != null ? _registry.GetClassificationType(typeName) : null;
         }
-    }
-
-    /// <summary>
-    /// Classification type names for comment tags.
-    /// </summary>
-    internal static class CommentTagClassificationTypes
-    {
-        public const string Todo = "CommentTag.TODO";
-        public const string Hack = "CommentTag.HACK";
-        public const string Note = "CommentTag.NOTE";
-        public const string Bug = "CommentTag.BUG";
-        public const string Fixme = "CommentTag.FIXME";
-        public const string Undone = "CommentTag.UNDONE";
-        public const string Review = "CommentTag.REVIEW";
-        public const string Anchor = "CommentTag.ANCHOR";
-
-        public const string Metadata = "CommentTag.Metadata";
     }
 }

@@ -1,48 +1,10 @@
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Text.RegularExpressions;
 
 namespace CommentsVS.Services
 {
-    /// <summary>
-    /// Represents information about a Git repository's hosting provider.
-    /// </summary>
-    public sealed class GitRepositoryInfo(GitHostingProvider provider, string owner, string repository, string baseUrl)
-    {
-        public GitHostingProvider Provider { get; } = provider;
-        public string Owner { get; } = owner;
-        public string Repository { get; } = repository;
-        public string BaseUrl { get; } = baseUrl;
-
-        /// <summary>
-        /// Gets the URL for an issue/work item number.
-        /// </summary>
-        public string GetIssueUrl(int issueNumber)
-        {
-            return Provider switch
-            {
-                GitHostingProvider.GitHub => $"{BaseUrl}/{Owner}/{Repository}/issues/{issueNumber}",
-                GitHostingProvider.GitLab => $"{BaseUrl}/{Owner}/{Repository}/-/issues/{issueNumber}",
-                GitHostingProvider.Bitbucket => $"{BaseUrl}/{Owner}/{Repository}/issues/{issueNumber}",
-                GitHostingProvider.AzureDevOps => $"{BaseUrl}/{Owner}/{Repository}/_workitems/edit/{issueNumber}",// Azure DevOps uses work items which are org-wide
-                                                                                                                  // Format: https://dev.azure.com/{org}/{project}/_workitems/edit/{id}
-                _ => null,
-            };
-        }
-    }
-
-    /// <summary>
-    /// Supported Git hosting providers.
-    /// </summary>
-    public enum GitHostingProvider
-    {
-        Unknown,
-        GitHub,
-        GitLab,
-        Bitbucket,
-        AzureDevOps
-    }
-
     /// <summary>
     /// Service to detect Git repository information from a file path.
     /// </summary>

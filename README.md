@@ -128,22 +128,6 @@ Place your cursor inside any XML documentation comment and press **Ctrl+.** to s
 
 ![Light Bulb](art/lightbulb.png)
 
-### Compact Style Formatting
-Short summaries stay on a single line for compactness:
-
-```csharp
-/// <summary>Gets the name.</summary>
-```
-
-Longer content automatically expands to multi-line format:
-
-```csharp
-/// <summary>
-/// Gets the full name of the user including first name, middle name,
-/// and last name concatenated together.
-/// </summary>
-```
-
 ### Multi-Language Support
 Works with C# and VB.NET XML documentation comments:
 - `///` single-line comments (C#)

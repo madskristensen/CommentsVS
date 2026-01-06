@@ -26,6 +26,7 @@ namespace CommentsVS
         public const int CommentsSubMenu = 0x0003;
         public const int CommentsSubMenuGroup = 0x0004;
         public const int CommentsToggleGroup = 0x0005;
+        public const int CommentsAnchorNavGroup = 0x000A;
         public const int CommentsRenderingGroup = 0x0006;
         public const int CommentsSettingsGroup = 0x0007;
         public const int CodeAnchorsToolbar = 0x0008;
