@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using CommentsVS.Options;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 
 namespace CommentsVS.ToolWindows
@@ -17,7 +16,6 @@ namespace CommentsVS.ToolWindows
         private readonly AnchorService _anchorService = new();
         private SolutionAnchorScanner _scanner;
         private SolutionAnchorCache _cache;
-        private SolutionFileWatcher _fileWatcher;
 
         /// <summary>
         /// Gets the current instance of the tool window (set after CreateAsync is called).
@@ -46,30 +44,28 @@ namespace CommentsVS.ToolWindows
 
         public override string GetTitle(int toolWindowId) => "Code Anchors";
 
+
         public override Type PaneType => typeof(CodeAnchorsToolWindowPane);
 
 
         public override async Task<FrameworkElement> CreateAsync(int toolWindowId, CancellationToken cancellationToken)
         {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-
             Instance = this;
 
-            // Initialize services
+            // Initialize services (doesn't require main thread)
             _cache = new SolutionAnchorCache();
             _scanner = new SolutionAnchorScanner(_anchorService, _cache);
-            _fileWatcher = new SolutionFileWatcher(_scanner, _cache);
 
-            // Subscribe to scanner events
+            // Subscribe to scanner events (doesn't require main thread)
             _scanner.ScanStarted += OnScanStarted;
             _scanner.ScanProgress += OnScanProgress;
             _scanner.ScanCompleted += OnScanCompleted;
 
-            // Subscribe to file watcher events
-            _fileWatcher.FileScanned += OnFileScanned;
+            // Get options before switching threads
+            General options = await General.GetLiveInstanceAsync();
 
-            // Subscribe to cache changes
-            _cache.CacheChanged += OnCacheChanged;
+            // Switch to main thread for WPF control creation and VS event subscriptions
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
             _control = new CodeAnchorsControl();
             _control.AnchorActivated += OnAnchorActivated;
@@ -78,14 +74,14 @@ namespace CommentsVS.ToolWindows
             VS.Events.SolutionEvents.OnAfterOpenSolution += OnSolutionOpened;
             VS.Events.SolutionEvents.OnAfterCloseSolution += OnSolutionClosed;
 
-            // Subscribe to document events for real-time updates of open documents
+            // Subscribe to document events for real-time updates when files are saved in VS
             VS.Events.DocumentEvents.Saved += OnDocumentSaved;
 
-            // Check if solution is already open and start scanning
-            General options = await General.GetLiveInstanceAsync();
+            // Start scanning if enabled (runs on background thread)
             if (options.ScanSolutionOnLoad)
             {
-                await ScanSolutionAsync();
+                // Fire and forget - don't block tool window creation
+                ScanSolutionAsync().FireAndForget();
             }
 
             return _control;
@@ -102,7 +98,6 @@ namespace CommentsVS.ToolWindows
             }
 
             await _scanner.ScanSolutionAsync();
-            await _fileWatcher.StartWatchingAsync();
         }
 
         /// <summary>
@@ -149,7 +144,6 @@ namespace CommentsVS.ToolWindows
 
         private void OnSolutionClosed()
         {
-            _fileWatcher?.StopWatching();
             _cache?.Clear();
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
@@ -161,8 +155,7 @@ namespace CommentsVS.ToolWindows
 
         private void OnDocumentSaved(string filePath)
         {
-            // File watcher will handle this, but we can force an immediate rescan
-            // for better UX when editing open documents
+            // Rescan the saved file and update the cache
             if (_cache != null && _scanner != null)
             {
                 ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
@@ -170,6 +163,10 @@ namespace CommentsVS.ToolWindows
                     string projectName = await GetProjectNameForFileAsync(filePath);
                     IReadOnlyList<AnchorItem> anchors = await _scanner.ScanFileAsync(filePath, projectName);
                     _cache.AddOrUpdateFile(filePath, anchors);
+                    
+                    // Refresh the UI
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    RefreshAnchorsFromCache();
                 }).FireAndForget();
             }
         }
@@ -208,22 +205,6 @@ namespace CommentsVS.ToolWindows
                     RefreshAnchorsFromCache();
                 }
             }).FireAndForget();
-        }
-
-        private void OnFileScanned(object sender, FileScannedEventArgs e)
-        {
-            // Refresh display when a file is scanned
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-            {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                RefreshAnchorsFromCache();
-            }).FireAndForget();
-        }
-
-        private void OnCacheChanged(object sender, EventArgs e)
-        {
-            // This is called frequently, so we don't refresh here
-            // The OnFileScanned and OnScanCompleted handlers take care of UI updates
         }
 
         private void RefreshAnchorsFromCache()

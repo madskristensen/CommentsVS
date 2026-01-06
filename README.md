@@ -24,8 +24,8 @@ or get the [CI build][vsixgallery].
 - **Markdown Support** — Use `**bold**`, `*italic*`, `` `code` ``, and `[links](url)` in comments
 - **Auto-Reflow** — Automatically wrap comments to your preferred line length
 - **Collapse/Expand** — Hide comment blocks to focus on code, expand when needed
-- **Color-coded Tags** — TODO, HACK, BUG, FIXME, NOTE highlighted in distinct colors
-- **Code Anchors** — Tool window to browse and navigate all comment tags across open files
+- **Color-coded Anchor Tags** — TODO, HACK, BUG, FIXME, NOTE highlighted in distinct colors
+- **Solution-Wide Code Anchors** — Browse all TODOs, HACKs, and notes across your entire solution
 - **Clickable Issues** — `#123` links directly to GitHub/GitLab/Azure DevOps issues
 - **Theme-aware** — Works with light and dark Visual Studio themes
 
@@ -173,14 +173,18 @@ Notes:
 - Only `@owner`, `#issue`, and `yyyy-MM-dd` tokens are currently recognized.
 
 ### Code Anchors Tool Window
-**Track all your TODOs, HACKs, and notes in one place.** The Code Anchors tool window provides a centralized view of all comment tags across your open documents.
+**Track all your TODOs, HACKs, and notes across your entire solution.** The Code Anchors tool window provides a centralized view of all comment tags—not just in open files, but across every file in your solution.
 
 Open it via **View > Other Windows > Code Anchors**.
 
 ![Code Anchors](art/code-anchors.png)
 
 #### Features
-- **Live scanning** — Automatically detects anchors in all open documents
+- **Solution-wide scanning** — Finds anchors in all files across your entire solution, not just open documents
+- **Background indexing** — Scans files on a background thread without blocking the UI
+- **Configurable file types** — Choose which file extensions to scan (C#, TypeScript, HTML, and 30+ more by default)
+- **Smart folder exclusions** — Automatically ignores `node_modules`, `bin`, `obj`, `.git`, and other non-source folders
+- **Auto-refresh on save** — Updates automatically when you save files in Visual Studio
 - **Color-coded indicators** — Each anchor type has a colored circle matching its editor highlight color
 - **Quick navigation** — Double-click or press Enter to jump directly to any anchor
 - **Keyboard shortcuts** — Use **Alt+Page Down** / **Alt+Page Up** to navigate between anchors
@@ -253,6 +257,13 @@ Configure the extension behavior via **Tools > Options > CommentsVS**.
 | Enable Comment Tag Highlighting | On | Enable/disable tag highlighting |
 
 Tag colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - [TAG]" entries.
+
+### Code Anchors
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Scan Solution on Load | On | Automatically scan the solution for anchors when opening the Code Anchors tool window |
+| File Extensions to Scan | .cs, .vb, .js, .ts, ... | Comma-separated list of file extensions to include when scanning |
+| Folders to Ignore | node_modules, bin, obj, ... | Comma-separated list of folder names to skip during scanning |
 
 ![Options](art/options.png)
 
