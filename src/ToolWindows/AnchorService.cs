@@ -19,9 +19,10 @@ namespace CommentsVS.ToolWindows
 
         /// <summary>
         /// Regex to match anchors in comments. Captures the anchor keyword and optional trailing colon.
+        /// Supports C-style (// and /* */), VB-style ('), and HTML-style (<!-- -->) comments.
         /// </summary>
         private static readonly Regex _anchorRegex = new(
-            @"(?<prefix>//|/\*|')\s*(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR)\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*:?\s*(?<message>.*?)(?:\*/|$)",
+            @"(?<prefix>//|/\*|'|<!--)\s*(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR)\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*:?\s*(?<message>.*?)(?:\*/|-->|$)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>

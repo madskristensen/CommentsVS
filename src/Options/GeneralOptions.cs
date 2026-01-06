@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using CommentsVS.Services;
@@ -109,6 +110,67 @@ namespace CommentsVS.Options
         [DefaultValue(RenderingMode.Off)]
         [TypeConverter(typeof(EnumConverter))]
         public RenderingMode CommentRenderingMode { get; set; } = RenderingMode.Off;
+
+        private const string _anchorsCategory = "Code Anchors";
+
+        [Category(_anchorsCategory)]
+        [DisplayName("Scan solution on load")]
+        [Description("When enabled, the entire solution will be scanned for code anchors (TODO, HACK, etc.) when a solution is loaded.")]
+        [DefaultValue(true)]
+        public bool ScanSolutionOnLoad { get; set; } = true;
+
+        [Category(_anchorsCategory)]
+        [DisplayName("File extensions to scan")]
+        [Description("Comma-separated list of file extensions to scan for code anchors. Example: .cs,.vb,.js,.ts")]
+        [DefaultValue(".cs,.vb,.fs,.cpp,.c,.h,.hpp,.cc,.cxx,.js,.ts,.jsx,.tsx,.css,.scss,.less,.html,.htm,.xml,.xaml,.json,.yaml,.yml,.ps1,.psm1,.sql,.md,.razor,.cshtml,.vbhtml,.py,.rb,.go,.rs,.java,.kt,.swift,.php")]
+        public string FileExtensionsToScan { get; set; } = ".cs,.vb,.fs,.cpp,.c,.h,.hpp,.cc,.cxx,.js,.ts,.jsx,.tsx,.css,.scss,.less,.html,.htm,.xml,.xaml,.json,.yaml,.yml,.ps1,.psm1,.sql,.md,.razor,.cshtml,.vbhtml,.py,.rb,.go,.rs,.java,.kt,.swift,.php";
+
+        [Category(_anchorsCategory)]
+        [DisplayName("Folders to ignore")]
+        [Description("Comma-separated list of folder names to ignore when scanning for code anchors.")]
+        [DefaultValue("node_modules,bin,obj,.git,.vs,.svn,packages,.nuget,bower_components,vendor,dist,build,out,target,.idea,.vscode,__pycache__,.pytest_cache,coverage,.nyc_output")]
+        public string FoldersToIgnore { get; set; } = "node_modules,bin,obj,.git,.vs,.svn,packages,.nuget,bower_components,vendor,dist,build,out,target,.idea,.vscode,__pycache__,.pytest_cache,coverage,.nyc_output";
+
+        /// <summary>
+        /// Gets the file extensions to scan as a HashSet for fast lookup.
+        /// </summary>
+        public HashSet<string> GetFileExtensionsSet()
+        {
+            var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(FileExtensionsToScan))
+            {
+                foreach (var ext in FileExtensionsToScan.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var trimmed = ext.Trim();
+                    if (!string.IsNullOrEmpty(trimmed))
+                    {
+                        // Ensure extension starts with a dot
+                        extensions.Add(trimmed.StartsWith(".") ? trimmed : "." + trimmed);
+                    }
+                }
+            }
+            return extensions;
+        }
+
+        /// <summary>
+        /// Gets the folders to ignore as a HashSet for fast lookup.
+        /// </summary>
+        public HashSet<string> GetIgnoredFoldersSet()
+        {
+            var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(FoldersToIgnore))
+            {
+                foreach (var folder in FoldersToIgnore.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var trimmed = folder.Trim();
+                    if (!string.IsNullOrEmpty(trimmed))
+                    {
+                        folders.Add(trimmed);
+                    }
+                }
+            }
+            return folders;
+        }
 
         /// <summary>
         /// Creates a CommentReflowEngine configured with the current options.

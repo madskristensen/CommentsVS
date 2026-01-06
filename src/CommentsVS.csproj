@@ -98,6 +98,9 @@
     <Compile Include="ToolWindows\CodeAnchorsSearchTask.cs" />
     <Compile Include="ToolWindows\CodeAnchorsToolWindow.cs" />
     <Compile Include="ToolWindows\CodeAnchorsToolWindowPane.cs" />
+    <Compile Include="ToolWindows\SolutionAnchorCache.cs" />
+    <Compile Include="ToolWindows\SolutionAnchorScanner.cs" />
+    <Compile Include="ToolWindows\SolutionFileWatcher.cs" />
     <Compile Include="VSCommandTable.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

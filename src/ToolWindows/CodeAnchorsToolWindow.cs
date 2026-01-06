@@ -2,18 +2,22 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using CommentsVS.Options;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 
 namespace CommentsVS.ToolWindows
 {
     /// <summary>
-    /// Tool window for displaying code anchors (TODO, HACK, ANCHOR, etc.) from open documents.
+    /// Tool window for displaying code anchors (TODO, HACK, ANCHOR, etc.) from the entire solution.
     /// </summary>
     public class CodeAnchorsToolWindow : BaseToolWindow<CodeAnchorsToolWindow>
     {
         private CodeAnchorsControl _control;
         private readonly AnchorService _anchorService = new();
+        private SolutionAnchorScanner _scanner;
+        private SolutionAnchorCache _cache;
+        private SolutionFileWatcher _fileWatcher;
 
         /// <summary>
         /// Gets the current instance of the tool window (set after CreateAsync is called).
@@ -24,6 +28,21 @@ namespace CommentsVS.ToolWindows
         /// Gets the control hosted in this tool window.
         /// </summary>
         public CodeAnchorsControl Control => _control;
+
+        /// <summary>
+        /// Gets the solution anchor cache.
+        /// </summary>
+        public SolutionAnchorCache Cache => _cache;
+
+        /// <summary>
+        /// Gets the solution anchor scanner.
+        /// </summary>
+        public SolutionAnchorScanner Scanner => _scanner;
+
+        /// <summary>
+        /// Gets a value indicating whether a scan is currently in progress.
+        /// </summary>
+        public bool IsScanning => _scanner?.IsScanning ?? false;
 
         public override string GetTitle(int toolWindowId) => "Code Anchors";
 
@@ -36,107 +55,54 @@ namespace CommentsVS.ToolWindows
 
             Instance = this;
 
+            // Initialize services
+            _cache = new SolutionAnchorCache();
+            _scanner = new SolutionAnchorScanner(_anchorService, _cache);
+            _fileWatcher = new SolutionFileWatcher(_scanner, _cache);
+
+            // Subscribe to scanner events
+            _scanner.ScanStarted += OnScanStarted;
+            _scanner.ScanProgress += OnScanProgress;
+            _scanner.ScanCompleted += OnScanCompleted;
+
+            // Subscribe to file watcher events
+            _fileWatcher.FileScanned += OnFileScanned;
+
+            // Subscribe to cache changes
+            _cache.CacheChanged += OnCacheChanged;
+
             _control = new CodeAnchorsControl();
             _control.AnchorActivated += OnAnchorActivated;
 
-            // Initial scan of open documents
-            await ScanOpenDocumentsAsync();
+            // Subscribe to solution events
+            VS.Events.SolutionEvents.OnAfterOpenSolution += OnSolutionOpened;
+            VS.Events.SolutionEvents.OnAfterCloseSolution += OnSolutionClosed;
 
-            // Subscribe to document events
-            VS.Events.DocumentEvents.Opened += OnDocumentOpened;
-            VS.Events.DocumentEvents.Closed += OnDocumentClosed;
+            // Subscribe to document events for real-time updates of open documents
             VS.Events.DocumentEvents.Saved += OnDocumentSaved;
+
+            // Check if solution is already open and start scanning
+            General options = await General.GetLiveInstanceAsync();
+            if (options.ScanSolutionOnLoad)
+            {
+                await ScanSolutionAsync();
+            }
 
             return _control;
         }
 
         /// <summary>
-        /// Scans all currently open documents for anchors.
+        /// Scans the entire solution for anchors in the background.
         /// </summary>
-        public async Task ScanOpenDocumentsAsync()
+        public async Task ScanSolutionAsync()
         {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-            _control?.ClearAnchors();
-
-            var allAnchors = new List<AnchorItem>();
-
-            // Get the running document table
-            IVsRunningDocumentTable rdt = await VS.Services.GetRunningDocumentTableAsync();
-            if (rdt == null)
+            if (_scanner == null)
             {
                 return;
             }
 
-            rdt.GetRunningDocumentsEnum(out IEnumRunningDocuments enumDocs);
-            if (enumDocs == null)
-            {
-                return;
-            }
-
-            var cookies = new uint[1];
-            while (enumDocs.Next(1, cookies, out var fetched) == 0 && fetched == 1)
-            {
-                rdt.GetDocumentInfo(
-                    cookies[0],
-                    out var flags,
-                    out var readLocks,
-                    out var editLocks,
-                    out var filePath,
-                    out IVsHierarchy hierarchy,
-                    out var itemId,
-                    out IntPtr docData);
-
-                if (string.IsNullOrEmpty(filePath))
-                {
-                    continue;
-                }
-
-                // Get project name
-                string projectName = null;
-                if (hierarchy != null)
-                {
-                    hierarchy.GetProperty((uint)Microsoft.VisualStudio.VSConstants.VSITEMID.Root, (int)__VSHPROPID.VSHPROPID_Name, out var projNameObj);
-                    projectName = projNameObj as string;
-                }
-
-                // Try to get text from the document
-                var documentText = await GetDocumentTextAsync(filePath);
-                if (!string.IsNullOrEmpty(documentText))
-                {
-                    IReadOnlyList<AnchorItem> anchors = _anchorService.ScanText(documentText, filePath, projectName);
-                    allAnchors.AddRange(anchors);
-                }
-            }
-
-            _control?.UpdateAnchors(allAnchors);
-        }
-
-        /// <summary>
-        /// Scans a single document for anchors and updates the display.
-        /// </summary>
-        public async Task ScanDocumentAsync(string filePath)
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-            if (string.IsNullOrEmpty(filePath) || _control == null)
-            {
-                return;
-            }
-
-            // Remove existing anchors for this file
-            _control.RemoveAnchorsForFile(filePath);
-
-            // Get project name
-            var projectName = await GetProjectNameForFileAsync(filePath);
-
-            // Get document text
-            var documentText = await GetDocumentTextAsync(filePath);
-            if (!string.IsNullOrEmpty(documentText))
-            {
-                IReadOnlyList<AnchorItem> anchors = _anchorService.ScanText(documentText, filePath, projectName);
-                _control.AddAnchors(anchors);
-            }
+            await _scanner.ScanSolutionAsync();
+            await _fileWatcher.StartWatchingAsync();
         }
 
         /// <summary>
@@ -169,15 +135,109 @@ namespace CommentsVS.ToolWindows
 
         private void OnAnchorActivated(object sender, AnchorItem anchor) => NavigateToAnchorAsync(anchor).FireAndForget();
 
-        private void OnDocumentOpened(string filePath) => ScanDocumentAsync(filePath).FireAndForget();
-
-        private void OnDocumentClosed(string filePath)
+        private void OnSolutionOpened(Solution solution)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            _control?.RemoveAnchorsForFile(filePath);
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                General options = await General.GetLiveInstanceAsync();
+                if (options.ScanSolutionOnLoad)
+                {
+                    await ScanSolutionAsync();
+                }
+            }).FireAndForget();
         }
 
-        private void OnDocumentSaved(string filePath) => ScanDocumentAsync(filePath).FireAndForget();
+        private void OnSolutionClosed()
+        {
+            _fileWatcher?.StopWatching();
+            _cache?.Clear();
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                _control?.ClearAnchors();
+                _control?.UpdateStatus("No solution loaded", 0, 0);
+            }).FireAndForget();
+        }
+
+        private void OnDocumentSaved(string filePath)
+        {
+            // File watcher will handle this, but we can force an immediate rescan
+            // for better UX when editing open documents
+            if (_cache != null && _scanner != null)
+            {
+                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                {
+                    string projectName = await GetProjectNameForFileAsync(filePath);
+                    IReadOnlyList<AnchorItem> anchors = await _scanner.ScanFileAsync(filePath, projectName);
+                    _cache.AddOrUpdateFile(filePath, anchors);
+                }).FireAndForget();
+            }
+        }
+
+        private void OnScanStarted(object sender, EventArgs e)
+        {
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                _control?.UpdateStatus("Scanning solution...", 0, 0);
+            }).FireAndForget();
+        }
+
+        private void OnScanProgress(object sender, ScanProgressEventArgs e)
+        {
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                _control?.UpdateStatus($"Scanning... {e.ProcessedFiles}/{e.TotalFiles} files ({e.AnchorsFound} anchors)", e.ProcessedFiles, e.TotalFiles);
+            }).FireAndForget();
+        }
+
+        private void OnScanCompleted(object sender, ScanCompletedEventArgs e)
+        {
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                if (e.WasCancelled)
+                {
+                    _control?.UpdateStatus(e.ErrorMessage ?? "Scan cancelled", 0, 0);
+                }
+                else
+                {
+                    // Update the control with all anchors from cache
+                    RefreshAnchorsFromCache();
+                }
+            }).FireAndForget();
+        }
+
+        private void OnFileScanned(object sender, FileScannedEventArgs e)
+        {
+            // Refresh display when a file is scanned
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                RefreshAnchorsFromCache();
+            }).FireAndForget();
+        }
+
+        private void OnCacheChanged(object sender, EventArgs e)
+        {
+            // This is called frequently, so we don't refresh here
+            // The OnFileScanned and OnScanCompleted handlers take care of UI updates
+        }
+
+        private void RefreshAnchorsFromCache()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (_cache == null || _control == null)
+            {
+                return;
+            }
+
+            IReadOnlyList<AnchorItem> allAnchors = _cache.GetAllAnchors();
+            _control.UpdateAnchors(allAnchors);
+        }
 
         private async Task NavigateToAnchorAsync(AnchorItem anchor)
         {
@@ -214,33 +274,6 @@ namespace CommentsVS.ToolWindows
             {
                 await ex.LogAsync();
             }
-        }
-
-        private async Task<string> GetDocumentTextAsync(string filePath)
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-            try
-            {
-                // Try to get from open document first
-                DocumentView docView = await VS.Documents.GetDocumentViewAsync(filePath);
-                if (docView?.TextView != null)
-                {
-                    return docView.TextView.TextSnapshot.GetText();
-                }
-
-                // Fall back to reading from disk
-                if (System.IO.File.Exists(filePath))
-                {
-                    return System.IO.File.ReadAllText(filePath);
-                }
-            }
-            catch
-            {
-                // Ignore errors
-            }
-
-            return null;
         }
 
         private async Task<string> GetProjectNameForFileAsync(string filePath)

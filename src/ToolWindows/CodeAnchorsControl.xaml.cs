@@ -193,6 +193,18 @@ namespace CommentsVS.ToolWindows
             return SelectedAnchor;
         }
 
+        /// <summary>
+        /// Updates the status bar with a custom message and progress.
+        /// </summary>
+        /// <param name="message">The status message to display.</param>
+        /// <param name="current">The current progress value (for progress display).</param>
+        /// <param name="total">The total progress value (for progress display).</param>
+        public void UpdateStatus(string message, int current, int total)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            StatusText.Text = message;
+        }
+
         private void UpdateStatus()
         {
             var totalCount = _allAnchors.Count;
