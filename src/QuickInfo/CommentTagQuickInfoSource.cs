@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,6 +35,10 @@ namespace CommentsVS.QuickInfo
     {
         private static readonly Regex _commentTagRegex = new(
             @"\b(?<tag>TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex _metadataRegex = new(
+            @"(?<tag>TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)(?:\s*(?:\((?<metaParen>[^)]*)\)|\[(?<metaBracket>[^\]]*)\]))?\s*: ?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly Regex _commentLineRegex = new(
@@ -81,7 +88,8 @@ namespace CommentsVS.QuickInfo
 
                         // Switch to UI thread to create WPF elements
                         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-                        var content = new CommentTagQuickInfoContent(title, description);
+                        var metadata = TryParseMetadata(lineText, match);
+                        var content = new CommentTagQuickInfoContent(title, description, metadata);
 
                         return new QuickInfoItem(trackingSpan, content);
                     }
@@ -123,6 +131,71 @@ namespace CommentsVS.QuickInfo
         public void Dispose()
         {
         }
+
+        private static IReadOnlyList<CommentTagMetadataItem>? TryParseMetadata(string lineText, Match tagMatch)
+        {
+            // Attempt to find a prefixed metadata section immediately after the tag token.
+            // Examples:
+            //   TODO(@user): message
+            //   TODO[#1234]: message
+            //   TODO(2026-02-01): message
+            //   TODO(@user, #1234, 2026-02-01): message
+            //   TODO[@user #1234 2026-02-01]: message
+
+            var match = _metadataRegex.Match(lineText, tagMatch.Index);
+            if (!match.Success || match.Index != tagMatch.Index)
+            {
+                return null;
+            }
+
+            var meta = match.Groups["metaParen"].Success ? match.Groups["metaParen"].Value :
+                       match.Groups["metaBracket"].Success ? match.Groups["metaBracket"].Value :
+                       null;
+
+            if (string.IsNullOrWhiteSpace(meta))
+            {
+                return null;
+            }
+
+            return ParseMetadataTokens(meta);
+        }
+
+        private static IReadOnlyList<CommentTagMetadataItem> ParseMetadataTokens(string metadata)
+        {
+            var items = new List<CommentTagMetadataItem>();
+
+            foreach (var token in Regex.Split(metadata, @"[\s,;]+"))
+            {
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    continue;
+                }
+
+                if (token[0] == '@' && token.Length > 1)
+                {
+                    items.Add(new CommentTagMetadataItem(CommentTagMetadataKind.Owner, token.Substring(1)));
+                    continue;
+                }
+
+                if (token[0] == '#')
+                {
+                    var id = token.Length > 1 ? token.Substring(1) : string.Empty;
+                    if (!string.IsNullOrWhiteSpace(id))
+                    {
+                        items.Add(new CommentTagMetadataItem(CommentTagMetadataKind.Issue, id));
+                    }
+
+                    continue;
+                }
+
+                if (DateTime.TryParseExact(token, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+                {
+                    items.Add(new CommentTagMetadataItem(CommentTagMetadataKind.DueDate, token));
+                }
+            }
+
+            return items;
+        }
     }
 
     /// <summary>
@@ -130,7 +203,7 @@ namespace CommentsVS.QuickInfo
     /// </summary>
     internal sealed class CommentTagQuickInfoContent : StackPanel, IInteractiveQuickInfoContent
     {
-        public CommentTagQuickInfoContent(string title, string description)
+        public CommentTagQuickInfoContent(string title, string description, IReadOnlyList<CommentTagMetadataItem>? metadata)
         {
             // Title
             var titleBlock = new TextBlock
@@ -140,6 +213,42 @@ namespace CommentsVS.QuickInfo
                 Margin = new Thickness(0, 0, 0, 4)
             };
             Children.Add(titleBlock);
+
+            if (metadata is { Count: > 0 })
+            {
+                var metadataBlock = new TextBlock
+                {
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 0, 0, 6),
+                    MaxWidth = 400
+                };
+
+                LineBreak trailingLineBreak = null;
+
+                foreach (var item in metadata)
+                {
+                    var label = item.Kind switch
+                    {
+                        CommentTagMetadataKind.Owner => "Owner",
+                        CommentTagMetadataKind.Issue => "Issue",
+                        CommentTagMetadataKind.DueDate => "Due",
+                        _ => "Meta",
+                    };
+
+                    metadataBlock.Inlines.Add(new Run($"{label}: ") { FontWeight = FontWeights.SemiBold });
+                    metadataBlock.Inlines.Add(new Run(item.Value));
+                    trailingLineBreak = new LineBreak();
+                    metadataBlock.Inlines.Add(trailingLineBreak);
+                }
+
+                // Remove the last line break.
+                if (trailingLineBreak != null)
+                {
+                    metadataBlock.Inlines.Remove(trailingLineBreak);
+                }
+
+                Children.Add(metadataBlock);
+            }
 
             // Description
             var descriptionBlock = new TextBlock
@@ -171,4 +280,13 @@ namespace CommentsVS.QuickInfo
             VS.Commands.ExecuteAsync("View.TaskList").FireAndForget();
         }
     }
+
+    internal enum CommentTagMetadataKind
+    {
+        Owner,
+        Issue,
+        DueDate,
+    }
+
+    internal readonly record struct CommentTagMetadataItem(CommentTagMetadataKind Kind, string Value);
 }

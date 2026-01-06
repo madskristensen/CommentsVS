@@ -127,6 +127,27 @@ Colors can be customized via **Tools > Options > Environment > Fonts and Colors*
 
 ![Comment Tags](art/comment-tags.png)
 
+#### Tag metadata
+
+You can optionally include metadata right after the tag name to make the tooltip more informative.
+
+Supported forms:
+
+- Owner: `TODO(@mads): Refactor this`
+- Issue reference: `TODO[#1234]: Follow up`
+- Due date (ISO date): `TODO(2026-02-01): Remove workaround`
+
+You can combine multiple tokens inside the same `(...)` or `[...]` section:
+
+- `TODO(@mads, #1234, 2026-02-01): Refactor this`
+- `TODO[@mads #1234 2026-02-01]: Refactor this`
+
+Notes:
+
+- Due dates must be formatted as `yyyy-MM-dd`.
+- Tokens are separated by spaces, commas, or semicolons.
+- Only `@owner`, `#issue`, and `yyyy-MM-dd` tokens are currently recognized.
+
 ### Clickable Issue Links
 **Jump to issues instantly.** Issue references like `#123` in comments automatically become clickable links to the issue on your hosting provider. No more copying issue numbers and searching manually. The extension detects the Git remote URL and supports:
 
