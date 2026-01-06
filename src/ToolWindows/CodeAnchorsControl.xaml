@@ -1,0 +1,283 @@
+<UserControl x:Class="CommentsVS.ToolWindows.CodeAnchorsControl"
+         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+         xmlns:vs="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+         xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+         xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+         xmlns:local="clr-namespace:CommentsVS.ToolWindows"
+         xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
+         toolkit:Themes.UseVsTheme="True"
+         mc:Ignorable="d" 
+         d:DesignHeight="300" d:DesignWidth="600"
+         Background="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
+         Foreground="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}">
+<UserControl.Resources>
+    <!-- Themed Button Style -->
+    <Style x:Key="ThemedButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Padding" Value="4,1"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
+                            CornerRadius="2">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarMouseOverBackgroundBeginBrushKey}}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarBorderBrushKey}}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarMouseDownBackgroundBeginBrushKey}}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarBorderBrushKey}}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+        
+    <!-- DataGrid Cell Style -->
+    <Style TargetType="DataGridCell">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridCell">
+                    <Border Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarSelectedBrushKey}}"/>
+                <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+        
+    <!-- DataGrid Row Style with better hover/selection highlighting -->
+    <Style TargetType="DataGridRow">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Margin" Value="0"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarMouseOverBackgroundBeginBrushKey}}"/>
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarSelectedBrushKey}}"/>
+            </Trigger>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="IsSelected" Value="True"/>
+                    <Condition Property="IsMouseOver" Value="True"/>
+                </MultiTrigger.Conditions>
+                <Setter Property="Background" Value="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarHoverOverSelectedBrushKey}}"/>
+            </MultiTrigger>
+        </Style.Triggers>
+    </Style>
+        
+    <!-- DataGrid Column Header Style -->
+    <Style TargetType="DataGridColumnHeader">
+        <Setter Property="Background" Value="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarGradientBeginBrushKey}}"/>
+        <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+        <Setter Property="Padding" Value="6,4"/>
+        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowBorderBrushKey}}"/>
+    </Style>
+</UserControl.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Toolbar -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarGradientBeginBrushKey}}"
+                BorderBrush="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                BorderThickness="0,0,0,1"
+                Padding="4,1">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="RefreshButton" 
+                        Click="RefreshButton_Click"
+                        ToolTip="Refresh anchors from open documents"
+                        Style="{StaticResource ThemedButtonStyle}"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <imaging:CrispImage Moniker="{x:Static catalog:KnownMonikers.Refresh}" Width="16" Height="16"/>
+                        <TextBlock Text="Refresh" Margin="3,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+                    </StackPanel>
+                </Button>
+                
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="4,2"/>
+                
+                <imaging:CrispImage Moniker="{x:Static catalog:KnownMonikers.Search}" Width="16" Height="16" 
+                                    VerticalAlignment="Center" Margin="4,0,2,0"/>
+                <TextBox x:Name="SearchTextBox"
+                         Width="120"
+                         Height="20"
+                         Padding="2,1"
+                         VerticalAlignment="Center"
+                         VerticalContentAlignment="Center"
+                         TextChanged="SearchTextBox_TextChanged"/>
+                
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="4,2"/>
+                
+                <TextBlock Text="Type:" VerticalAlignment="Center" Margin="4,0"
+                           Foreground="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+                <ComboBox x:Name="FilterComboBox" 
+                          Width="90" 
+                          Height="20"
+                          Padding="4,1"
+                          SelectionChanged="FilterComboBox_SelectionChanged"
+                          VerticalAlignment="Center"
+                          VerticalContentAlignment="Center">
+                    <ComboBoxItem Content="All" IsSelected="True"/>
+                    <ComboBoxItem Content="TODO"/>
+                    <ComboBoxItem Content="HACK"/>
+                    <ComboBoxItem Content="NOTE"/>
+                    <ComboBoxItem Content="BUG"/>
+                    <ComboBoxItem Content="FIXME"/>
+                    <ComboBoxItem Content="UNDONE"/>
+                    <ComboBoxItem Content="REVIEW"/>
+                    <ComboBoxItem Content="ANCHOR"/>
+                </ComboBox>
+                
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="4,2"/>
+                
+                <CheckBox x:Name="GroupByFileCheckBox"
+                          Content="Group by File"
+                          VerticalAlignment="Center"
+                          Margin="4,0"
+                          Checked="GroupByFileCheckBox_Changed"
+                          Unchecked="GroupByFileCheckBox_Changed"
+                          Foreground="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Anchor List -->
+        <DataGrid x:Name="AnchorDataGrid"
+                  Grid.Row="1"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="None"
+                  BorderThickness="0"
+                  Background="Transparent"
+                  RowBackground="Transparent"
+                  AlternatingRowBackground="Transparent"
+                  MouseDoubleClick="AnchorDataGrid_MouseDoubleClick"
+                  KeyDown="AnchorDataGrid_KeyDown">
+            <DataGrid.Columns>
+                <!-- Icon Column -->
+                <DataGridTemplateColumn Header="" Width="24" CanUserResize="False">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <imaging:CrispImage x:Name="AnchorIcon" Width="16" Height="16" 
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                
+                <!-- Type Column -->
+                <DataGridTextColumn Header="Type" Binding="{Binding TypeDisplayName}" Width="70">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                
+                <!-- Message Column -->
+                <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                
+                <!-- Metadata Column -->
+                <DataGridTextColumn Header="Metadata" Binding="{Binding MetadataDisplay}" Width="100">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="ToolTip" Value="{Binding RawMetadata}"/>
+                            <Setter Property="FontStyle" Value="Italic"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                
+                <!-- File Column -->
+                <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="150">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="ToolTip" Value="{Binding FilePath}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                
+                <!-- Line Column -->
+                <DataGridTextColumn Header="Line" Binding="{Binding LineNumber}" Width="50">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+                            <Setter Property="TextAlignment" Value="Right"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                
+                <!-- Project Column -->
+                <DataGridTextColumn Header="Project" Binding="{Binding Project}" Width="120">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+        
+        <!-- Status Bar -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource {x:Static vs:EnvironmentColors.CommandBarGradientBeginBrushKey}}"
+                BorderBrush="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                BorderThickness="0,1,0,0"
+                Padding="6,1">
+            <TextBlock x:Name="StatusText" 
+                       Text="Ready"
+                       Foreground="{DynamicResource {x:Static vs:EnvironmentColors.ToolWindowTextBrushKey}}"/>
+        </Border>
+    </Grid>
+</UserControl>

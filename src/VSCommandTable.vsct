@@ -105,6 +105,39 @@
           <LocCanonicalName>.CommentsVS.OpenSettings</LocCanonicalName>
         </Strings>
       </Button>
+      <!-- Code Anchors Tool Window -->
+      <Button guid="CommentsVS" id="ShowCodeAnchors" priority="0x0100" type="Button">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1"/>
+        <Icon guid="ImageCatalogGuid" id="Bookmark" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Code Anchors</ButtonText>
+          <CanonicalName>.CommentsVS.ShowCodeAnchors</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ShowCodeAnchors</LocCanonicalName>
+        </Strings>
+      </Button>
+      <!-- Navigate to Next Anchor -->
+      <Button guid="CommentsVS" id="NextAnchor" priority="0x0100" type="Button">
+        <Parent guid="CommentsVS" id="CommentsToggleGroup"/>
+        <Icon guid="ImageCatalogGuid" id="NextBookmark" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Next Anchor</ButtonText>
+          <CanonicalName>.CommentsVS.NextAnchor</CanonicalName>
+          <LocCanonicalName>.CommentsVS.NextAnchor</LocCanonicalName>
+        </Strings>
+      </Button>
+      <!-- Navigate to Previous Anchor -->
+      <Button guid="CommentsVS" id="PreviousAnchor" priority="0x0101" type="Button">
+        <Parent guid="CommentsVS" id="CommentsToggleGroup"/>
+        <Icon guid="ImageCatalogGuid" id="PreviousBookmark" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Previous Anchor</ButtonText>
+          <CanonicalName>.CommentsVS.PreviousAnchor</CanonicalName>
+          <LocCanonicalName>.CommentsVS.PreviousAnchor</LocCanonicalName>
+        </Strings>
+      </Button>
     </Buttons>
   </Commands>
 
@@ -120,6 +153,8 @@
 
   <KeyBindings>
     <KeyBinding guid="CommentsVS" id="ToggleCommentVisibility" editor="guidVSStd97" key1="M" mod1="Control" key2="C" mod2="Control" />
+    <KeyBinding guid="CommentsVS" id="NextAnchor" editor="guidVSStd97" key1="VK_NEXT" mod1="Alt" />
+    <KeyBinding guid="CommentsVS" id="PreviousAnchor" editor="guidVSStd97" key1="VK_PRIOR" mod1="Alt" />
   </KeyBindings>
 
   <Symbols>
@@ -136,6 +171,9 @@
       <IDSymbol name="SetRenderingModeCompact" value="0x0204" />
       <IDSymbol name="SetRenderingModeFull" value="0x0205" />
       <IDSymbol name="OpenSettings" value="0x0206" />
+      <IDSymbol name="ShowCodeAnchors" value="0x0207" />
+      <IDSymbol name="NextAnchor" value="0x0208" />
+      <IDSymbol name="PreviousAnchor" value="0x0209" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

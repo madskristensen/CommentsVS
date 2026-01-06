@@ -39,6 +39,10 @@ namespace CommentsVS.Classification
         internal static ClassificationTypeDefinition ReviewType = null;
 
         [Export(typeof(ClassificationTypeDefinition))]
+        [Name(CommentTagClassificationTypes.Anchor)]
+        internal static ClassificationTypeDefinition AnchorType = null;
+
+        [Export(typeof(ClassificationTypeDefinition))]
         [Name(CommentTagClassificationTypes.Metadata)]
         internal static ClassificationTypeDefinition MetadataType = null;
     }
@@ -144,6 +148,21 @@ namespace CommentsVS.Classification
         {
             DisplayName = "Comment Tag - REVIEW";
             ForegroundColor = Colors.DodgerBlue;
+            IsBold = true;
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.Anchor)]
+    [Name(CommentTagClassificationTypes.Anchor)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class AnchorFormatDefinition : ClassificationFormatDefinition
+    {
+        public AnchorFormatDefinition()
+        {
+            DisplayName = "Comment Tag - ANCHOR";
+            ForegroundColor = Colors.Cyan;
             IsBold = true;
         }
     }

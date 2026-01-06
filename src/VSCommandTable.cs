@@ -34,5 +34,8 @@ namespace CommentsVS
         public const int SetRenderingModeCompact = 0x0204;
         public const int SetRenderingModeFull = 0x0205;
         public const int OpenSettings = 0x0206;
+        public const int ShowCodeAnchors = 0x0207;
+        public const int NextAnchor = 0x0208;
+        public const int PreviousAnchor = 0x0209;
     }
 }

@@ -38,19 +38,19 @@ namespace CommentsVS.Classification
         private const int _maxFileSize = 150_000;
 
         /// <summary>
-        /// Tag keywords for fast pre-check before running regex.
+        /// Anchor keywords for fast pre-check before running regex.
         /// </summary>
-        private static readonly string[] _tagKeywords = ["TODO", "HACK", "NOTE", "BUG", "FIXME", "UNDONE", "REVIEW"];
+        private static readonly string[] _anchorKeywords = ["TODO", "HACK", "NOTE", "BUG", "FIXME", "UNDONE", "REVIEW", "ANCHOR"];
 
-        // Regex to match comment tags - looks for tag keywords after comment prefixes
-        private static readonly Regex _tagRegex = new(
-            @"(?<=//.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?)|" +
-            @"(?<=/\*.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?)|" +
-            @"(?<='.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b:?)",
+        // Regex to match comment anchors - looks for anchor keywords after comment prefixes
+        private static readonly Regex _anchorRegex = new(
+            @"(?<=//.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR)\b:?)|" +
+            @"(?<=/\*.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR)\b:?)|" +
+            @"(?<='.*)(?<tag>\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR)\b:?)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        private static readonly Regex _tagWithMetadataRegex = new(
-            @"\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW)\b(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
+        private static readonly Regex _anchorWithMetadataRegex = new(
+            @"\b(?:TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR)\b(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public event EventHandler<ClassificationChangedEventArgs> ClassificationChanged;
@@ -90,24 +90,24 @@ namespace CommentsVS.Classification
 
             var text = span.GetText();
 
-            // Fast pre-check: skip regex if no tag keywords are present (case-insensitive)
-            var hasAnyTag = false;
-            foreach (var keyword in _tagKeywords)
+            // Fast pre-check: skip regex if no anchor keywords are present (case-insensitive)
+            var hasAnyAnchor = false;
+            foreach (var keyword in _anchorKeywords)
             {
                 if (text.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    hasAnyTag = true;
+                    hasAnyAnchor = true;
                     break;
                 }
             }
-            if (!hasAnyTag)
+            if (!hasAnyAnchor)
             {
                 return result;
             }
 
             var lineStart = span.Start.Position;
 
-            foreach (Match match in _tagRegex.Matches(text))
+            foreach (Match match in _anchorRegex.Matches(text))
             {
                 Group tagGroup = match.Groups["tag"];
                 if (!tagGroup.Success)
@@ -126,9 +126,9 @@ namespace CommentsVS.Classification
 
                 if (_metadataType != null)
                 {
-                    // Classify the optional metadata right after the tag.
-                    // Examples: TODO(@mads): ...  TODO[#123]: ...
-                    Match metaMatch = _tagWithMetadataRegex.Match(text, tagGroup.Index);
+                    // Classify the optional metadata right after the anchor.
+                    // Examples: TODO(@mads): ...  TODO[#123]: ...  ANCHOR(section-name): ...
+                    Match metaMatch = _anchorWithMetadataRegex.Match(text, tagGroup.Index);
                     if (metaMatch.Success && metaMatch.Index == tagGroup.Index)
                     {
                         Group metaGroup = metaMatch.Groups["metadata"];
@@ -155,6 +155,7 @@ namespace CommentsVS.Classification
                 "FIXME" => CommentTagClassificationTypes.Fixme,
                 "UNDONE" => CommentTagClassificationTypes.Undone,
                 "REVIEW" => CommentTagClassificationTypes.Review,
+                "ANCHOR" => CommentTagClassificationTypes.Anchor,
                 _ => null
             };
 
@@ -174,6 +175,7 @@ namespace CommentsVS.Classification
         public const string Fixme = "CommentTag.FIXME";
         public const string Undone = "CommentTag.UNDONE";
         public const string Review = "CommentTag.REVIEW";
+        public const string Anchor = "CommentTag.ANCHOR";
 
         public const string Metadata = "CommentTag.Metadata";
     }

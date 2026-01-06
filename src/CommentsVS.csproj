@@ -50,8 +50,11 @@
     <Compile Include="Adornments\RenderedCommentIntraTextTagger.cs" />
     <Compile Include="Classification\CommentTagClassifier.cs" />
     <Compile Include="Classification\CommentTagFormatDefinitions.cs" />
+    <Compile Include="Commands\NextAnchorCommand.cs" />
     <Compile Include="Commands\OpenSettingsCommand.cs" />
+    <Compile Include="Commands\PreviousAnchorCommand.cs" />
     <Compile Include="Commands\SetRenderingModeCommand.cs" />
+    <Compile Include="Commands\ShowCodeAnchorsCommand.cs" />
     <Compile Include="Commands\ToggleCollapseByDefaultCommand.cs" />
     <Compile Include="Commands\ToggleCommentVisibilityCommand.cs" />
     <Compile Include="Handlers\EscapeKeyHandler.cs" />
@@ -80,6 +83,13 @@
     <Compile Include="SuggestedActions\ReflowCommentSuggestedActionsSource.cs" />
     <Compile Include="Tagging\IssueReferenceTagger.cs" />
     <Compile Include="Tagging\XmlDocCommentOutliningTagger.cs" />
+    <Compile Include="ToolWindows\AnchorItem.cs" />
+    <Compile Include="ToolWindows\AnchorService.cs" />
+    <Compile Include="ToolWindows\AnchorType.cs" />
+    <Compile Include="ToolWindows\CodeAnchorsControl.xaml.cs">
+      <DependentUpon>CodeAnchorsControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ToolWindows\CodeAnchorsToolWindow.cs" />
     <Compile Include="VSCommandTable.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -131,6 +141,11 @@
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="ToolWindows\CodeAnchorsControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
