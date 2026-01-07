@@ -136,9 +136,9 @@ namespace CommentsVS.ToolWindows
                                 totalAnchors += anchors.Count;
                             }
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
-                            // Skip files that can't be read
+                            ex.Log();
                         }
 
                         processedFiles++;

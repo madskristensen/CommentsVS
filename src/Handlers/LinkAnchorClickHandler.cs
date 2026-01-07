@@ -187,9 +187,9 @@ namespace CommentsVS.Handlers
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Ignore file read errors
+                    ex.Log();
                 }
             }
 

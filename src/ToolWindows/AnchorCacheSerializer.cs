@@ -96,9 +96,9 @@ namespace CommentsVS.ToolWindows
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently fail - cache is not critical
+                ex.Log();
                 return false;
             }
         }
@@ -165,9 +165,9 @@ namespace CommentsVS.ToolWindows
 
                 return result;
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently fail - will rescan
+                ex.Log();
                 return null;
             }
         }
@@ -185,9 +185,9 @@ namespace CommentsVS.ToolWindows
                 {
                     File.Delete(filePath);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Ignore deletion failures
+                    ex.Log();
                 }
             }
         }

@@ -86,9 +86,9 @@ namespace CommentsVS.Handlers
                     Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
                     e.Handled = true;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Ignore errors opening browser
+                    ex.Log();
                 }
             }
         }

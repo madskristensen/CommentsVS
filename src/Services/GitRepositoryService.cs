@@ -132,8 +132,9 @@ namespace CommentsVS.Services
                     return await readTask.ConfigureAwait(false);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                ex.Log();
                 return null;
             }
         }
@@ -161,8 +162,9 @@ namespace CommentsVS.Services
                 _repoCache.TryGetValue(gitDir, out GitRepositoryInfo cachedInfo);
                 return cachedInfo;
             }
-            catch
+            catch (Exception ex)
             {
+                ex.Log();
                 return null;
             }
         }
@@ -224,8 +226,9 @@ namespace CommentsVS.Services
                 // .NET Framework 4.8 doesn't have ReadAllLinesAsync, read on background thread
                 lines = await Task.Run(() => File.ReadAllLines(configPath)).ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
+                ex.Log();
                 return null;
             }
 
