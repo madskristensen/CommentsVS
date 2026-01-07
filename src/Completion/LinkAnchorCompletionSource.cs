@@ -47,7 +47,7 @@ namespace CommentsVS.Completion
     /// </summary>
     internal sealed class LinkAnchorCompletionCommitManager : IAsyncCompletionCommitManager
     {
-        public IEnumerable<char> PotentialCommitCharacters => null;
+        public IEnumerable<char> PotentialCommitCharacters => [];
 
         public bool ShouldCommitCompletion(IAsyncCompletionSession session, SnapshotPoint location, char typedChar, CancellationToken token)
         {
