@@ -74,8 +74,10 @@ namespace CommentsVS.ToolWindows
             VS.Events.SolutionEvents.OnAfterOpenSolution += OnSolutionOpened;
             VS.Events.SolutionEvents.OnAfterCloseSolution += OnSolutionClosed;
 
-            // Subscribe to document events for real-time updates when files are saved in VS
+            // Subscribe to document events for real-time updates
             VS.Events.DocumentEvents.Saved += OnDocumentSaved;
+            VS.Events.DocumentEvents.Opened += OnDocumentOpened;
+            VS.Events.DocumentEvents.Closed += OnDocumentClosed;
 
             // Start scanning if enabled (runs on background thread)
             if (options.ScanSolutionOnLoad)
@@ -167,6 +169,46 @@ namespace CommentsVS.ToolWindows
                     // Refresh the UI
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     RefreshAnchorsFromCache();
+                }).FireAndForget();
+            }
+        }
+
+        private void OnDocumentOpened(string filePath)
+        {
+            // Scan the opened file and add to cache (for misc files without a solution)
+            if (_cache != null && _scanner != null)
+            {
+                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                {
+                    string projectName = await GetProjectNameForFileAsync(filePath);
+                    IReadOnlyList<AnchorItem> anchors = await _scanner.ScanFileAsync(filePath, projectName);
+                    _cache.AddOrUpdateFile(filePath, anchors);
+                    
+                    // Refresh the UI
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    RefreshAnchorsFromCache();
+                }).FireAndForget();
+            }
+        }
+
+        private void OnDocumentClosed(string filePath)
+        {
+            // Remove the file from cache when closed (for misc files without a solution)
+            // Only do this when no solution is loaded, otherwise the file stays in cache
+            if (_cache != null)
+            {
+                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    
+                    // Check if a solution is loaded
+                    bool solutionLoaded = await VS.Solutions.IsOpenAsync();
+                    if (!solutionLoaded)
+                    {
+                        // No solution - remove the file from cache
+                        _cache.RemoveFile(filePath);
+                        RefreshAnchorsFromCache();
+                    }
                 }).FireAndForget();
             }
         }

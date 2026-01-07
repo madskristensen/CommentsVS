@@ -12,9 +12,9 @@
     <Menu guid="CommentsVS" id="CommentsSubMenu" priority="0x0100" type="Menu">
       <Parent guid="CommentsVS" id="CommentsSubMenuGroup"/>
       <Strings>
-        <ButtonText>Comments</ButtonText>
-        <CommandName>Comments</CommandName>
-        <CanonicalName>.CommentsVS.Comments</CanonicalName>
+        <ButtonText>Comment Studio</ButtonText>
+        <CommandName>Comment Studio</CommandName>
+        <CanonicalName>.CommentsVS.CommentStudio</CanonicalName>
       </Strings>
     </Menu>
     <!-- Code Anchors Tool Window Toolbar -->

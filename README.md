@@ -27,6 +27,7 @@ or get the [CI build][vsixgallery].
 - **Color-coded Anchor Tags** — TODO, HACK, BUG, FIXME, NOTE highlighted in distinct colors
 - **Solution-Wide Code Anchors** — Browse all TODOs, HACKs, and notes across your entire solution
 - **Clickable Issues** — `#123` links directly to GitHub/GitLab/Azure DevOps issues
+- **Link Anchors** — Navigate to other files, lines, or named anchors with `LINK:` syntax
 - **Theme-aware** — Works with light and dark Visual Studio themes
 
 **Supports:** C# (`///`), VB.NET (`'''`), and block comments (`/** */`)
@@ -226,6 +227,50 @@ These are especially useful for marking important sections you frequently need t
 **Ctrl+Click** on any `#123` reference in a comment to open the issue in your browser. Hover over the reference to see a tooltip with the full URL.
 
 ![Issue Links](art/issue-links.png)
+
+### Link Anchors
+**Navigate to related code instantly.** Create clickable links in comments that navigate to other files, specific lines, or named anchors within your codebase.
+
+#### Basic Syntax
+```csharp
+// LINK: path/to/file.cs                    // Opens file
+// LINK: ./relative/path/file.cs            // Relative path from current file
+// LINK: ../sibling/folder/file.cs          // Parent-relative path
+// LINK: /solution/root/file.cs             // Solution-relative path (starts with /)
+// LINK: @/project/root/file.cs             // Project-relative path (starts with @/)
+// LINK: images/Add group calendar.png      // File paths can contain spaces
+```
+
+#### Line Number Links
+```csharp
+// LINK: Services/UserService.cs:45         // Opens file at line 45
+// LINK: Database/Schema.sql:100-150        // Opens file, navigates to line range
+```
+
+#### Anchor Links
+```csharp
+// LINK: Services/UserService.cs#validate-input    // Jump to named anchor in file
+// LINK: #local-anchor                             // Jump to anchor in current file
+// LINK: ./file.cs:50#section-name                 // Line number + anchor
+```
+
+#### Features
+- **Underlined links** — LINK references are underlined and highlighted
+- **Hover tooltips** — See the resolved file path and validation status
+- **Ctrl+Click navigation** — Jump directly to the target file, line, or anchor
+- **IntelliSense** — Get completions for file paths and anchor names
+- **Validation** — Warning squiggles appear for broken links (missing files)
+- **Path resolution** — Supports relative (`./`, `../`), solution-relative (`/`, `~/`), and project-relative (`@/`) paths
+- **Spaces in paths** — File names with spaces are fully supported
+
+Link anchors work with the existing ANCHOR tags to create a navigation system within your codebase:
+```csharp
+// In UserService.cs:
+// ANCHOR(validate-input): Input validation logic
+
+// In another file:
+// See input validation: LINK: Services/UserService.cs#validate-input
+```
 
 ## Options
 

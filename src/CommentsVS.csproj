@@ -61,9 +61,11 @@
     <Compile Include="Commands\ToggleCollapseByDefaultCommand.cs" />
     <Compile Include="Commands\ToggleCommentVisibilityCommand.cs" />
     <Compile Include="Commands\ToggleGroupByFileCommand.cs" />
+    <Compile Include="Completion\LinkAnchorCompletionSource.cs" />
     <Compile Include="Handlers\EscapeKeyHandler.cs" />
     <Compile Include="Handlers\FormatDocumentHandler.cs" />
     <Compile Include="Handlers\IssueReferenceClickHandler.cs" />
+    <Compile Include="Handlers\LinkAnchorClickHandler.cs" />
     <Compile Include="Handlers\PasteHandler.cs" />
     <Compile Include="Handlers\TypingReflowHandler.cs" />
     <Compile Include="Options\GeneralOptions.cs" />
@@ -72,11 +74,14 @@
     <Compile Include="QuickInfo\CommentTagQuickInfoSource.cs" />
     <Compile Include="QuickInfo\CompactModeQuickInfoSource.cs" />
     <Compile Include="QuickInfo\IssueReferenceQuickInfoSource.cs" />
+    <Compile Include="QuickInfo\LinkAnchorQuickInfoSource.cs" />
     <Compile Include="Services\CommentReflowEngine.cs" />
+    <Compile Include="Services\FilePathResolver.cs" />
     <Compile Include="Services\GitHostingProvider.cs" />
     <Compile Include="Services\GitRepositoryInfo.cs" />
     <Compile Include="Services\GitRepositoryService.cs" />
     <Compile Include="Services\LanguageCommentStyles.cs" />
+    <Compile Include="Services\LinkAnchorParser.cs" />
     <Compile Include="Services\XmlDocCommentCache.cs" />
     <Compile Include="Services\XmlDocCommentParser.cs" />
     <Compile Include="Services\XmlDocCommentRenderer.cs" />
@@ -88,6 +93,8 @@
     <Compile Include="SuggestedActions\ReflowCommentSuggestedAction.cs" />
     <Compile Include="SuggestedActions\ReflowCommentSuggestedActionsSource.cs" />
     <Compile Include="Tagging\IssueReferenceTagger.cs" />
+    <Compile Include="Tagging\LinkAnchorTagger.cs" />
+    <Compile Include="Tagging\LinkAnchorValidationTagger.cs" />
     <Compile Include="Tagging\XmlDocCommentOutliningTagger.cs" />
     <Compile Include="ToolWindows\AnchorItem.cs" />
     <Compile Include="ToolWindows\AnchorService.cs" />

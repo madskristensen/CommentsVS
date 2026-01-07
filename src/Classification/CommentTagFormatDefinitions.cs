@@ -162,7 +162,8 @@ namespace CommentsVS.Classification
         public AnchorFormatDefinition()
         {
             DisplayName = "Comment Tag - ANCHOR";
-            ForegroundColor = Colors.Cyan;
+            // Teal works well in both light and dark themes
+            ForegroundColor = Colors.Teal;
             IsBold = true;
         }
     }

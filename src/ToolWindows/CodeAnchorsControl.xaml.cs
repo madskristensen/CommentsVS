@@ -315,16 +315,18 @@ namespace CommentsVS.ToolWindows
         {
             if (e.Row.Item is AnchorItem anchor)
             {
-                // Find the Ellipse in the row and set its fill color
-                DataGridRow row = e.Row;
-                row.Loaded += (s, args) =>
+                // Find the Ellipse in the row and set its fill color based on anchor type
+                // Use LayoutUpdated event to ensure the visual tree is ready
+                void OnLayoutUpdated(object s, EventArgs args)
                 {
-                    System.Windows.Shapes.Ellipse ellipse = FindVisualChild<System.Windows.Shapes.Ellipse>(row);
+                    e.Row.LayoutUpdated -= OnLayoutUpdated;
+                    System.Windows.Shapes.Ellipse ellipse = FindVisualChild<System.Windows.Shapes.Ellipse>(e.Row);
                     if (ellipse != null)
                     {
                         ellipse.Fill = new System.Windows.Media.SolidColorBrush(anchor.AnchorType.GetColor());
                     }
-                };
+                }
+                e.Row.LayoutUpdated += OnLayoutUpdated;
             }
         }
 

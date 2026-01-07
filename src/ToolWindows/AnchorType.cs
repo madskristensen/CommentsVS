@@ -57,7 +57,7 @@ namespace CommentsVS.ToolWindows
                 AnchorType.Fixme => Colors.OrangeRed,
                 AnchorType.Undone => Colors.MediumPurple,
                 AnchorType.Review => Colors.DodgerBlue,
-                AnchorType.Anchor => Colors.Cyan,
+                AnchorType.Anchor => Colors.Teal,
                 _ => Colors.Gray
             };
         }
