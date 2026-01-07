@@ -99,7 +99,7 @@ public sealed class CommentReflowEngineTests
         Assert.IsTrue(result.Contains("<code>"), "Expected code opening tag");
         Assert.IsTrue(result.Contains("</code>"), "Expected code closing tag");
         // Code content should not be reflowed
-        Assert.IsTrue(result.Contains("var x = 123;") || result.Contains("var x = 123;"));
+        Assert.IsTrue(result.Contains("var x = 123;"));
     }
 
     #endregion

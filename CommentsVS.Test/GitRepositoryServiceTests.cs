@@ -323,6 +323,6 @@ public sealed class GitRepositoryServiceTests
             "ParseRemoteUrl",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 
-        return (GitRepositoryInfo)method.Invoke(null, [remoteUrl]);
+        return (GitRepositoryInfo)method.Invoke(null, new object[] { remoteUrl });
     }
 }
