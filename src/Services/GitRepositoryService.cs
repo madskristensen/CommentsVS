@@ -22,6 +22,16 @@ namespace CommentsVS.Services
         private static readonly ConcurrentDictionary<string, Task<GitRepositoryInfo>> _pendingReads = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
+        /// Clears all cached repository information.
+        /// Call this when the solution closes or when Git configuration may have changed.
+        /// </summary>
+        public static void ClearCache()
+        {
+            _repoCache.Clear();
+            _pendingReads.Clear();
+        }
+
+        /// <summary>
         /// Defines a pattern for matching a Git remote URL to a hosting provider.
         /// </summary>
         private sealed class RemoteUrlPattern(Regex regex, GitHostingProvider provider, string baseUrl, bool usesOrgProject = false)
