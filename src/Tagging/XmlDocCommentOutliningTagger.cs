@@ -11,8 +11,11 @@ namespace CommentsVS.Tagging
 {
     [Export(typeof(ITaggerProvider))]
     [TagType(typeof(IOutliningRegionTag))]
-    [ContentType("CSharp")]
-    [ContentType("Basic")]
+    [ContentType(ContentTypes.CSharp)]
+    [ContentType(ContentTypes.VisualBasic)]
+    [ContentType(ContentTypes.FSharp)]
+    [ContentType("TypeScript")]
+    [ContentType("JavaScript")]
     [Order(Before = "default")]
     [Order(Before = "Structure")]
     [Name("XmlDocCommentOutliningTagger")]

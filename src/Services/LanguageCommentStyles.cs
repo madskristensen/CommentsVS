@@ -1,7 +1,6 @@
+using Microsoft.VisualStudio.Utilities;
 namespace CommentsVS.Services
 {
-    using Microsoft.VisualStudio.Utilities;
-
     /// <summary>
     /// Defines language-specific comment syntax patterns.
     /// </summary>
@@ -50,7 +49,7 @@ namespace CommentsVS.Services
         /// C# documentation comment style: /// for single-line.
         /// </summary>
         public static LanguageCommentStyle CSharp { get; } = new LanguageCommentStyle(
-            contentType: "CSharp",
+            contentType: ContentTypes.CSharp,
             singleLineDocPrefix: "///",
             multiLineDocStart: "/**",
             multiLineDocEnd: "*/",
@@ -60,7 +59,7 @@ namespace CommentsVS.Services
         /// Visual Basic documentation comment style: ''' for single-line.
         /// </summary>
         public static LanguageCommentStyle VisualBasic { get; } = new LanguageCommentStyle(
-            contentType: "Basic",
+            contentType: ContentTypes.VisualBasic,
             singleLineDocPrefix: "'''",
             multiLineDocStart: null,
             multiLineDocEnd: null,
@@ -70,14 +69,45 @@ namespace CommentsVS.Services
         /// C++ documentation comment style: /// for single-line, /** */ for multi-line.
         /// </summary>
         public static LanguageCommentStyle Cpp { get; } = new LanguageCommentStyle(
-            contentType: "C/C++",
+            contentType: ContentTypes.CPlusPlus,
             singleLineDocPrefix: "///",
             multiLineDocStart: "/**",
             multiLineDocEnd: "*/",
             multiLineContinuation: " * ");
 
         /// <summary>
+        /// F# documentation comment style: /// for single-line.
+        /// </summary>
+        public static LanguageCommentStyle FSharp { get; } = new LanguageCommentStyle(
+            contentType: "FSharp",
+            singleLineDocPrefix: "///",
+            multiLineDocStart: null,
+            multiLineDocEnd: null,
+            multiLineContinuation: null);
+
+        /// <summary>
+        /// TypeScript documentation comment style: /// for single-line.
+        /// </summary>
+        public static LanguageCommentStyle TypeScript { get; } = new LanguageCommentStyle(
+            contentType: "TypeScript",
+            singleLineDocPrefix: "///",
+            multiLineDocStart: null,
+            multiLineDocEnd: null,
+            multiLineContinuation: null);
+
+        /// <summary>
+        /// JavaScript documentation comment style: /// for single-line.
+        /// </summary>
+        public static LanguageCommentStyle JavaScript { get; } = new LanguageCommentStyle(
+            contentType: "JavaScript",
+            singleLineDocPrefix: "///",
+            multiLineDocStart: null,
+            multiLineDocEnd: null,
+            multiLineContinuation: null);
+
+        /// <summary>
         /// Gets the appropriate comment style for a given content type.
+
         /// </summary>
         /// <param name="contentType">The content type name (e.g., "CSharp", "Basic", "C/C++").</param>
         /// <returns>The matching comment style, or null if not supported.</returns>
@@ -88,24 +118,43 @@ namespace CommentsVS.Services
                 return null;
             }
 
-            if (contentType.IndexOf("CSharp", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (contentType.IndexOf(ContentTypes.CSharp, StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return CSharp;
             }
 
-            if (contentType.IndexOf("Basic", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (contentType.IndexOf(ContentTypes.VisualBasic, StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return VisualBasic;
             }
 
-            if (contentType.IndexOf("C/C++", StringComparison.OrdinalIgnoreCase) >= 0 ||
+
+            if (contentType.IndexOf(ContentTypes.CPlusPlus, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 contentType.IndexOf("C++", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return Cpp;
             }
 
+            if (contentType.IndexOf(ContentTypes.FSharp, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                contentType.IndexOf("FSharp", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return FSharp;
+            }
+
+            if (contentType.IndexOf("TypeScript", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return TypeScript;
+            }
+
+            if (contentType.IndexOf("JavaScript", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return JavaScript;
+            }
+
             return null;
         }
+
+
 
         /// <summary>
         /// Gets the appropriate comment style for a given content type.
@@ -134,8 +183,24 @@ namespace CommentsVS.Services
                 return Cpp;
             }
 
+            if (contentType.IsOfType("F#") || contentType.IsOfType("FSharp"))
+            {
+                return FSharp;
+            }
+
+            if (contentType.IsOfType("TypeScript"))
+            {
+                return TypeScript;
+            }
+
+            if (contentType.IsOfType("JavaScript"))
+            {
+                return JavaScript;
+            }
+
             return null;
         }
+
 
         /// <summary>
         /// Gets whether multi-line documentation comments are supported.

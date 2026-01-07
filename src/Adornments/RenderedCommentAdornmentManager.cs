@@ -12,9 +12,15 @@ namespace CommentsVS.Adornments
     /// Provides the adornment layer for rendered comments and creates the adornment manager.
     /// </summary>
     [Export(typeof(IWpfTextViewCreationListener))]
-    [ContentType("CSharp")]
-    [ContentType("Basic")]
+    [ContentType(ContentTypes.CSharp)]
+    [ContentType(ContentTypes.VisualBasic)]
+    [ContentType(ContentTypes.FSharp)]
+    [ContentType(ContentTypes.CPlusPlus)]
+    [ContentType("TypeScript")]
+    [ContentType("JavaScript")]
     [TextViewRole(PredefinedTextViewRoles.Document)]
+
+
     internal sealed class RenderedCommentAdornmentManagerProvider : IWpfTextViewCreationListener
     {
         [Export(typeof(AdornmentLayerDefinition))]

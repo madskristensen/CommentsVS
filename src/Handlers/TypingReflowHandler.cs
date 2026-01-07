@@ -3,8 +3,6 @@ using System.Threading;
 
 using CommentsVS.Options;
 using CommentsVS.Services;
-
-using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
@@ -16,9 +14,15 @@ namespace CommentsVS.Handlers
     /// Uses debouncing to ensure smooth typing experience without swallowing characters.
     /// </summary>
     [Export(typeof(IWpfTextViewCreationListener))]
-    [ContentType("CSharp")]
-    [ContentType("Basic")]
+    [ContentType(ContentTypes.CSharp)]
+    [ContentType(ContentTypes.VisualBasic)]
+    [ContentType(ContentTypes.FSharp)]
+    [ContentType(ContentTypes.CPlusPlus)]
+    [ContentType("TypeScript")]
+    [ContentType("JavaScript")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
+
+
     internal sealed class TypingReflowHandler : IWpfTextViewCreationListener
     {
         private const int _debounceDelayMs = 300;

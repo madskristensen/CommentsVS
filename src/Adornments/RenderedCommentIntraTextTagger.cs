@@ -32,9 +32,15 @@ namespace CommentsVS.Adornments
     }
 
     [Export(typeof(IViewTaggerProvider))]
-    [ContentType("CSharp")]
-    [ContentType("Basic")]
+    [ContentType(ContentTypes.CSharp)]
+    [ContentType(ContentTypes.VisualBasic)]
+    [ContentType(ContentTypes.FSharp)]
+    [ContentType(ContentTypes.CPlusPlus)]
+    [ContentType("TypeScript")]
+    [ContentType("JavaScript")]
     [TagType(typeof(IntraTextAdornmentTag))]
+
+
     [TextViewRole(PredefinedTextViewRoles.Document)]
     internal sealed class RenderedCommentIntraTextTaggerProvider : IViewTaggerProvider
     {

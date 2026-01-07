@@ -16,9 +16,15 @@ namespace CommentsVS.Handlers
     /// Down Arrow: Hide rendering
     /// </summary>
     [Export(typeof(ICommandHandler))]
-    [ContentType("CSharp")]
-    [ContentType("Basic")]
+    [ContentType(ContentTypes.CSharp)]
+    [ContentType(ContentTypes.VisualBasic)]
+    [ContentType(ContentTypes.FSharp)]
+    [ContentType(ContentTypes.CPlusPlus)]
+    [ContentType("TypeScript")]
+    [ContentType("JavaScript")]
     [Name(nameof(RenderedCommentNavigationHandler))]
+
+
     [TextViewRole(PredefinedTextViewRoles.Document)]
     internal sealed class RenderedCommentNavigationHandler :
         ICommandHandler<EscapeKeyCommandArgs>

@@ -72,7 +72,50 @@ public sealed class LanguageCommentStyleTests
     }
 
     [TestMethod]
+    public void GetForContentType_WithFSharp_ReturnsFSharpStyle()
+    {
+        var result = LanguageCommentStyle.GetForContentType("F#");
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual("FSharp", result.ContentType);
+        Assert.AreEqual("///", result.SingleLineDocPrefix);
+        Assert.IsNull(result.MultiLineDocStart);
+    }
+
+    [TestMethod]
+    public void GetForContentType_WithJavaScript_ReturnsJavaScriptStyle()
+    {
+        var result = LanguageCommentStyle.GetForContentType("JavaScript");
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual("JavaScript", result.ContentType);
+        Assert.AreEqual("///", result.SingleLineDocPrefix);
+        Assert.IsNull(result.MultiLineDocStart);
+    }
+
+    [TestMethod]
+    public void GetForContentType_WithFSharpSymbol_ReturnsFSharpStyle()
+    {
+        var result = LanguageCommentStyle.GetForContentType("F#");
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual("FSharp", result.ContentType);
+    }
+
+    [TestMethod]
+    public void GetForContentType_WithTypeScript_ReturnsTypeScriptStyle()
+    {
+        var result = LanguageCommentStyle.GetForContentType("TypeScript");
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual("TypeScript", result.ContentType);
+        Assert.AreEqual("///", result.SingleLineDocPrefix);
+        Assert.IsNull(result.MultiLineDocStart);
+    }
+
+    [TestMethod]
     public void GetForContentType_WithNull_ReturnsNull()
+
     {
         var result = LanguageCommentStyle.GetForContentType((string?)null);
 

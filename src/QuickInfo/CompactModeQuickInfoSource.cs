@@ -14,9 +14,14 @@ namespace CommentsVS.QuickInfo
 {
     [Export(typeof(IAsyncQuickInfoSourceProvider))]
     [Name("CompactModeQuickInfo")]
-    [ContentType("CSharp")]
     [ContentType("Basic")]
+    [ContentType("CSharp")]
+    [ContentType("FSharp")]
+    [ContentType("C/C++")]
+    [ContentType("TypeScript")]
+    [ContentType("JavaScript")]
     [Order(Before = "Default Quick Info Presenter")]
+
     internal sealed class CompactModeQuickInfoSourceProvider : IAsyncQuickInfoSourceProvider
     {
         public IAsyncQuickInfoSource TryCreateQuickInfoSource(ITextBuffer textBuffer)
