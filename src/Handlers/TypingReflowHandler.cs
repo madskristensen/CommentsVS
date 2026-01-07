@@ -14,17 +14,22 @@ namespace CommentsVS.Handlers
     /// Uses debouncing to ensure smooth typing experience without swallowing characters.
     /// </summary>
     [Export(typeof(IWpfTextViewCreationListener))]
-    [ContentType(ContentTypes.CSharp)]
-    [ContentType(ContentTypes.VisualBasic)]
-    [ContentType(ContentTypes.FSharp)]
-    [ContentType(ContentTypes.CPlusPlus)]
-    [ContentType("TypeScript")]
-    [ContentType("JavaScript")]
+    [ContentType(SupportedContentTypes.CSharp)]
+    [ContentType(SupportedContentTypes.VisualBasic)]
+    [ContentType(SupportedContentTypes.FSharp)]
+    [ContentType(SupportedContentTypes.CPlusPlus)]
+    [ContentType(SupportedContentTypes.TypeScript)]
+    [ContentType(SupportedContentTypes.JavaScript)]
+    [ContentType(SupportedContentTypes.Razor)]
+    [ContentType(SupportedContentTypes.Sql)]
+    [ContentType(SupportedContentTypes.PowerShell)]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
 
 
     internal sealed class TypingReflowHandler : IWpfTextViewCreationListener
     {
+
+
         private const int _debounceDelayMs = 300;
 
         public void TextViewCreated(IWpfTextView textView)

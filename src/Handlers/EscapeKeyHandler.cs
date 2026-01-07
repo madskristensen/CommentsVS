@@ -16,18 +16,23 @@ namespace CommentsVS.Handlers
     /// Down Arrow: Hide rendering
     /// </summary>
     [Export(typeof(ICommandHandler))]
-    [ContentType(ContentTypes.CSharp)]
-    [ContentType(ContentTypes.VisualBasic)]
-    [ContentType(ContentTypes.FSharp)]
-    [ContentType(ContentTypes.CPlusPlus)]
-    [ContentType("TypeScript")]
-    [ContentType("JavaScript")]
+    [ContentType(SupportedContentTypes.CSharp)]
+    [ContentType(SupportedContentTypes.VisualBasic)]
+    [ContentType(SupportedContentTypes.FSharp)]
+    [ContentType(SupportedContentTypes.CPlusPlus)]
+    [ContentType(SupportedContentTypes.TypeScript)]
+    [ContentType(SupportedContentTypes.JavaScript)]
+    [ContentType(SupportedContentTypes.Razor)]
+    [ContentType(SupportedContentTypes.Sql)]
+    [ContentType(SupportedContentTypes.PowerShell)]
     [Name(nameof(RenderedCommentNavigationHandler))]
 
 
     [TextViewRole(PredefinedTextViewRoles.Document)]
     internal sealed class RenderedCommentNavigationHandler :
         ICommandHandler<EscapeKeyCommandArgs>
+
+
     {
         public string DisplayName => "Handle Down Arrow Key in Rendered Comments";
 

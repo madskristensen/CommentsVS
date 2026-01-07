@@ -11,16 +11,21 @@ namespace CommentsVS.Tagging
 {
     [Export(typeof(ITaggerProvider))]
     [TagType(typeof(IOutliningRegionTag))]
-    [ContentType(ContentTypes.CSharp)]
-    [ContentType(ContentTypes.VisualBasic)]
-    [ContentType(ContentTypes.FSharp)]
-    [ContentType("TypeScript")]
-    [ContentType("JavaScript")]
+    [ContentType(SupportedContentTypes.CSharp)]
+    [ContentType(SupportedContentTypes.VisualBasic)]
+    [ContentType(SupportedContentTypes.FSharp)]
+    [ContentType(SupportedContentTypes.TypeScript)]
+    [ContentType(SupportedContentTypes.JavaScript)]
+    [ContentType(SupportedContentTypes.Razor)]
+    [ContentType(SupportedContentTypes.Sql)]
+    [ContentType(SupportedContentTypes.PowerShell)]
     [Order(Before = "default")]
     [Order(Before = "Structure")]
     [Name("XmlDocCommentOutliningTagger")]
     internal sealed class XmlDocCommentOutliningTaggerProvider : ITaggerProvider
     {
+
+
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
             return buffer.Properties.GetOrCreateSingletonProperty(

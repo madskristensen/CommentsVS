@@ -10,20 +10,26 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Utilities;
 
+
 namespace CommentsVS.QuickInfo
 {
     [Export(typeof(IAsyncQuickInfoSourceProvider))]
     [Name("CompactModeQuickInfo")]
-    [ContentType("Basic")]
-    [ContentType("CSharp")]
-    [ContentType("FSharp")]
-    [ContentType("C/C++")]
-    [ContentType("TypeScript")]
-    [ContentType("JavaScript")]
+    [ContentType(SupportedContentTypes.VisualBasic)]
+    [ContentType(SupportedContentTypes.CSharp)]
+    [ContentType(SupportedContentTypes.FSharp)]
+    [ContentType(SupportedContentTypes.CPlusPlus)]
+    [ContentType(SupportedContentTypes.TypeScript)]
+    [ContentType(SupportedContentTypes.JavaScript)]
+    [ContentType(SupportedContentTypes.Razor)]
+    [ContentType(SupportedContentTypes.Sql)]
+    [ContentType(SupportedContentTypes.PowerShell)]
     [Order(Before = "Default Quick Info Presenter")]
 
     internal sealed class CompactModeQuickInfoSourceProvider : IAsyncQuickInfoSourceProvider
     {
+
+
         public IAsyncQuickInfoSource TryCreateQuickInfoSource(ITextBuffer textBuffer)
         {
             return textBuffer.Properties.GetOrCreateSingletonProperty(

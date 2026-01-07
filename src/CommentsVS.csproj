@@ -80,6 +80,7 @@
     <Compile Include="QuickInfo\IssueReferenceQuickInfoSource.cs" />
     <Compile Include="QuickInfo\LinkAnchorQuickInfoSource.cs" />
     <Compile Include="Services\CommentReflowEngine.cs" />
+    <Compile Include="Services\ContentTypes.cs" />
     <Compile Include="Services\FilePathResolver.cs" />
     <Compile Include="Services\GitHostingProvider.cs" />
     <Compile Include="Services\GitRepositoryInfo.cs" />

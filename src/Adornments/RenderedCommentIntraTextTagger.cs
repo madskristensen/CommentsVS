@@ -31,19 +31,26 @@ namespace CommentsVS.Adornments
         public void Execute(object parameter) => _execute();
     }
 
+
+
     [Export(typeof(IViewTaggerProvider))]
-    [ContentType(ContentTypes.CSharp)]
-    [ContentType(ContentTypes.VisualBasic)]
-    [ContentType(ContentTypes.FSharp)]
-    [ContentType(ContentTypes.CPlusPlus)]
-    [ContentType("TypeScript")]
-    [ContentType("JavaScript")]
+    [ContentType(SupportedContentTypes.CSharp)]
+    [ContentType(SupportedContentTypes.VisualBasic)]
+    [ContentType(SupportedContentTypes.FSharp)]
+    [ContentType(SupportedContentTypes.CPlusPlus)]
+    [ContentType(SupportedContentTypes.TypeScript)]
+    [ContentType(SupportedContentTypes.JavaScript)]
+    [ContentType(SupportedContentTypes.Razor)]
+    [ContentType(SupportedContentTypes.Sql)]
+    [ContentType(SupportedContentTypes.PowerShell)]
     [TagType(typeof(IntraTextAdornmentTag))]
 
 
     [TextViewRole(PredefinedTextViewRoles.Document)]
     internal sealed class RenderedCommentIntraTextTaggerProvider : IViewTaggerProvider
     {
+
+
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
             if (textView == null || textView is not IWpfTextView wpfTextView)

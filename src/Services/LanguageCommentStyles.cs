@@ -49,7 +49,7 @@ namespace CommentsVS.Services
         /// C# documentation comment style: /// for single-line.
         /// </summary>
         public static LanguageCommentStyle CSharp { get; } = new LanguageCommentStyle(
-            contentType: ContentTypes.CSharp,
+            contentType: SupportedContentTypes.CSharp,
             singleLineDocPrefix: "///",
             multiLineDocStart: "/**",
             multiLineDocEnd: "*/",
@@ -59,7 +59,7 @@ namespace CommentsVS.Services
         /// Visual Basic documentation comment style: ''' for single-line.
         /// </summary>
         public static LanguageCommentStyle VisualBasic { get; } = new LanguageCommentStyle(
-            contentType: ContentTypes.VisualBasic,
+            contentType: SupportedContentTypes.VisualBasic,
             singleLineDocPrefix: "'''",
             multiLineDocStart: null,
             multiLineDocEnd: null,
@@ -69,7 +69,7 @@ namespace CommentsVS.Services
         /// C++ documentation comment style: /// for single-line, /** */ for multi-line.
         /// </summary>
         public static LanguageCommentStyle Cpp { get; } = new LanguageCommentStyle(
-            contentType: ContentTypes.CPlusPlus,
+            contentType: SupportedContentTypes.CPlusPlus,
             singleLineDocPrefix: "///",
             multiLineDocStart: "/**",
             multiLineDocEnd: "*/",
@@ -79,7 +79,7 @@ namespace CommentsVS.Services
         /// F# documentation comment style: /// for single-line.
         /// </summary>
         public static LanguageCommentStyle FSharp { get; } = new LanguageCommentStyle(
-            contentType: "FSharp",
+            contentType: SupportedContentTypes.FSharp,
             singleLineDocPrefix: "///",
             multiLineDocStart: null,
             multiLineDocEnd: null,
@@ -89,7 +89,7 @@ namespace CommentsVS.Services
         /// TypeScript documentation comment style: /// for single-line.
         /// </summary>
         public static LanguageCommentStyle TypeScript { get; } = new LanguageCommentStyle(
-            contentType: "TypeScript",
+            contentType: SupportedContentTypes.TypeScript,
             singleLineDocPrefix: "///",
             multiLineDocStart: null,
             multiLineDocEnd: null,
@@ -99,14 +99,45 @@ namespace CommentsVS.Services
         /// JavaScript documentation comment style: /// for single-line.
         /// </summary>
         public static LanguageCommentStyle JavaScript { get; } = new LanguageCommentStyle(
-            contentType: "JavaScript",
+            contentType: SupportedContentTypes.JavaScript,
             singleLineDocPrefix: "///",
             multiLineDocStart: null,
             multiLineDocEnd: null,
             multiLineContinuation: null);
 
         /// <summary>
+        /// Razor/Blazor documentation comment style: /// for single-line (C# sections).
+        /// </summary>
+        public static LanguageCommentStyle Razor { get; } = new LanguageCommentStyle(
+            contentType: SupportedContentTypes.Razor,
+            singleLineDocPrefix: "///",
+            multiLineDocStart: null,
+            multiLineDocEnd: null,
+            multiLineContinuation: null);
+
+        /// <summary>
+        /// SQL comment style: -- for single-line.
+        /// </summary>
+        public static LanguageCommentStyle Sql { get; } = new LanguageCommentStyle(
+            contentType: SupportedContentTypes.Sql,
+            singleLineDocPrefix: "--",
+            multiLineDocStart: "/*",
+            multiLineDocEnd: "*/",
+            multiLineContinuation: null);
+
+        /// <summary>
+        /// PowerShell comment style: # for single-line.
+        /// </summary>
+        public static LanguageCommentStyle PowerShell { get; } = new LanguageCommentStyle(
+            contentType: SupportedContentTypes.PowerShell,
+            singleLineDocPrefix: "#",
+            multiLineDocStart: "<#",
+            multiLineDocEnd: "#>",
+            multiLineContinuation: null);
+
+        /// <summary>
         /// Gets the appropriate comment style for a given content type.
+
 
         /// </summary>
         /// <param name="contentType">The content type name (e.g., "CSharp", "Basic", "C/C++").</param>
@@ -118,41 +149,62 @@ namespace CommentsVS.Services
                 return null;
             }
 
-            if (contentType.IndexOf(ContentTypes.CSharp, StringComparison.OrdinalIgnoreCase) >= 0)
+            // Check Razor before CSharp since "RazorCSharp" contains "CSharp"
+            if (contentType.IndexOf(SupportedContentTypes.Razor, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                contentType.IndexOf("Razor", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return Razor;
+            }
+
+            if (contentType.IndexOf(SupportedContentTypes.CSharp, StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return CSharp;
             }
 
-            if (contentType.IndexOf(ContentTypes.VisualBasic, StringComparison.OrdinalIgnoreCase) >= 0)
+            if (contentType.IndexOf(SupportedContentTypes.VisualBasic, StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return VisualBasic;
             }
 
 
-            if (contentType.IndexOf(ContentTypes.CPlusPlus, StringComparison.OrdinalIgnoreCase) >= 0 ||
+            if (contentType.IndexOf(SupportedContentTypes.CPlusPlus, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 contentType.IndexOf("C++", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return Cpp;
             }
 
-            if (contentType.IndexOf(ContentTypes.FSharp, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                contentType.IndexOf("FSharp", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (contentType.IndexOf(SupportedContentTypes.FSharp, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                contentType.IndexOf("F#", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return FSharp;
             }
 
-            if (contentType.IndexOf("TypeScript", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (contentType.IndexOf(SupportedContentTypes.TypeScript, StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return TypeScript;
             }
 
-            if (contentType.IndexOf("JavaScript", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (contentType.IndexOf(SupportedContentTypes.JavaScript, StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return JavaScript;
             }
 
+            if (contentType.IndexOf(SupportedContentTypes.Sql, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return Sql;
+            }
+
+            if (contentType.IndexOf(SupportedContentTypes.PowerShell, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return PowerShell;
+            }
+
+
+
             return null;
         }
+
+
 
 
 
@@ -168,38 +220,55 @@ namespace CommentsVS.Services
                 return null;
             }
 
-            if (contentType.IsOfType("CSharp"))
+            if (contentType.IsOfType(SupportedContentTypes.CSharp))
             {
                 return CSharp;
             }
 
-            if (contentType.IsOfType("Basic"))
+            if (contentType.IsOfType(SupportedContentTypes.VisualBasic))
             {
                 return VisualBasic;
             }
 
-            if (contentType.IsOfType("C/C++"))
+            if (contentType.IsOfType(SupportedContentTypes.CPlusPlus))
             {
                 return Cpp;
             }
 
-            if (contentType.IsOfType("F#") || contentType.IsOfType("FSharp"))
+            if (contentType.IsOfType("F#") || contentType.IsOfType(SupportedContentTypes.FSharp))
             {
                 return FSharp;
             }
 
-            if (contentType.IsOfType("TypeScript"))
+            if (contentType.IsOfType(SupportedContentTypes.TypeScript))
             {
                 return TypeScript;
             }
 
-            if (contentType.IsOfType("JavaScript"))
+            if (contentType.IsOfType(SupportedContentTypes.JavaScript))
             {
                 return JavaScript;
             }
 
+            if (contentType.IsOfType(SupportedContentTypes.Razor) || contentType.IsOfType("Razor"))
+            {
+                return Razor;
+            }
+
+            if (contentType.IsOfType(SupportedContentTypes.Sql))
+            {
+                return Sql;
+            }
+
+            if (contentType.IsOfType(SupportedContentTypes.PowerShell))
+            {
+                return PowerShell;
+            }
+
             return null;
         }
+
+
 
 
         /// <summary>
