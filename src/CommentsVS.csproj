@@ -64,6 +64,7 @@
     <Compile Include="Commands\ToggleCollapseByDefaultCommand.cs" />
     <Compile Include="Commands\ToggleCommentVisibilityCommand.cs" />
     <Compile Include="Commands\ToggleGroupByFileCommand.cs" />
+    <Compile Include="Commands\TypeFilterComboCommand.cs" />
     <Compile Include="Completion\LinkAnchorCompletionSource.cs" />
     <Compile Include="Handlers\EscapeKeyHandler.cs" />
     <Compile Include="Handlers\FormatDocumentHandler.cs" />

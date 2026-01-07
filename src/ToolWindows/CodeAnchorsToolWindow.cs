@@ -122,6 +122,17 @@ namespace CommentsVS.ToolWindows
         }
 
         /// <summary>
+        /// Sets the type filter for the tool window.
+        /// </summary>
+        /// <param name="typeFilter">The type filter to apply (All, TODO, HACK, etc.).</param>
+        public void SetTypeFilter(string typeFilter)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            _control?.SetTypeFilter(typeFilter);
+        }
+
+        /// <summary>
         /// Navigates to the next anchor in the list.
         /// </summary>
         public async Task NavigateToNextAnchorAsync()

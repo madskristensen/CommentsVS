@@ -28,29 +28,13 @@ namespace CommentsVS.ToolWindows
                 var searchString = SearchQuery.SearchString ?? string.Empty;
                 var matchCase = pane.MatchCaseOption.Value;
 
-                // Extract type filter if present (e.g., type:"TODO")
-                string typeFilter = null;
-                var filterPattern = "type:\"";
-                var filterIndex = searchString.IndexOf(filterPattern, StringComparison.OrdinalIgnoreCase);
-                if (filterIndex >= 0)
-                {
-                    var startIndex = filterIndex + filterPattern.Length;
-                    var endIndex = searchString.IndexOf('"', startIndex);
-                    if (endIndex > startIndex)
-                    {
-                        typeFilter = searchString.Substring(startIndex, endIndex - startIndex);
-                        // Remove the filter from the search string
-                        searchString = searchString.Remove(filterIndex, endIndex - filterIndex + 1).Trim();
-                    }
-                }
-
                 // Apply the search on the UI thread using JoinableTaskFactory
                 ThreadHelper.JoinableTaskFactory.Run(async () =>
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     if (pane.Content is CodeAnchorsControl control)
                     {
-                        resultCount = control.ApplySearchFilter(searchString, typeFilter, matchCase);
+                        resultCount = control.ApplySearchFilter(searchString, matchCase);
                     }
                 });
 

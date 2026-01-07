@@ -13,7 +13,6 @@ namespace CommentsVS.ToolWindows
     public class CodeAnchorsToolWindowPane : ToolWindowPane
     {
         private IVsEnumWindowSearchOptions _searchOptionsEnum;
-        private IVsEnumWindowSearchFilters _searchFiltersEnum;
         private WindowSearchBooleanOption _matchCaseOption;
 
         public CodeAnchorsToolWindowPane()
@@ -61,32 +60,6 @@ namespace CommentsVS.ToolWindows
                     _searchOptionsEnum = new WindowSearchOptionEnumerator(options);
                 }
                 return _searchOptionsEnum;
-            }
-        }
-
-        /// <summary>
-        /// Gets the search filters enumerator for anchor type filtering.
-        /// </summary>
-        public override IVsEnumWindowSearchFilters SearchFiltersEnum
-        {
-            get
-            {
-                if (_searchFiltersEnum == null)
-                {
-                    var filters = new List<IVsWindowSearchFilter>
-                    {
-                        new WindowSearchSimpleFilter("TODO", "Show only TODO anchors", "type", "TODO"),
-                        new WindowSearchSimpleFilter("HACK", "Show only HACK anchors", "type", "HACK"),
-                        new WindowSearchSimpleFilter("NOTE", "Show only NOTE anchors", "type", "NOTE"),
-                        new WindowSearchSimpleFilter("BUG", "Show only BUG anchors", "type", "BUG"),
-                        new WindowSearchSimpleFilter("FIXME", "Show only FIXME anchors", "type", "FIXME"),
-                        new WindowSearchSimpleFilter("UNDONE", "Show only UNDONE anchors", "type", "UNDONE"),
-                        new WindowSearchSimpleFilter("REVIEW", "Show only REVIEW anchors", "type", "REVIEW"),
-                        new WindowSearchSimpleFilter("ANCHOR", "Show only ANCHOR anchors", "type", "ANCHOR"),
-                    };
-                    _searchFiltersEnum = new WindowSearchFilterEnumerator(filters);
-                }
-                return _searchFiltersEnum;
             }
         }
 

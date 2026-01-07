@@ -36,6 +36,7 @@ namespace CommentsVS
             if (await GetServiceAsync(typeof(IMenuCommandService)) is OleMenuCommandService commandService)
             {
                 ScopeFilterComboCommand.Initialize(this, commandService);
+                TypeFilterComboCommand.Initialize(this, commandService);
             }
         }
     }

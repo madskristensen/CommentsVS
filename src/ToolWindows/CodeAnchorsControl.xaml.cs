@@ -41,13 +41,11 @@ namespace CommentsVS.ToolWindows
         /// Applies a search filter from the VS search box.
         /// </summary>
         /// <param name="searchText">The text to search for.</param>
-        /// <param name="typeFilter">Optional type filter (TODO, HACK, etc.).</param>
         /// <param name="matchCase">Whether to match case.</param>
         /// <returns>The number of matching results.</returns>
-        public uint ApplySearchFilter(string searchText, string typeFilter, bool matchCase)
+        public uint ApplySearchFilter(string searchText, bool matchCase)
         {
             _currentSearchFilter = searchText ?? string.Empty;
-            _currentTypeFilter = string.IsNullOrEmpty(typeFilter) ? "All" : typeFilter;
             _currentMatchCase = matchCase;
 
             _viewSource.View.Refresh();
@@ -57,12 +55,23 @@ namespace CommentsVS.ToolWindows
         }
 
         /// <summary>
+        /// Sets the type filter for anchors.
+        /// </summary>
+        /// <param name="typeFilter">The type filter (All, TODO, HACK, etc.).</param>
+        public void SetTypeFilter(string typeFilter)
+        {
+            _currentTypeFilter = string.IsNullOrEmpty(typeFilter) ? "All" : typeFilter;
+
+            _viewSource.View.Refresh();
+            UpdateStatus();
+        }
+
+        /// <summary>
         /// Clears the search filter and shows all anchors.
         /// </summary>
         public void ClearSearchFilter()
         {
             _currentSearchFilter = string.Empty;
-            _currentTypeFilter = "All";
             _currentMatchCase = false;
 
             _viewSource.View.Refresh();

@@ -32,6 +32,7 @@ namespace CommentsVS
         public const int CodeAnchorsToolbar = 0x0008;
         public const int CodeAnchorsToolbarGroup = 0x0009;
         public const int CodeAnchorsScopeGroup = 0x000B;
+        public const int CodeAnchorsTypeFilterGroup = 0x000C;
         public const int ToggleCommentVisibility = 0x0200;
         public const int ToggleCollapseByDefault = 0x0202;
         public const int SetRenderingModeOff = 0x0203;
@@ -45,5 +46,7 @@ namespace CommentsVS
         public const int ToggleGroupByFile = 0x020B;
         public const int ScopeFilterCombo = 0x020C;
         public const int ScopeFilterComboGetList = 0x020D;
+        public const int TypeFilterCombo = 0x020E;
+        public const int TypeFilterComboGetList = 0x020F;
     }
 }

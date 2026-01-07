@@ -58,6 +58,10 @@
       <Group guid="CommentsVS" id="CodeAnchorsToolbarGroup" priority="0x0100">
         <Parent guid="CommentsVS" id="CodeAnchorsToolbar"/>
       </Group>
+      <!-- Code Anchors type filter group (right-aligned) -->
+      <Group guid="CommentsVS" id="CodeAnchorsTypeFilterGroup" priority="0x0200">
+        <Parent guid="CommentsVS" id="CodeAnchorsToolbar"/>
+      </Group>
     </Groups>
 
     <Combos>
@@ -67,6 +71,14 @@
         <Strings>
           <ButtonText>Entire Solution</ButtonText>
           <CanonicalName>.CommentsVS.ScopeFilterCombo</CanonicalName>
+        </Strings>
+      </Combo>
+      <!-- Type Filter Combo for Code Anchors toolbar -->
+      <Combo guid="CommentsVS" id="TypeFilterCombo" priority="0x0050" type="DropDownCombo" defaultWidth="100" idCommandList="TypeFilterComboGetList">
+        <Parent guid="CommentsVS" id="CodeAnchorsTypeFilterGroup"/>
+        <Strings>
+          <ButtonText>All Types</ButtonText>
+          <CanonicalName>.CommentsVS.TypeFilterCombo</CanonicalName>
         </Strings>
       </Combo>
     </Combos>
@@ -224,6 +236,7 @@
       <IDSymbol name="CodeAnchorsToolbar" value="0x0008" />
       <IDSymbol name="CodeAnchorsToolbarGroup" value="0x0009" />
       <IDSymbol name="CodeAnchorsScopeGroup" value="0x000B" />
+      <IDSymbol name="CodeAnchorsTypeFilterGroup" value="0x000C" />
       <IDSymbol name="ToggleCommentVisibility" value="0x0200" />
       <IDSymbol name="ToggleCollapseByDefault" value="0x0202" />
       <IDSymbol name="SetRenderingModeOff" value="0x0203" />
@@ -237,6 +250,8 @@
       <IDSymbol name="ToggleGroupByFile" value="0x020B" />
       <IDSymbol name="ScopeFilterCombo" value="0x020C" />
       <IDSymbol name="ScopeFilterComboGetList" value="0x020D" />
+      <IDSymbol name="TypeFilterCombo" value="0x020E" />
+      <IDSymbol name="TypeFilterComboGetList" value="0x020F" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>
