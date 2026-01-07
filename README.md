@@ -174,7 +174,7 @@ Notes:
 - Tokens are separated by spaces, commas, or semicolons.
 - Only `@owner`, `#issue`, and `yyyy-MM-dd` tokens are currently recognized.
 
-### Prefix-Based Comment Highlighting (Better Comments)
+### Prefix-Based Comment Highlighting
 **Make different comment types visually distinct.** Inspired by the popular "Better Comments" extension, Comment Studio highlights comments differently based on their prefix character:
 
 | Prefix | Color | Style | Purpose |
@@ -187,16 +187,8 @@ Notes:
 | `// >` | Purple | Italic | Quotes and references |
 
 Example:
-```csharp
-// ! Critical: This must be called before Initialize()
-// ? Why does this return null instead of throwing?
-// * Important: Update the cache after this call
-// // Old implementation kept for reference
-// - Disabled pending review
-// > From the API docs: "Returns -1 on failure"
 
-// Regular comment without prefix stays normal
-```
+![Prefix Based Highligting](art/prefix-based-highligting.png)
 
 The feature can be enabled/disabled in **Tools > Options > CommentsVS > Comment Tags**. Colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment - [Type]" entries.
 
@@ -282,6 +274,8 @@ These are especially useful for marking important sections you frequently need t
 // LINK: #local-anchor                             // Jump to anchor in current file
 // LINK: ./file.cs:50#section-name                 // Line number + anchor
 ```
+
+![Link Anchors Intellisense](art/link-anchors-intellisense.png)
 
 #### Features
 - **Underlined links** — Only the file path/anchor is underlined (not "LINK:")
