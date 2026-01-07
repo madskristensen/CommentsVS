@@ -331,7 +331,16 @@ namespace CommentsVS.Adornments
                 // Adjust span to start after indentation so the adornment
                 // appears at the same column as the comment prefix (///)
                 var adjustedStart = block.Span.Start + block.Indentation.Length;
-                var adjustedSpan = new Microsoft.VisualStudio.Text.Span(adjustedStart, block.Span.End - adjustedStart);
+                var adjustedEnd = block.Span.End;
+
+                // Validate span bounds to prevent ArgumentOutOfRangeException
+                // This can happen if the buffer changed since the comment blocks were parsed
+                if (adjustedStart < 0 || adjustedEnd > snapshot.Length || adjustedStart > adjustedEnd)
+                {
+                    continue;
+                }
+
+                var adjustedSpan = new Microsoft.VisualStudio.Text.Span(adjustedStart, adjustedEnd - adjustedStart);
                 var blockSpan = new SnapshotSpan(snapshot, adjustedSpan);
 
                 if (!spans.IntersectsWith(new NormalizedSnapshotSpanCollection(blockSpan)))

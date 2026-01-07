@@ -94,6 +94,50 @@ namespace CommentsVS.Options
         [DefaultValue(true)]
         public bool EnableCommentTagHighlighting { get; set; } = true;
 
+        private const string _prefixCategory = "Comment Prefix Highlighting";
+
+        [Category(_prefixCategory)]
+        [DisplayName("Enable prefix highlighting")]
+        [Description("When enabled, comments with special prefixes (!, ?, *, //, -, >) will be highlighted with different colors. Colors can be customized in Tools > Options > Environment > Fonts and Colors.")]
+        [DefaultValue(true)]
+        public bool EnablePrefixHighlighting { get; set; } = true;
+
+        [Category(_prefixCategory)]
+        [DisplayName("Alert prefix (!)")]
+        [Description("When enabled, comments starting with '!' will be highlighted as alerts.")]
+        [DefaultValue(true)]
+        public bool EnableAlertPrefix { get; set; } = true;
+
+        [Category(_prefixCategory)]
+        [DisplayName("Query prefix (?)")]
+        [Description("When enabled, comments starting with '?' will be highlighted as queries/questions.")]
+        [DefaultValue(true)]
+        public bool EnableQueryPrefix { get; set; } = true;
+
+        [Category(_prefixCategory)]
+        [DisplayName("Important prefix (*)")]
+        [Description("When enabled, comments starting with '*' will be highlighted as important.")]
+        [DefaultValue(true)]
+        public bool EnableImportantPrefix { get; set; } = true;
+
+        [Category(_prefixCategory)]
+        [DisplayName("Strikethrough prefix (//)")]
+        [Description("When enabled, comments starting with '//' (double comment) will be shown with strikethrough.")]
+        [DefaultValue(true)]
+        public bool EnableStrikethroughPrefix { get; set; } = true;
+
+        [Category(_prefixCategory)]
+        [DisplayName("Disabled prefix (-)")]
+        [Description("When enabled, comments starting with '-' will be highlighted as disabled/removed.")]
+        [DefaultValue(true)]
+        public bool EnableDisabledPrefix { get; set; } = true;
+
+        [Category(_prefixCategory)]
+        [DisplayName("Quote prefix (>)")]
+        [Description("When enabled, comments starting with '>' will be highlighted as quotes/references.")]
+        [DefaultValue(true)]
+        public bool EnableQuotePrefix { get; set; } = true;
+
         private const string _linksCategory = "Issue Links";
 
         [Category(_linksCategory)]

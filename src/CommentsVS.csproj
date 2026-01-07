@@ -52,6 +52,8 @@
     <Compile Include="Classification\CommentTagClassifier.cs" />
     <Compile Include="Classification\CommentTagClassifierProvider.cs" />
     <Compile Include="Classification\CommentTagFormatDefinitions.cs" />
+    <Compile Include="Classification\PrefixCommentClassifier.cs" />
+    <Compile Include="Classification\PrefixCommentClassifierProvider.cs" />
     <Compile Include="Commands\NextAnchorCommand.cs" />
     <Compile Include="Commands\OpenSettingsCommand.cs" />
     <Compile Include="Commands\PreviousAnchorCommand.cs" />

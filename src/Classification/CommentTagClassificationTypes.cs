@@ -14,5 +14,13 @@ namespace CommentsVS.Classification
         public const string Review = "CommentTag.REVIEW";
         public const string Anchor = "CommentTag.ANCHOR";
         public const string Metadata = "CommentTag.Metadata";
+
+        // Prefix-based comment highlighting (Better Comments style)
+        public const string PrefixAlert = "CommentPrefix.Alert";
+        public const string PrefixQuery = "CommentPrefix.Query";
+        public const string PrefixImportant = "CommentPrefix.Important";
+        public const string PrefixStrikethrough = "CommentPrefix.Strikethrough";
+        public const string PrefixDisabled = "CommentPrefix.Disabled";
+        public const string PrefixQuote = "CommentPrefix.Quote";
     }
 }

@@ -25,6 +25,7 @@ or get the [CI build][vsixgallery].
 - **Auto-Reflow** — Automatically wrap comments to your preferred line length
 - **Collapse/Expand** — Hide comment blocks to focus on code, expand when needed
 - **Color-coded Anchor Tags** — TODO, HACK, BUG, FIXME, NOTE highlighted in distinct colors
+- **Better Comments Style** — Prefix-based highlighting (`!`, `?`, `*`, `//`, `-`, `>`) for visual differentiation
 - **Solution-Wide Code Anchors** — Browse all TODOs, HACKs, and notes across your entire solution
 - **Clickable Issues** — `#123` links directly to GitHub/GitLab/Azure DevOps issues
 - **Link Anchors** — Navigate to other files, lines, or named anchors with `LINK:` syntax
@@ -173,6 +174,34 @@ Notes:
 - Tokens are separated by spaces, commas, or semicolons.
 - Only `@owner`, `#issue`, and `yyyy-MM-dd` tokens are currently recognized.
 
+### Prefix-Based Comment Highlighting (Better Comments)
+**Make different comment types visually distinct.** Inspired by the popular "Better Comments" extension, Comment Studio highlights comments differently based on their prefix character:
+
+| Prefix | Color | Style | Purpose |
+|--------|-------|-------|---------|
+| `// !` | Red | Normal | Alerts and warnings |
+| `// ?` | Blue | Normal | Questions and queries |
+| `// *` | Green | Normal | Important highlights |
+| `// //` | Gray | Strikethrough | Deprecated/old code |
+| `// -` | Dark Gray | Normal | Disabled/removed |
+| `// >` | Purple | Italic | Quotes and references |
+
+Example:
+```csharp
+// ! Critical: This must be called before Initialize()
+// ? Why does this return null instead of throwing?
+// * Important: Update the cache after this call
+// // Old implementation kept for reference
+// - Disabled pending review
+// > From the API docs: "Returns -1 on failure"
+
+// Regular comment without prefix stays normal
+```
+
+Each prefix type can be individually enabled/disabled in **Tools > Options > CommentsVS > Comment Prefix Highlighting**. Colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment - [Type]" entries.
+
+Works with `//` (C#), `#` (Python, PowerShell), and `'` (VB.NET) comment styles.
+
 ### Code Anchors Tool Window
 **Track all your TODOs, HACKs, and notes across your entire solution.** The Code Anchors tool window provides a centralized view of all comment tags—not just in open files, but across every file in your solution.
 
@@ -304,6 +333,19 @@ Configure the extension behavior via **Tools > Options > CommentsVS**.
 | Enable Comment Tag Highlighting | On | Enable/disable tag highlighting |
 
 Tag colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - [TAG]" entries.
+
+### Comment Prefix Highlighting
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Enable Prefix Highlighting | On | Enable/disable prefix-based comment highlighting |
+| Alert prefix (!) | On | Highlight `// !` comments as alerts |
+| Query prefix (?) | On | Highlight `// ?` comments as questions |
+| Important prefix (*) | On | Highlight `// *` comments as important |
+| Strikethrough prefix (//) | On | Style `// //` comments with strikethrough |
+| Disabled prefix (-) | On | Highlight `// -` comments as disabled |
+| Quote prefix (>) | On | Highlight `// >` comments as quotes |
+
+Prefix colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment - [Type]" entries.
 
 ### Code Anchors
 | Setting | Default | Description |
