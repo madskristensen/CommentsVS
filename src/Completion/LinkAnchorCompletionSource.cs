@@ -155,10 +155,18 @@ namespace CommentsVS.Completion
                 }
                 var fullPathContext = textBeforeCursor.Substring(afterLink);
 
-                // If starting with #, provide anchor completions
+                // If starting with #, provide global anchor completions
                 if (fullPathContext.StartsWith("#"))
                 {
                     items.AddRange(GetAnchorCompletions(currentText.TrimStart('#')));
+                }
+                // If path contains # (e.g., "IFoo.cs#"), provide file-specific anchor completions
+                else if (fullPathContext.Contains("#"))
+                {
+                    var hashIndex = fullPathContext.IndexOf('#');
+                    var filePath = fullPathContext.Substring(0, hashIndex);
+                    var partialAnchor = fullPathContext.Substring(hashIndex + 1);
+                    items.AddRange(GetFileSpecificAnchorCompletions(filePath, partialAnchor));
                 }
                 else
                 {
@@ -317,6 +325,113 @@ namespace CommentsVS.Completion
                     sortText: anchor.AnchorId,
                     filterText: anchor.AnchorId,
                     attributeIcons: ImmutableArray<ImageElement>.Empty);
+            }
+        }
+
+        /// <summary>
+        /// Gets anchor completions for a specific file path.
+        /// </summary>
+        /// <param name="filePath">The file path (may be relative) before the # character.</param>
+        /// <param name="partialAnchor">The partial anchor text after the # character.</param>
+        private IEnumerable<CompletionItem> GetFileSpecificAnchorCompletions(string filePath, string partialAnchor)
+        {
+            CodeAnchorsToolWindow toolWindow = CodeAnchorsToolWindow.Instance;
+            if (toolWindow?.Cache == null || string.IsNullOrEmpty(_currentDirectory))
+            {
+                yield break;
+            }
+
+            // Resolve the file path relative to current directory
+            var resolvedPath = ResolveFilePath(filePath);
+            if (string.IsNullOrEmpty(resolvedPath))
+            {
+                yield break;
+            }
+
+            // Get all ANCHOR type anchors from the specific file
+            IReadOnlyList<AnchorItem> allAnchors = toolWindow.Cache.GetAllAnchors();
+            IEnumerable<AnchorItem> anchorItems = allAnchors
+                .Where(a => a.AnchorType == AnchorType.Anchor &&
+                           !string.IsNullOrEmpty(a.AnchorId) &&
+                           string.Equals(a.FilePath, resolvedPath, System.StringComparison.OrdinalIgnoreCase));
+
+            // Filter by partial anchor text
+            if (!string.IsNullOrEmpty(partialAnchor))
+            {
+                anchorItems = anchorItems.Where(a =>
+                    a.AnchorId.StartsWith(partialAnchor, System.StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Deduplicate by anchor ID (same file may have duplicate anchor IDs)
+            HashSet<string> seen = new(System.StringComparer.OrdinalIgnoreCase);
+            foreach (AnchorItem anchor in anchorItems)
+            {
+                if (!seen.Add(anchor.AnchorId))
+                {
+                    continue;
+                }
+
+                var displayText = "#" + anchor.AnchorId;
+                var description = $"Line {anchor.LineNumber}";
+
+                // InsertText should be the full path including the file and anchor
+                var insertText = filePath + displayText;
+
+                yield return new CompletionItem(
+                    displayText: displayText,
+                    source: this,
+                    icon: _anchorIcon,
+                    filters: ImmutableArray<CompletionFilter>.Empty,
+                    suffix: description,
+                    insertText: insertText,
+                    sortText: anchor.AnchorId,
+                    filterText: anchor.AnchorId,
+                    attributeIcons: ImmutableArray<ImageElement>.Empty);
+            }
+        }
+
+        /// <summary>
+        /// Resolves a relative file path to an absolute path.
+        /// </summary>
+        private string ResolveFilePath(string filePath)
+        {
+            if (string.IsNullOrEmpty(_currentDirectory))
+            {
+                return null;
+            }
+
+            var searchDirectory = _currentDirectory;
+
+            // Handle relative path prefixes
+            if (filePath.StartsWith("./") || filePath.StartsWith(".\\"))
+            {
+                filePath = filePath.Substring(2);
+            }
+            else if (filePath.StartsWith("../") || filePath.StartsWith("..\\"))
+            {
+                searchDirectory = Path.GetDirectoryName(_currentDirectory);
+                filePath = filePath.Substring(3);
+
+                // Handle multiple parent directory references
+                while (filePath.StartsWith("../") || filePath.StartsWith("..\\"))
+                {
+                    searchDirectory = Path.GetDirectoryName(searchDirectory);
+                    filePath = filePath.Substring(3);
+                    if (string.IsNullOrEmpty(searchDirectory))
+                    {
+                        return null;
+                    }
+                }
+            }
+
+            try
+            {
+                var fullPath = Path.GetFullPath(Path.Combine(searchDirectory, filePath));
+                return File.Exists(fullPath) ? fullPath : null;
+            }
+            catch
+            {
+                return null;
             }
         }
 
