@@ -5,22 +5,22 @@ namespace CommentsVS.ToolWindows
     /// <summary>
     /// Represents a single anchor found in a source file.
     /// </summary>
-    public class AnchorItem
+    public sealed record AnchorItem
     {
         /// <summary>
-        /// Gets or sets the type of anchor (TODO, HACK, ANCHOR, etc.).
+        /// Gets the type of anchor (TODO, HACK, ANCHOR, etc.).
         /// </summary>
-        public AnchorType AnchorType { get; set; }
+        public AnchorType AnchorType { get; init; }
 
         /// <summary>
-        /// Gets or sets the message/description text following the anchor keyword.
+        /// Gets the message/description text following the anchor keyword.
         /// </summary>
-        public string Message { get; set; }
+        public string Message { get; init; }
 
         /// <summary>
-        /// Gets or sets the full file path where the anchor is located.
+        /// Gets the full file path where the anchor is located.
         /// </summary>
-        public string FilePath { get; set; }
+        public string FilePath { get; init; }
 
         /// <summary>
         /// Gets the file name without directory path.
@@ -28,39 +28,39 @@ namespace CommentsVS.ToolWindows
         public string FileName => string.IsNullOrEmpty(FilePath) ? string.Empty : Path.GetFileName(FilePath);
 
         /// <summary>
-        /// Gets or sets the 1-based line number where the anchor is located.
+        /// Gets the 1-based line number where the anchor is located.
         /// </summary>
-        public int LineNumber { get; set; }
+        public int LineNumber { get; init; }
 
         /// <summary>
-        /// Gets or sets the 0-based column/character position where the anchor starts.
+        /// Gets the 0-based column/character position where the anchor starts.
         /// </summary>
-        public int Column { get; set; }
+        public int Column { get; init; }
 
         /// <summary>
-        /// Gets or sets the project name containing this anchor.
+        /// Gets the project name containing this anchor.
         /// </summary>
-        public string Project { get; set; }
+        public string Project { get; init; }
 
         /// <summary>
-        /// Gets or sets the raw metadata string from parentheses or brackets, e.g., "(@mads)" or "[#123]".
+        /// Gets the raw metadata string from parentheses or brackets, e.g., "(@mads)" or "[#123]".
         /// </summary>
-        public string RawMetadata { get; set; }
+        public string RawMetadata { get; init; }
 
         /// <summary>
-        /// Gets or sets the owner/assignee extracted from metadata (e.g., "@mads").
+        /// Gets the owner/assignee extracted from metadata (e.g., "@mads").
         /// </summary>
-        public string Owner { get; set; }
+        public string Owner { get; init; }
 
         /// <summary>
-        /// Gets or sets the issue reference extracted from metadata (e.g., "#123").
+        /// Gets the issue reference extracted from metadata (e.g., "#123").
         /// </summary>
-        public string IssueReference { get; set; }
+        public string IssueReference { get; init; }
 
         /// <summary>
-        /// Gets or sets the anchor identifier for ANCHOR types (e.g., "section-name" from "ANCHOR(section-name)").
+        /// Gets the anchor identifier for ANCHOR types (e.g., "section-name" from "ANCHOR(section-name)").
         /// </summary>
-        public string AnchorId { get; set; }
+        public string AnchorId { get; init; }
 
         /// <summary>
         /// Gets the display text for the anchor type column.

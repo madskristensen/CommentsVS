@@ -98,29 +98,40 @@ namespace CommentsVS.ToolWindows
                         continue;
                     }
 
+                    // Extract message
+                    string message = null;
+                    Group messageGroup = match.Groups["message"];
+                    if (messageGroup.Success)
+                    {
+                        message = messageGroup.Value.Trim();
+                    }
+
+                    // Extract metadata
+                    string rawMetadata = null;
+                    string owner = null;
+                    string issueReference = null;
+                    string anchorId = null;
+
+                    Group metadataGroup = match.Groups["metadata"];
+                    if (metadataGroup.Success && metadataGroup.Length > 0)
+                    {
+                        rawMetadata = metadataGroup.Value;
+                        (owner, issueReference, anchorId) = ParseMetadata(rawMetadata, anchorType.Value);
+                    }
+
                     var anchor = new AnchorItem
                     {
                         AnchorType = anchorType.Value,
                         FilePath = filePath,
                         LineNumber = lineNumber + 1, // 1-based line numbers
                         Column = tagGroup.Index,
-                        Project = projectName
+                        Project = projectName,
+                        Message = message,
+                        RawMetadata = rawMetadata,
+                        Owner = owner,
+                        IssueReference = issueReference,
+                        AnchorId = anchorId
                     };
-
-                    // Extract message
-                    Group messageGroup = match.Groups["message"];
-                    if (messageGroup.Success)
-                    {
-                        anchor.Message = messageGroup.Value.Trim();
-                    }
-
-                    // Extract metadata
-                    Group metadataGroup = match.Groups["metadata"];
-                    if (metadataGroup.Success && metadataGroup.Length > 0)
-                    {
-                        anchor.RawMetadata = metadataGroup.Value;
-                        ParseMetadata(anchor);
-                    }
 
                     anchors.Add(anchor);
                 }
@@ -197,29 +208,40 @@ namespace CommentsVS.ToolWindows
                         continue;
                     }
 
+                    // Extract message
+                    string message = null;
+                    Group messageGroup = match.Groups["message"];
+                    if (messageGroup.Success)
+                    {
+                        message = messageGroup.Value.Trim();
+                    }
+
+                    // Extract metadata
+                    string rawMetadata = null;
+                    string owner = null;
+                    string issueReference = null;
+                    string anchorId = null;
+
+                    Group metadataGroup = match.Groups["metadata"];
+                    if (metadataGroup.Success && metadataGroup.Length > 0)
+                    {
+                        rawMetadata = metadataGroup.Value;
+                        (owner, issueReference, anchorId) = ParseMetadata(rawMetadata, anchorType.Value);
+                    }
+
                     var anchor = new AnchorItem
                     {
                         AnchorType = anchorType.Value,
                         FilePath = filePath,
                         LineNumber = lineNumber + 1, // 1-based line numbers
                         Column = tagGroup.Index,
-                        Project = projectName
+                        Project = projectName,
+                        Message = message,
+                        RawMetadata = rawMetadata,
+                        Owner = owner,
+                        IssueReference = issueReference,
+                        AnchorId = anchorId
                     };
-
-                    // Extract message
-                    Group messageGroup = match.Groups["message"];
-                    if (messageGroup.Success)
-                    {
-                        anchor.Message = messageGroup.Value.Trim();
-                    }
-
-                    // Extract metadata
-                    Group metadataGroup = match.Groups["metadata"];
-                    if (metadataGroup.Success && metadataGroup.Length > 0)
-                    {
-                        anchor.RawMetadata = metadataGroup.Value;
-                        ParseMetadata(anchor);
-                    }
 
                     anchors.Add(anchor);
                 }
@@ -231,37 +253,43 @@ namespace CommentsVS.ToolWindows
         /// <summary>
         /// Parses the metadata string to extract owner, issue reference, and anchor ID.
         /// </summary>
-        private void ParseMetadata(AnchorItem anchor)
+        private (string owner, string issueReference, string anchorId) ParseMetadata(string rawMetadata, AnchorType anchorType)
         {
-            if (string.IsNullOrEmpty(anchor.RawMetadata))
+            if (string.IsNullOrEmpty(rawMetadata))
             {
-                return;
+                return (null, null, null);
             }
 
+            string owner = null;
+            string issueReference = null;
+            string anchorId = null;
+
             // Extract owner (@username)
-            Match ownerMatch = _ownerRegex.Match(anchor.RawMetadata);
+            Match ownerMatch = _ownerRegex.Match(rawMetadata);
             if (ownerMatch.Success)
             {
-                anchor.Owner = ownerMatch.Groups[1].Value;
+                owner = ownerMatch.Groups[1].Value;
             }
 
             // Extract issue reference (#123)
-            Match issueMatch = _issueRegex.Match(anchor.RawMetadata);
+            Match issueMatch = _issueRegex.Match(rawMetadata);
             if (issueMatch.Success)
             {
-                anchor.IssueReference = "#" + issueMatch.Groups[1].Value;
+                issueReference = "#" + issueMatch.Groups[1].Value;
             }
 
             // For ANCHOR type, the metadata content is the anchor ID
-            if (anchor.AnchorType == AnchorType.Anchor)
+            if (anchorType == AnchorType.Anchor)
             {
                 // Strip parentheses/brackets and use as anchor ID
-                var content = anchor.RawMetadata.Trim('(', ')', '[', ']');
-                if (!string.IsNullOrWhiteSpace(content) && anchor.Owner == null && anchor.IssueReference == null)
+                var content = rawMetadata.Trim('(', ')', '[', ']');
+                if (!string.IsNullOrWhiteSpace(content) && owner == null && issueReference == null)
                 {
-                    anchor.AnchorId = content;
+                    anchorId = content;
                 }
             }
+
+            return (owner, issueReference, anchorId);
         }
     }
 }

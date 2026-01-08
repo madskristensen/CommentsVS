@@ -6,32 +6,32 @@ namespace CommentsVS.Services
     /// <summary>
     /// Represents a parsed link anchor from a comment.
     /// </summary>
-    public class LinkAnchorInfo
+    public sealed record LinkAnchorInfo
     {
         /// <summary>
-        /// Gets or sets the full matched text (e.g., "LINK: path/to/file.cs:45#anchor").
+        /// Gets the full matched text (e.g., "LINK: path/to/file.cs:45#anchor").
         /// </summary>
-        public string FullMatch { get; set; }
+        public string FullMatch { get; init; }
 
         /// <summary>
-        /// Gets or sets the file path portion (e.g., "path/to/file.cs").
+        /// Gets the file path portion (e.g., "path/to/file.cs").
         /// </summary>
-        public string FilePath { get; set; }
+        public string FilePath { get; init; }
 
         /// <summary>
-        /// Gets or sets the start line number, if specified (1-based).
+        /// Gets the start line number, if specified (1-based).
         /// </summary>
-        public int? LineNumber { get; set; }
+        public int? LineNumber { get; init; }
 
         /// <summary>
-        /// Gets or sets the end line number for range links (1-based).
+        /// Gets the end line number for range links (1-based).
         /// </summary>
-        public int? EndLineNumber { get; set; }
+        public int? EndLineNumber { get; init; }
 
         /// <summary>
-        /// Gets or sets the anchor name (e.g., "section-name" from "#section-name").
+        /// Gets the anchor name (e.g., "section-name" from "#section-name").
         /// </summary>
-        public string AnchorName { get; set; }
+        public string AnchorName { get; init; }
 
         /// <summary>
         /// Gets a value indicating whether this is a local anchor reference (current file).
@@ -56,23 +56,23 @@ namespace CommentsVS.Services
         /// <summary>
         /// Gets the start position of the full match within the line.
         /// </summary>
-        public int StartIndex { get; set; }
+        public int StartIndex { get; init; }
 
         /// <summary>
         /// Gets the length of the full matched text.
         /// </summary>
-        public int Length { get; set; }
+        public int Length { get; init; }
 
         /// <summary>
         /// Gets the start position of the target portion (path/anchor) within the line.
         /// This excludes the "LINK:" prefix.
         /// </summary>
-        public int TargetStartIndex { get; set; }
+        public int TargetStartIndex { get; init; }
 
         /// <summary>
         /// Gets the length of the target portion (path:line#anchor).
         /// </summary>
-        public int TargetLength { get; set; }
+        public int TargetLength { get; init; }
     }
 
     /// <summary>
@@ -139,25 +139,21 @@ namespace CommentsVS.Services
 
             foreach (Match match in _linkRegex.Matches(text))
             {
-                var info = new LinkAnchorInfo
-                {
-                    FullMatch = match.Value,
-                    StartIndex = match.Index,
-                    Length = match.Length
-                };
-
                 // Calculate target position (excludes "LINK:" prefix)
                 Group prefixGroup = match.Groups["prefix"];
                 var prefixLength = prefixGroup.Success ? prefixGroup.Length : 0;
-                info.TargetStartIndex = match.Index + prefixLength;
-                info.TargetLength = match.Length - prefixLength;
+
+                string filePath = null;
+                int? lineNumber = null;
+                int? endLineNumber = null;
+                string anchorName = null;
 
                 // Check for local anchor (#anchor-name only)
                 Group localAnchorGroup = match.Groups["localanchor"];
                 if (localAnchorGroup.Success)
                 {
                     // Remove the leading # from the anchor name
-                    info.AnchorName = localAnchorGroup.Value.TrimStart('#');
+                    anchorName = localAnchorGroup.Value.TrimStart('#');
                 }
                 else
                 {
@@ -166,27 +162,40 @@ namespace CommentsVS.Services
                     if (pathGroup.Success)
                     {
                         // Trim trailing whitespace that may be captured when path contains spaces
-                        info.FilePath = pathGroup.Value.TrimEnd();
+                        filePath = pathGroup.Value.TrimEnd();
                     }
 
                     Group lineGroup = match.Groups["line"];
                     if (lineGroup.Success && int.TryParse(lineGroup.Value, out var line))
                     {
-                        info.LineNumber = line;
+                        lineNumber = line;
                     }
 
                     Group endLineGroup = match.Groups["endline"];
                     if (endLineGroup.Success && int.TryParse(endLineGroup.Value, out var endLine))
                     {
-                        info.EndLineNumber = endLine;
+                        endLineNumber = endLine;
                     }
 
                     Group fileAnchorGroup = match.Groups["fileanchor"];
                     if (fileAnchorGroup.Success)
                     {
-                        info.AnchorName = fileAnchorGroup.Value;
+                        anchorName = fileAnchorGroup.Value;
                     }
                 }
+
+                var info = new LinkAnchorInfo
+                {
+                    FullMatch = match.Value,
+                    StartIndex = match.Index,
+                    Length = match.Length,
+                    TargetStartIndex = match.Index + prefixLength,
+                    TargetLength = match.Length - prefixLength,
+                    FilePath = filePath,
+                    LineNumber = lineNumber,
+                    EndLineNumber = endLineNumber,
+                    AnchorName = anchorName
+                };
 
                 results.Add(info);
             }
