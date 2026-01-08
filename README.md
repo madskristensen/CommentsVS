@@ -31,7 +31,7 @@ or get the [CI build][vsixgallery].
 - **Link Anchors** — Navigate to other files, lines, or named anchors with `LINK:` syntax
 - **Theme-aware** — Works with light and dark Visual Studio themes
 
-**Supports:** C# (`///`), VB.NET (`'''`), and block comments (`/** */`)
+**Supports:** C#, VB.NET, F#, C++, TypeScript, JavaScript, Razor, SQL, and PowerShell
 
 ## Why Comment Studio?
 
@@ -210,7 +210,9 @@ Open it via **View > Other Windows > Code Anchors**.
 - **Color-coded indicators** — Each anchor type has a colored circle matching its editor highlight color
 - **Quick navigation** — Double-click or press Enter to jump directly to any anchor
 - **Keyboard shortcuts** — Use **Alt+Page Down** / **Alt+Page Up** to navigate between anchors
-- **Built-in search** — Filter anchors by text, with type-specific filters (TODO, HACK, NOTE, etc.)
+- **Scope filter** — Filter anchors by Solution, Project, Document, or Open Documents
+- **Type filter** — Filter by anchor type (TODO, HACK, NOTE, BUG, etc.) using the toolbar combo
+- **Built-in search** — Filter anchors by text
 - **Group by file** — Organize anchors by their source file for easier navigation
 - **Metadata display** — Shows owner (@user), issue references (#123), and anchor IDs
 
