@@ -12,7 +12,7 @@ namespace CommentsVS.Tagging
 {
     [Export(typeof(IViewTaggerProvider))]
     [TagType(typeof(IUrlTag))]
-    [ContentType("code")]
+    [ContentType(SupportedContentTypes.Code)]
     [TextViewRole(PredefinedTextViewRoles.Document)]
     internal sealed class IssueReferenceTaggerProvider : IViewTaggerProvider
     {

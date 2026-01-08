@@ -19,7 +19,7 @@ using Microsoft.VisualStudio.Utilities;
 namespace CommentsVS.Completion
 {
     [Export(typeof(IAsyncCompletionSourceProvider))]
-    [ContentType("code")]
+    [ContentType(SupportedContentTypes.Code)]
     [Name("LinkAnchorCompletion")]
     internal sealed class LinkAnchorCompletionSourceProvider : IAsyncCompletionSourceProvider
     {
@@ -31,7 +31,7 @@ namespace CommentsVS.Completion
     }
 
     [Export(typeof(IAsyncCompletionCommitManagerProvider))]
-    [ContentType("code")]
+    [ContentType(SupportedContentTypes.Code)]
     [Name("LinkAnchorCompletionCommitManager")]
     internal sealed class LinkAnchorCompletionCommitManagerProvider : IAsyncCompletionCommitManagerProvider
     {
@@ -164,7 +164,7 @@ namespace CommentsVS.Completion
                 {
                     // Provide file path completions with full context - run on background thread
                     List<CompletionItem> fileCompletions = await Task.Run(() =>
-                        GetFilePathCompletions(fullPathContext, currentText).ToList(), token).ConfigureAwait(false);
+                        GetFilePathCompletions(fullPathContext).ToList(), token).ConfigureAwait(false);
                     items.AddRange(fileCompletions);
                 }
             }
@@ -183,7 +183,7 @@ namespace CommentsVS.Completion
             return Task.FromResult<object>(item.Suffix ?? item.DisplayText);
         }
 
-        private IEnumerable<CompletionItem> GetFilePathCompletions(string fullPathContext, string filterText)
+        private IEnumerable<CompletionItem> GetFilePathCompletions(string fullPathContext)
         {
             if (string.IsNullOrEmpty(_currentDirectory))
             {

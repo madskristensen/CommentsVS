@@ -11,7 +11,7 @@ namespace CommentsVS.Tagging
 {
     [Export(typeof(IViewTaggerProvider))]
     [TagType(typeof(IErrorTag))]
-    [ContentType("code")]
+    [ContentType(SupportedContentTypes.Code)]
     [TextViewRole(PredefinedTextViewRoles.Document)]
     internal sealed class LinkAnchorValidationTaggerProvider : IViewTaggerProvider
     {

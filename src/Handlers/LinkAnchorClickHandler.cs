@@ -16,7 +16,7 @@ namespace CommentsVS.Handlers
 {
     [Export(typeof(IMouseProcessorProvider))]
     [Name("LinkAnchorClickHandler")]
-    [ContentType("code")]
+    [ContentType(SupportedContentTypes.Code)]
     [TextViewRole(PredefinedTextViewRoles.Document)]
     internal sealed class LinkAnchorMouseProcessorProvider : IMouseProcessorProvider
     {

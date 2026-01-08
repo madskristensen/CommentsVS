@@ -6,7 +6,10 @@ namespace CommentsVS.Services
     /// </summary>
     public static class SupportedContentTypes
     {
-
+        /// <summary>
+        /// Generic code content type (base type for all programming languages).
+        /// </summary>
+        public const string Code = "code";
 
         /// <summary>
         /// C# content type.

@@ -1,4 +1,5 @@
 using System.ComponentModel.Composition;
+using CommentsVS.Services;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Utilities;
@@ -9,7 +10,7 @@ namespace CommentsVS.Classification
     /// Provides classifiers for comment tags in code files.
     /// </summary>
     [Export(typeof(IClassifierProvider))]
-    [ContentType("code")]
+    [ContentType(SupportedContentTypes.Code)]
     internal sealed class CommentTagClassifierProvider : IClassifierProvider
     {
         [Import]

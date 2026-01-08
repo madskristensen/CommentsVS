@@ -4,21 +4,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommentsVS.Options;
 using EnvDTE80;
-using Microsoft.VisualStudio.Shell.Interop;
-using DTESolution = EnvDTE.Solution;
 using DTEProject = EnvDTE.Project;
 using DTEProjectItem = EnvDTE.ProjectItem;
 using DTEProjectItems = EnvDTE.ProjectItems;
+using DTESolution = EnvDTE.Solution;
 
 namespace CommentsVS.ToolWindows
 {
     /// <summary>
     /// Service for scanning entire solutions for code anchors in background.
     /// </summary>
-    public class SolutionAnchorScanner
+    /// <remarks>
+    /// Initializes a new instance of the <see cref="SolutionAnchorScanner"/> class.
+    /// </remarks>
+    public class SolutionAnchorScanner(AnchorService anchorService, SolutionAnchorCache cache)
     {
-        private readonly AnchorService _anchorService;
-        private readonly SolutionAnchorCache _cache;
+        private readonly AnchorService _anchorService = anchorService ?? throw new ArgumentNullException(nameof(anchorService));
+        private readonly SolutionAnchorCache _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         private CancellationTokenSource _scanCts;
         private readonly object _scanLock = new();
         private bool _isScanning;
@@ -42,15 +44,6 @@ namespace CommentsVS.ToolWindows
         /// Gets a value indicating whether a scan is currently in progress.
         /// </summary>
         public bool IsScanning => _isScanning;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SolutionAnchorScanner"/> class.
-        /// </summary>
-        public SolutionAnchorScanner(AnchorService anchorService, SolutionAnchorCache cache)
-        {
-            _anchorService = anchorService ?? throw new ArgumentNullException(nameof(anchorService));
-            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        }
 
         /// <summary>
         /// Scans the entire solution for code anchors in the background.
@@ -384,56 +377,42 @@ namespace CommentsVS.ToolWindows
     /// <summary>
     /// Event arguments for scan completion.
     /// </summary>
-    public class ScanCompletedEventArgs : EventArgs
+    public class ScanCompletedEventArgs(int totalAnchors, bool wasCancelled, string errorMessage) : EventArgs
     {
         /// <summary>
         /// Gets the total number of anchors found.
         /// </summary>
-        public int TotalAnchors { get; }
+        public int TotalAnchors { get; } = totalAnchors;
 
         /// <summary>
         /// Gets a value indicating whether the scan was cancelled.
         /// </summary>
-        public bool WasCancelled { get; }
+        public bool WasCancelled { get; } = wasCancelled;
 
         /// <summary>
         /// Gets the error message if the scan failed, or null if successful.
         /// </summary>
-        public string ErrorMessage { get; }
-
-        public ScanCompletedEventArgs(int totalAnchors, bool wasCancelled, string errorMessage)
-        {
-            TotalAnchors = totalAnchors;
-            WasCancelled = wasCancelled;
-            ErrorMessage = errorMessage;
-        }
+        public string ErrorMessage { get; } = errorMessage;
     }
 
     /// <summary>
     /// Event arguments for scan progress updates.
     /// </summary>
-    public class ScanProgressEventArgs : EventArgs
+    public class ScanProgressEventArgs(int processedFiles, int totalFiles, int anchorsFound) : EventArgs
     {
         /// <summary>
         /// Gets the number of files processed so far.
         /// </summary>
-        public int ProcessedFiles { get; }
+        public int ProcessedFiles { get; } = processedFiles;
 
         /// <summary>
         /// Gets the total number of files to process.
         /// </summary>
-        public int TotalFiles { get; }
+        public int TotalFiles { get; } = totalFiles;
 
         /// <summary>
         /// Gets the number of anchors found so far.
         /// </summary>
-        public int AnchorsFound { get; }
-
-        public ScanProgressEventArgs(int processedFiles, int totalFiles, int anchorsFound)
-        {
-            ProcessedFiles = processedFiles;
-            TotalFiles = totalFiles;
-            AnchorsFound = anchorsFound;
-        }
+        public int AnchorsFound { get; } = anchorsFound;
     }
 }

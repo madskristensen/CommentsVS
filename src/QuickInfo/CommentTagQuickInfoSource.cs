@@ -19,7 +19,7 @@ namespace CommentsVS.QuickInfo
 {
     [Export(typeof(IAsyncQuickInfoSourceProvider))]
     [Name("CommentTagQuickInfo")]
-    [ContentType("code")]
+    [ContentType(SupportedContentTypes.Code)]
     [Order(Before = "Default Quick Info Presenter")]
     internal sealed class CommentTagQuickInfoSourceProvider : IAsyncQuickInfoSourceProvider
     {

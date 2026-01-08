@@ -10,7 +10,7 @@ namespace CommentsVS.QuickInfo
 {
     [Export(typeof(IAsyncQuickInfoSourceProvider))]
     [Name("LinkAnchorQuickInfo")]
-    [ContentType("code")]
+    [ContentType(SupportedContentTypes.Code)]
     [Order(Before = "Default Quick Info Presenter")]
     internal sealed class LinkAnchorQuickInfoSourceProvider : IAsyncQuickInfoSourceProvider
     {
