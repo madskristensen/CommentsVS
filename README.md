@@ -24,7 +24,7 @@ or get the [CI build][vsixgallery].
 - **Markdown Support** — Use `**bold**`, `*italic*`, `` `code` ``, and `[links](url)` in comments
 - **Auto-Reflow** — Automatically wrap comments to your preferred line length
 - **Collapse/Expand** — Hide comment blocks to focus on code, expand when needed
-- **Color-coded Anchor Tags** — TODO, HACK, BUG, FIXME, NOTE highlighted in distinct colors
+- **Color-coded Anchor Tags** — TODO, HACK, BUG, FIXME, NOTE highlighted in distinct colors, plus custom tags
 - **Better Comments Style** — Prefix-based highlighting (`!`, `?`, `*`, `//`, `-`, `>`) for visual differentiation
 - **Solution-Wide Code Anchors** — Browse all TODOs, HACKs, and notes across your entire solution
 - **Clickable Issues** — `#123` links directly to GitHub/GitLab/Azure DevOps issues
@@ -148,6 +148,22 @@ Works with C# and VB.NET XML documentation comments:
 | FIXME | Orange Red | Code that needs fixing |
 | UNDONE | Purple | Incomplete work |
 | REVIEW | Dodger Blue | Code needing review |
+
+#### Custom Tags
+Define your own comment tags to match your team's workflow. Add custom tags in **Tools > Options > CommentsVS > Comment Tags** as a comma-separated list:
+
+```
+PERF, SECURITY, DEBT, REFACTOR, WIP, DEPRECATED
+```
+
+Custom tags are highlighted in **Goldenrod** and appear in the Code Anchors tool window alongside built-in tags. All custom tags share a single color, which can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - Custom".
+
+Example usage:
+```csharp
+// PERF: Consider caching this result
+// SECURITY: Validate user input before processing
+// DEBT: Extract this into a separate service
+```
 
 Colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - [TAG]" entries.
 
@@ -341,8 +357,9 @@ Configure the extension behavior via **Tools > Options > CommentsVS**.
 |---------|---------|-------------|
 | Enable Comment Tag Highlighting | On | Enable/disable tag highlighting |
 | Enable Prefix Highlighting | On | Enable/disable prefix-based comment highlighting (Better Comments style) |
+| Custom Tags | (empty) | Comma-separated list of custom tags to highlight (e.g., PERF, SECURITY, DEBT) |
 
-Tag colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - [TAG]" entries. Prefix colors can be customized under "Comment - [Type]" entries.
+Tag colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - [TAG]" entries. Custom tags share a single color under "Comment Tag - Custom". Prefix colors can be customized under "Comment - [Type]" entries.
 
 ### Code Anchors
 | Setting | Default | Description |

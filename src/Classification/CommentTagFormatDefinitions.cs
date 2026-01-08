@@ -42,6 +42,10 @@ namespace CommentsVS.Classification
         [Name(CommentTagClassificationTypes.Anchor)]
         internal static ClassificationTypeDefinition AnchorType = null;
 
+        [Export(typeof(ClassificationTypeDefinition))]
+        [Name(CommentTagClassificationTypes.Custom)]
+        internal static ClassificationTypeDefinition CustomType = null;
+
     [Export(typeof(ClassificationTypeDefinition))]
         [Name(CommentTagClassificationTypes.Metadata)]
         internal static ClassificationTypeDefinition MetadataType = null;
@@ -189,6 +193,22 @@ namespace CommentsVS.Classification
             DisplayName = "Comment Tag - ANCHOR";
             // Teal works well in both light and dark themes
             ForegroundColor = Colors.Teal;
+            IsBold = true;
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.Custom)]
+    [Name(CommentTagClassificationTypes.Custom)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class CustomTagFormatDefinition : ClassificationFormatDefinition
+    {
+        public CustomTagFormatDefinition()
+        {
+            DisplayName = "Comment Tag - Custom";
+            // Goldenrod works well in both light and dark themes
+            ForegroundColor = Colors.Goldenrod;
             IsBold = true;
         }
     }

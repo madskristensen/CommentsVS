@@ -57,7 +57,7 @@ namespace CommentsVS.Classification
 
             // Fast pre-check: skip regex if no anchor keywords are present (case-insensitive)
             var hasAnyAnchor = false;
-            foreach (var keyword in Constants.AnchorKeywords)
+            foreach (var keyword in Constants.GetAllAnchorKeywords())
             {
                 if (text.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
@@ -124,7 +124,18 @@ namespace CommentsVS.Classification
                 _ => null
             };
 
-            return typeName != null ? _registry.GetClassificationType(typeName) : null;
+            if (typeName != null)
+            {
+                return _registry.GetClassificationType(typeName);
+            }
+
+            // Check if it's a custom tag
+            if (General.Instance.GetCustomTagsSet().Contains(tag))
+            {
+                return _registry.GetClassificationType(CommentTagClassificationTypes.Custom);
+            }
+
+            return null;
         }
 
         public void Dispose()

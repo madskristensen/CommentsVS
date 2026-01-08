@@ -13,6 +13,7 @@ namespace CommentsVS.Classification
         public const string Undone = "CommentTag.UNDONE";
         public const string Review = "CommentTag.REVIEW";
         public const string Anchor = "CommentTag.ANCHOR";
+        public const string Custom = "CommentTag.Custom";
         public const string Metadata = "CommentTag.Metadata";
 
         // Prefix-based comment highlighting (Better Comments style)

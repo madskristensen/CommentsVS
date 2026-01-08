@@ -21,7 +21,11 @@ namespace CommentsVS
     [ProvideOptionPage(typeof(OptionsProvider.GeneralOptions), Vsix.Name, "General", 0, 0, true, SupportsProfiles = true)]
     [ProvideProfile(typeof(OptionsProvider.GeneralOptions), Vsix.Name, "General", 0, 0, true)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExistsAndFullyLoaded_string, PackageAutoLoadFlags.BackgroundLoad)]
-    [ProvideToolWindow(typeof(CodeAnchorsToolWindowPane), Style = VsDockStyle.Tabbed, Window = "D78612C7-9962-4B83-95D9-268046DAD23A")]
+    [ProvideToolWindow(typeof(CodeAnchorsToolWindowPane), Style = VsDockStyle.Tabbed, Window = WindowGuids.ErrorList)]
+    [ProvideToolWindowVisibility(typeof(CodeAnchorsToolWindowPane), VSConstants.UICONTEXT.NoSolution_string)]
+    [ProvideToolWindowVisibility(typeof(CodeAnchorsToolWindowPane), VSConstants.UICONTEXT.SolutionHasSingleProject_string)]
+    [ProvideToolWindowVisibility(typeof(CodeAnchorsToolWindowPane), VSConstants.UICONTEXT.SolutionHasMultipleProjects_string)]
+    [ProvideToolWindowVisibility(typeof(CodeAnchorsToolWindowPane), VSConstants.UICONTEXT.EmptySolution_string)]
     public sealed class CommentsVSPackage : ToolkitPackage
     {
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)

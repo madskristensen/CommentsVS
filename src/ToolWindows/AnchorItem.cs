@@ -13,6 +13,11 @@ namespace CommentsVS.ToolWindows
         public AnchorType AnchorType { get; init; }
 
         /// <summary>
+        /// Gets the custom tag name when AnchorType is Custom (e.g., "PERF", "SECURITY").
+        /// </summary>
+        public string CustomTagName { get; init; }
+
+        /// <summary>
         /// Gets the message/description text following the anchor keyword.
         /// </summary>
         public string Message { get; init; }
@@ -65,7 +70,9 @@ namespace CommentsVS.ToolWindows
         /// <summary>
         /// Gets the display text for the anchor type column.
         /// </summary>
-        public string TypeDisplayName => AnchorType.GetDisplayName();
+        public string TypeDisplayName => AnchorType == AnchorType.Custom && !string.IsNullOrEmpty(CustomTagName)
+            ? CustomTagName
+            : AnchorType.GetDisplayName();
 
         /// <summary>
         /// Gets the formatted metadata for display in the tool window.

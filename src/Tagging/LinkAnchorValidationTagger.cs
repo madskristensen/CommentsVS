@@ -139,13 +139,13 @@ namespace CommentsVS.Tagging
             foreach (SnapshotSpan span in spans)
             {
                 // Get the full line(s) that this span intersects
-                int startLineNumber = span.Start.GetContainingLine().LineNumber;
-                int endLineNumber = span.End.GetContainingLine().LineNumber;
+                var startLineNumber = span.Start.GetContainingLine().LineNumber;
+                var endLineNumber = span.End.GetContainingLine().LineNumber;
 
-                for (int lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber++)
+                for (var lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber++)
                 {
                     ITextSnapshotLine line = snapshot.GetLineFromLineNumber(lineNumber);
-                    string text = line.GetText();
+                    var text = line.GetText();
 
                     // Fast pre-check: skip if no LINK keyword
                     if (text.IndexOf("LINK", StringComparison.OrdinalIgnoreCase) < 0)

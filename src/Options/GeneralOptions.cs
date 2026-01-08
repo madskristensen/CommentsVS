@@ -44,6 +44,8 @@ namespace CommentsVS.Options
         private string _lastExtensionsValue;
         private HashSet<string> _cachedFolders;
         private string _lastFoldersValue;
+        private HashSet<string> _cachedCustomTags;
+        private string _lastCustomTagsValue;
 
         private const string _reflowCategory = "Comment Reflow";
 
@@ -104,6 +106,12 @@ namespace CommentsVS.Options
         [Description("When enabled, comments with special prefixes (!, ?, *, //, -, >) will be highlighted with different colors (Better Comments style). Colors can be customized in Tools > Options > Environment > Fonts and Colors.")]
         [DefaultValue(true)]
         public bool EnablePrefixHighlighting { get; set; } = true;
+
+        [Category(_tagsCategory)]
+        [DisplayName("Custom tags")]
+        [Description("Comma-separated list of custom comment tags to highlight. Example: PERF, SECURITY, DEBT, REFACTOR. All custom tags share the same color, customizable in Tools > Options > Environment > Fonts and Colors under 'Comment Tag - Custom'.")]
+        [DefaultValue("")]
+        public string CustomTags { get; set; } = "";
 
         private const string _linksCategory = "Issue Links";
 
@@ -203,6 +211,38 @@ namespace CommentsVS.Options
                 }
             }
             return folders;
+        }
+
+        /// <summary>
+        /// Gets the custom tags as a HashSet for fast lookup.
+        /// The result is cached and only recalculated when the setting changes.
+        /// Tags are normalized to uppercase.
+        /// </summary>
+        public HashSet<string> GetCustomTagsSet()
+        {
+            if (_cachedCustomTags == null || _lastCustomTagsValue != CustomTags)
+            {
+                _lastCustomTagsValue = CustomTags;
+                _cachedCustomTags = ParseCustomTags(CustomTags);
+            }
+            return _cachedCustomTags;
+        }
+
+        private static HashSet<string> ParseCustomTags(string customTags)
+        {
+            var tags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(customTags))
+            {
+                foreach (var tag in customTags.Split([','], StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var trimmed = tag.Trim().ToUpperInvariant();
+                    if (!string.IsNullOrEmpty(trimmed))
+                    {
+                        tags.Add(trimmed);
+                    }
+                }
+            }
+            return tags;
         }
 
         /// <summary>

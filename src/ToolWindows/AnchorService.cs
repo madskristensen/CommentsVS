@@ -48,7 +48,7 @@ namespace CommentsVS.ToolWindows
 
             // Fast pre-check: skip if no anchor keywords are present
             var hasAnyAnchor = false;
-            foreach (var keyword in Constants.AnchorKeywords)
+            foreach (var keyword in Constants.GetAllAnchorKeywords())
             {
                 if (fullText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
@@ -70,7 +70,7 @@ namespace CommentsVS.ToolWindows
 
                 // Fast pre-check for this line
                 var lineHasAnchor = false;
-                foreach (var keyword in Constants.AnchorKeywords)
+                foreach (var keyword in Constants.GetAllAnchorKeywords())
                 {
                     if (lineText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
                     {
@@ -92,7 +92,7 @@ namespace CommentsVS.ToolWindows
                         continue;
                     }
 
-                    AnchorType? anchorType = AnchorTypeExtensions.Parse(tagGroup.Value);
+                    AnchorType? anchorType = AnchorTypeExtensions.ParseWithCustom(tagGroup.Value, out var customTagName);
                     if (anchorType == null)
                     {
                         continue;
@@ -122,6 +122,7 @@ namespace CommentsVS.ToolWindows
                     var anchor = new AnchorItem
                     {
                         AnchorType = anchorType.Value,
+                        CustomTagName = customTagName,
                         FilePath = filePath,
                         LineNumber = lineNumber + 1, // 1-based line numbers
                         Column = tagGroup.Index,
@@ -158,7 +159,7 @@ namespace CommentsVS.ToolWindows
 
             // Fast pre-check: skip if no anchor keywords are present
             var hasAnyAnchor = false;
-            foreach (var keyword in Constants.AnchorKeywords)
+            foreach (var keyword in Constants.GetAllAnchorKeywords())
             {
                 if (text.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
@@ -180,7 +181,7 @@ namespace CommentsVS.ToolWindows
 
                 // Fast pre-check for this line
                 var lineHasAnchor = false;
-                foreach (var keyword in Constants.AnchorKeywords)
+                foreach (var keyword in Constants.GetAllAnchorKeywords())
                 {
                     if (lineText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
                     {
@@ -202,7 +203,7 @@ namespace CommentsVS.ToolWindows
                         continue;
                     }
 
-                    AnchorType? anchorType = AnchorTypeExtensions.Parse(tagGroup.Value);
+                    AnchorType? anchorType = AnchorTypeExtensions.ParseWithCustom(tagGroup.Value, out var customTagName);
                     if (anchorType == null)
                     {
                         continue;
@@ -232,6 +233,7 @@ namespace CommentsVS.ToolWindows
                     var anchor = new AnchorItem
                     {
                         AnchorType = anchorType.Value,
+                        CustomTagName = customTagName,
                         FilePath = filePath,
                         LineNumber = lineNumber + 1, // 1-based line numbers
                         Column = tagGroup.Index,

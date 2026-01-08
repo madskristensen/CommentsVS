@@ -1,4 +1,5 @@
 using System.Windows.Media;
+using CommentsVS.Options;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Imaging.Interop;
 
@@ -16,7 +17,8 @@ namespace CommentsVS.ToolWindows
         Fixme,
         Undone,
         Review,
-        Anchor
+        Anchor,
+        Custom
     }
 
     /// <summary>
@@ -39,6 +41,7 @@ namespace CommentsVS.ToolWindows
                 AnchorType.Undone => "UNDONE",
                 AnchorType.Review => "REVIEW",
                 AnchorType.Anchor => "ANCHOR",
+                AnchorType.Custom => "CUSTOM",
                 _ => anchorType.ToString().ToUpperInvariant()
             };
         }
@@ -58,6 +61,7 @@ namespace CommentsVS.ToolWindows
                 AnchorType.Undone => Colors.MediumPurple,
                 AnchorType.Review => Colors.DodgerBlue,
                 AnchorType.Anchor => Colors.Teal,
+                AnchorType.Custom => Colors.Goldenrod,
                 _ => Colors.Gray
             };
         }
@@ -77,6 +81,7 @@ namespace CommentsVS.ToolWindows
                 AnchorType.Undone => KnownMonikers.Undo,
                 AnchorType.Review => KnownMonikers.CodeReview,
                 AnchorType.Anchor => KnownMonikers.Bookmark,
+                AnchorType.Custom => KnownMonikers.Tag,
                 _ => KnownMonikers.QuestionMark
             };
         }
@@ -105,6 +110,52 @@ namespace CommentsVS.ToolWindows
                 "ANCHOR" => AnchorType.Anchor,
                 _ => null
             };
+        }
+
+        /// <summary>
+        /// Parses a string to an <see cref="AnchorType"/>, including custom tags.
+        /// </summary>
+        /// <param name="value">The string value (case-insensitive).</param>
+        /// <param name="customTagName">If the tag is a custom tag, outputs the tag name in uppercase.</param>
+        /// <returns>The parsed anchor type, or null if not recognized.</returns>
+        public static AnchorType? ParseWithCustom(string value, out string customTagName)
+        {
+            customTagName = null;
+
+            if (string.IsNullOrEmpty(value))
+            {
+                return null;
+            }
+
+            var upperValue = value.ToUpperInvariant();
+
+            // Check built-in tags first
+            AnchorType? builtInType = upperValue switch
+            {
+                "TODO" => AnchorType.Todo,
+                "HACK" => AnchorType.Hack,
+                "NOTE" => AnchorType.Note,
+                "BUG" => AnchorType.Bug,
+                "FIXME" => AnchorType.Fixme,
+                "UNDONE" => AnchorType.Undone,
+                "REVIEW" => AnchorType.Review,
+                "ANCHOR" => AnchorType.Anchor,
+                _ => null
+            };
+
+            if (builtInType != null)
+            {
+                return builtInType;
+            }
+
+            // Check if it's a custom tag
+            if (General.Instance.GetCustomTagsSet().Contains(upperValue))
+            {
+                customTagName = upperValue;
+                return AnchorType.Custom;
+            }
+
+            return null;
         }
     }
 }
