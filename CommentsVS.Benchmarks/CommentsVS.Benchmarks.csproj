@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="[0.*,)" />
+    <PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" Version="18.3.36812.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Link source files from main project that have no VS dependencies (or minimal) -->
+    <Compile Include="..\src\Services\XmlDocCommentParser.cs" Link="Services\XmlDocCommentParser.cs" />
+    <Compile Include="..\src\Services\XmlDocCommentRenderer.cs" Link="Services\XmlDocCommentRenderer.cs" />
+    <Compile Include="..\src\Services\LinkAnchorParser.cs" Link="Services\LinkAnchorParser.cs" />
+    <Compile Include="..\src\Services\CommentReflowEngine.cs" Link="Services\CommentReflowEngine.cs" />
+    <Compile Include="..\src\Services\GitRepositoryInfo.cs" Link="Services\GitRepositoryInfo.cs" />
+    <Compile Include="..\src\Services\GitHostingProvider.cs" Link="Services\GitHostingProvider.cs" />
+    <Compile Include="..\src\Services\LanguageCommentStyles.cs" Link="Services\LanguageCommentStyles.cs" />
+    <Compile Include="..\src\Services\ContentTypes.cs" Link="Services\ContentTypes.cs" />
+  </ItemGroup>
+
+</Project>
