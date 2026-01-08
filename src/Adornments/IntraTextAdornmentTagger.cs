@@ -44,8 +44,24 @@ namespace CommentsVS.Adornments
 
         private void HandleBufferChanged(object sender, TextContentChangedEventArgs args)
         {
-            // When text changes, we need to invalidate a broader region to ensure adornments
-            // are repositioned correctly. Calculate expanded spans that include context.
+            // Detect if this is a significant structural change (lines added/removed)
+            // In such cases, we need to invalidate more aggressively
+            bool hasLineCountChange = args.Changes.Any(c =>
+                c.OldText.Contains('\n') != c.NewText.Contains('\n') ||
+                c.OldText.Count(ch => ch == '\n') != c.NewText.Count(ch => ch == '\n'));
+
+            if (hasLineCountChange)
+            {
+                // Line count changed - clear cache and invalidate entire visible region
+                // This handles Code Cleanup, large pastes, etc. that shift line positions
+                _adornmentCache.Clear();
+
+                SnapshotSpan fullSpan = new(args.After, 0, args.After.Length);
+                InvalidateSpans([fullSpan]);
+                return;
+            }
+
+            // For simple edits within existing lines, use targeted invalidation
             var editedSpans = new List<SnapshotSpan>();
 
             foreach (ITextChange change in args.Changes)
@@ -78,29 +94,37 @@ namespace CommentsVS.Adornments
 
         private void AsyncUpdate()
         {
-            // Capture old snapshot for comparison
-            ITextSnapshot oldSnapshot = snapshot;
-
             if (snapshot != view.TextBuffer.CurrentSnapshot)
             {
+                ITextSnapshot oldSnapshot = snapshot;
                 snapshot = view.TextBuffer.CurrentSnapshot;
 
-                // Translate cached adornment spans to new snapshot
-                // Use EdgeInclusive to better track position when text is inserted before/after
-                var translatedAdornmentCache = new Dictionary<SnapshotSpan, TAdornment>();
-                foreach (KeyValuePair<SnapshotSpan, TAdornment> kvp in _adornmentCache)
+                // If line count changed significantly, clear cache entirely
+                // This avoids stale adornments from incorrect span translations
+                int lineDelta = Math.Abs(snapshot.LineCount - oldSnapshot.LineCount);
+                if (lineDelta > 0)
                 {
-                    SnapshotSpan translatedSpan = kvp.Key.TranslateTo(snapshot, SpanTrackingMode.EdgeInclusive);
-
-                    // Only keep the adornment if the translation was successful and the span is still valid
-                    // Discard if the span became empty or degenerate
-                    if (translatedSpan.Length > 0)
-                    {
-                        translatedAdornmentCache[translatedSpan] = kvp.Value;
-                    }
+                    _adornmentCache.Clear();
                 }
+                else
+                {
+                    // Translate cached adornment spans to new snapshot
+                    // Use EdgeInclusive to better track position when text is inserted before/after
+                    var translatedAdornmentCache = new Dictionary<SnapshotSpan, TAdornment>();
+                    foreach (KeyValuePair<SnapshotSpan, TAdornment> kvp in _adornmentCache)
+                    {
+                        SnapshotSpan translatedSpan = kvp.Key.TranslateTo(snapshot, SpanTrackingMode.EdgeInclusive);
 
-                _adornmentCache = translatedAdornmentCache;
+                        // Only keep the adornment if the translation was successful and the span is still valid
+                        // Discard if the span became empty or degenerate
+                        if (translatedSpan.Length > 0)
+                        {
+                            translatedAdornmentCache[translatedSpan] = kvp.Value;
+                        }
+                    }
+
+                    _adornmentCache = translatedAdornmentCache;
+                }
             }
 
             List<SnapshotSpan> translatedSpans;
