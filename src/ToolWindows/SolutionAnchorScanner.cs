@@ -109,24 +109,40 @@ namespace CommentsVS.ToolWindows
                 var totalFiles = filesToScan.Count;
                 var processedFiles = 0;
                 var totalAnchors = 0;
+                var lastProgressReport = 0;
+                var progressLock = new object();
 
-                // Switch to background thread for file processing
-                await Task.Run(async () =>
+                // Process files in parallel for improved performance
+                await Task.Run(() =>
                 {
-                    foreach ((var filePath, var projectName) in filesToScan)
+                    var parallelOptions = new ParallelOptions
+                    {
+                        CancellationToken = ct,
+                        MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) // Leave one core free for UI
+                    };
+
+                    Parallel.ForEach(filesToScan, parallelOptions, (fileInfo, loopState) =>
                     {
                         if (ct.IsCancellationRequested)
                         {
-                            break;
+                            loopState.Stop();
+                            return;
                         }
+
+                        var (filePath, projectName) = fileInfo;
 
                         try
                         {
-                            IReadOnlyList<AnchorItem> anchors = await ScanFileAsync(filePath, projectName);
-                            if (anchors.Count > 0)
+                            // Read file content synchronously (we're already on a background thread)
+                            var content = ReadFileSync(filePath);
+                            if (!string.IsNullOrEmpty(content))
                             {
-                                _cache.AddOrUpdateFile(filePath, anchors);
-                                totalAnchors += anchors.Count;
+                                IReadOnlyList<AnchorItem> anchors = _anchorService.ScanText(content, filePath, projectName);
+                                if (anchors.Count > 0)
+                                {
+                                    _cache.AddOrUpdateFile(filePath, anchors);
+                                    Interlocked.Add(ref totalAnchors, anchors.Count);
+                                }
                             }
                         }
                         catch (Exception ex)
@@ -134,14 +150,21 @@ namespace CommentsVS.ToolWindows
                             ex.Log();
                         }
 
-                        processedFiles++;
+                        var currentProcessed = Interlocked.Increment(ref processedFiles);
 
-                        // Report progress every 10 files or at the end
-                        if (processedFiles % 10 == 0 || processedFiles == totalFiles)
+                        // Report progress every 10 files or at the end (throttled to avoid UI flooding)
+                        if (currentProcessed == totalFiles || currentProcessed - lastProgressReport >= 10)
                         {
-                            ScanProgress?.Invoke(this, new ScanProgressEventArgs(processedFiles, totalFiles, totalAnchors));
+                            lock (progressLock)
+                            {
+                                if (currentProcessed - lastProgressReport >= 10 || currentProcessed == totalFiles)
+                                {
+                                    lastProgressReport = currentProcessed;
+                                    ScanProgress?.Invoke(this, new ScanProgressEventArgs(currentProcessed, totalFiles, totalAnchors));
+                                }
+                            }
                         }
-                    }
+                    });
                 }, ct);
 
                 ScanCompleted?.Invoke(this, new ScanCompletedEventArgs(totalAnchors, false, null));
@@ -356,6 +379,18 @@ namespace CommentsVS.ToolWindows
                 }
             }
             return false;
+        }
+
+        private static string ReadFileSync(string filePath)
+        {
+            try
+            {
+                return File.ReadAllText(filePath);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static async Task<string> ReadFileAsync(string filePath)

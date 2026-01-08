@@ -27,8 +27,20 @@
       "targetPath": "art/comment-tags.png"
     },
     {
+      "pathOnDisk": "art/prefix-based-highligting.png",
+      "targetPath": "art/prefix-based-highligting.png"
+    },
+    {
+      "pathOnDisk": "art/code-anchors.png",
+      "targetPath": "art/code-anchors.png"
+    },
+    {
       "pathOnDisk": "art/issue-links.png",
       "targetPath": "art/issue-links.png"
+    },
+    {
+      "pathOnDisk": "art/link-anchors-intellisense.png",
+      "targetPath": "art/link-anchors-intellisense.png"
     },
     {
       "pathOnDisk": "art/options.png",
