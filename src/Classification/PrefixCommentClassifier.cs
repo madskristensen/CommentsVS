@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using CommentsVS.Options;
+using CommentsVS.Services;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 
@@ -14,7 +15,8 @@ namespace CommentsVS.Classification
     internal sealed class PrefixCommentClassifier : IClassifier
     {
         private readonly ITextBuffer _buffer;
-        private readonly IClassificationTypeRegistryService _registry;
+        private readonly Regex _commentRegex;
+        private readonly string _fastCheckPattern;
 
         private readonly IClassificationType _alertType;
         private readonly IClassificationType _queryType;
@@ -28,11 +30,25 @@ namespace CommentsVS.Classification
         /// </summary>
         private const int _maxFileSize = 150_000;
 
-        // Regex to match comment prefixes after the comment delimiter
-        // Matches: // ! text, // ? text, // * text, // // text, // - text, // > text
-        // Also supports: # ! text, ' ! text (for other languages)
-        private static readonly Regex _prefixRegex = new(
-            @"(?<prefix>//|#|')\s*(?<marker>[!?*\->]|//)\s*(?<content>.*?)$",
+        // Regex patterns for different comment styles
+        // C-style: // ! text (C#, C++, TypeScript, JavaScript, Razor, F#)
+        private static readonly Regex _cStyleRegex = new(
+            @"(?<prefix>//)\s*(?<marker>[!?*\->]|//)\s*(?<content>.*?)$",
+            RegexOptions.Compiled | RegexOptions.Multiline);
+
+        // Hash-style: # ! text (PowerShell)
+        private static readonly Regex _hashStyleRegex = new(
+            @"(?<prefix>#)\s*(?<marker>[!?*\->])\s*(?<content>.*?)$",
+            RegexOptions.Compiled | RegexOptions.Multiline);
+
+        // VB-style: ' ! text
+        private static readonly Regex _vbStyleRegex = new(
+            @"(?<prefix>')\s*(?<marker>[!?*\->])\s*(?<content>.*?)$",
+            RegexOptions.Compiled | RegexOptions.Multiline);
+
+        // SQL-style: -- ! text
+        private static readonly Regex _sqlStyleRegex = new(
+            @"(?<prefix>--)\s*(?<marker>[!?*\->])\s*(?<content>.*?)$",
             RegexOptions.Compiled | RegexOptions.Multiline);
 
         public event EventHandler<ClassificationChangedEventArgs> ClassificationChanged;
@@ -40,16 +56,44 @@ namespace CommentsVS.Classification
         public PrefixCommentClassifier(ITextBuffer buffer, IClassificationTypeRegistryService registry)
         {
             _buffer = buffer;
-            _registry = registry;
 
-            _alertType = _registry.GetClassificationType(CommentTagClassificationTypes.PrefixAlert);
-            _queryType = _registry.GetClassificationType(CommentTagClassificationTypes.PrefixQuery);
-            _importantType = _registry.GetClassificationType(CommentTagClassificationTypes.PrefixImportant);
-            _strikethroughType = _registry.GetClassificationType(CommentTagClassificationTypes.PrefixStrikethrough);
-            _disabledType = _registry.GetClassificationType(CommentTagClassificationTypes.PrefixDisabled);
-            _quoteType = _registry.GetClassificationType(CommentTagClassificationTypes.PrefixQuote);
+            // Determine the appropriate regex based on content type
+            (_commentRegex, _fastCheckPattern) = GetCommentPatternForContentType(buffer);
+
+            _alertType = registry.GetClassificationType(CommentTagClassificationTypes.PrefixAlert);
+            _queryType = registry.GetClassificationType(CommentTagClassificationTypes.PrefixQuery);
+            _importantType = registry.GetClassificationType(CommentTagClassificationTypes.PrefixImportant);
+            _strikethroughType = registry.GetClassificationType(CommentTagClassificationTypes.PrefixStrikethrough);
+            _disabledType = registry.GetClassificationType(CommentTagClassificationTypes.PrefixDisabled);
+            _quoteType = registry.GetClassificationType(CommentTagClassificationTypes.PrefixQuote);
 
             _buffer.Changed += OnBufferChanged;
+        }
+
+        private static (Regex regex, string fastCheck) GetCommentPatternForContentType(ITextBuffer buffer)
+        {
+            var contentType = buffer.ContentType;
+
+            // VB uses ' for comments
+            if (contentType.IsOfType(SupportedContentTypes.VisualBasic))
+            {
+                return (_vbStyleRegex, "'");
+            }
+
+            // SQL uses -- for comments
+            if (contentType.IsOfType(SupportedContentTypes.Sql))
+            {
+                return (_sqlStyleRegex, "--");
+            }
+
+            // PowerShell uses # for comments
+            if (contentType.IsOfType(SupportedContentTypes.PowerShell))
+            {
+                return (_hashStyleRegex, "#");
+            }
+
+            // C#, C++, TypeScript, JavaScript, F#, Razor all use // for comments
+            return (_cStyleRegex, "//");
         }
 
         private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
@@ -81,14 +125,14 @@ namespace CommentsVS.Classification
             var text = span.GetText();
 
             // Fast pre-check: skip if no comment delimiter is present
-            if (!text.Contains("//") && !text.Contains("#") && !text.Contains("'"))
+            if (!text.Contains(_fastCheckPattern))
             {
                 return result;
             }
 
             var lineStart = span.Start.Position;
 
-            foreach (Match match in _prefixRegex.Matches(text))
+            foreach (Match match in _commentRegex.Matches(text))
             {
                 Group markerGroup = match.Groups["marker"];
                 Group contentGroup = match.Groups["content"];
@@ -99,37 +143,37 @@ namespace CommentsVS.Classification
                 }
 
                 var marker = markerGroup.Value;
-                                IClassificationType classificationType = GetClassificationType(marker);
+                IClassificationType classificationType = GetClassificationType(marker);
 
-                                if (classificationType != null && contentGroup.Success)
-                                {
-                                    // Classify the marker and the content together
-                                    var startIndex = markerGroup.Index;
-                                    var length = (contentGroup.Index + contentGroup.Length) - markerGroup.Index;
+                if (classificationType != null && contentGroup.Success)
+                {
+                    // Classify the marker and the content together
+                    var startIndex = markerGroup.Index;
+                    var length = (contentGroup.Index + contentGroup.Length) - markerGroup.Index;
 
-                                    if (length > 0)
-                                    {
-                                        var prefixSpan = new SnapshotSpan(span.Snapshot, lineStart + startIndex, length);
-                                        result.Add(new ClassificationSpan(prefixSpan, classificationType));
-                                    }
-                                }
-                            }
-
-                            return result;
-                        }
-
-                        private IClassificationType GetClassificationType(string marker)
-                        {
-                            return marker switch
-                            {
-                                "!" => _alertType,
-                                "?" => _queryType,
-                                "*" => _importantType,
-                                "//" => _strikethroughType,
-                                "-" => _disabledType,
-                                ">" => _quoteType,
-                                _ => null
-                            };
-                        }
+                    if (length > 0)
+                    {
+                        var prefixSpan = new SnapshotSpan(span.Snapshot, lineStart + startIndex, length);
+                        result.Add(new ClassificationSpan(prefixSpan, classificationType));
                     }
                 }
+            }
+
+            return result;
+        }
+
+        private IClassificationType GetClassificationType(string marker)
+        {
+            return marker switch
+            {
+                "!" => _alertType,
+                "?" => _queryType,
+                "*" => _importantType,
+                "//" => _strikethroughType,
+                "-" => _disabledType,
+                ">" => _quoteType,
+                _ => null
+            };
+        }
+    }
+}
