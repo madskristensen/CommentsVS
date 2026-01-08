@@ -54,6 +54,7 @@
     <Compile Include="Classification\CommentTagFormatDefinitions.cs" />
     <Compile Include="Classification\PrefixCommentClassifier.cs" />
     <Compile Include="Classification\PrefixCommentClassifierProvider.cs" />
+    <Compile Include="Commands\ExportAnchorsCommand.cs" />
     <Compile Include="Commands\NextAnchorCommand.cs" />
     <Compile Include="Commands\OpenSettingsCommand.cs" />
     <Compile Include="Commands\PreviousAnchorCommand.cs" />
@@ -79,6 +80,7 @@
     <Compile Include="QuickInfo\CompactModeQuickInfoSource.cs" />
     <Compile Include="QuickInfo\IssueReferenceQuickInfoSource.cs" />
     <Compile Include="QuickInfo\LinkAnchorQuickInfoSource.cs" />
+    <Compile Include="Services\AnchorExporter.cs" />
     <Compile Include="Services\CommentPatterns.cs" />
     <Compile Include="Services\CommentReflowEngine.cs" />
     <Compile Include="Services\Constants.cs" />

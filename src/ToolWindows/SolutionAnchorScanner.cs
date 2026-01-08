@@ -129,7 +129,7 @@ namespace CommentsVS.ToolWindows
                             return;
                         }
 
-                        var (filePath, projectName) = fileInfo;
+                        (string filePath, string projectName) = fileInfo;
 
                         try
                         {

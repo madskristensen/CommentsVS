@@ -215,6 +215,19 @@ Open it via **View > Other Windows > Code Anchors**.
 - **Built-in search** — Filter anchors by text
 - **Group by file** — Organize anchors by their source file for easier navigation
 - **Metadata display** — Shows owner (@user), issue references (#123), and anchor IDs
+- **Export anchors** — Copy or save anchors to TSV, CSV, Markdown, or JSON formats
+
+#### Exporting Anchors
+Use the **Export** split button in the toolbar to export the currently filtered anchors:
+
+| Format | Best For |
+|--------|----------|
+| **TSV** | Paste directly into Excel or Google Sheets |
+| **CSV** | Import into spreadsheets or databases |
+| **Markdown** | Documentation, GitHub issues, wikis |
+| **JSON** | Programmatic consumption, CI/CD integration |
+
+The export respects your current filters (scope, type, and search), so you can export exactly the anchors you need. Choose **Export to File...** to save to disk, or use the copy options for quick clipboard access.
 
 #### Supported Anchor Types
 | Type | Color | Description |

@@ -24,6 +24,15 @@
           <CanonicalName>.CommentsVS.CodeAnchorsToolbar</CanonicalName>
         </Strings>
       </Menu>
+      <!-- Export Split Button Menu -->
+      <Menu guid="CommentsVS" id="ExportSplitButtonMenu" priority="0x0300" type="MenuController">
+        <Parent guid="CommentsVS" id="CodeAnchorsExportGroup"/>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Export</ButtonText>
+          <CanonicalName>.CommentsVS.ExportSplitButtonMenu</CanonicalName>
+        </Strings>
+      </Menu>
     </Menus>
 
     <Groups>
@@ -61,6 +70,18 @@
       <!-- Code Anchors type filter group (right-aligned) -->
       <Group guid="CommentsVS" id="CodeAnchorsTypeFilterGroup" priority="0x0200">
         <Parent guid="CommentsVS" id="CodeAnchorsToolbar"/>
+      </Group>
+      <!-- Code Anchors export group -->
+      <Group guid="CommentsVS" id="CodeAnchorsExportGroup" priority="0x0300">
+        <Parent guid="CommentsVS" id="CodeAnchorsToolbar"/>
+      </Group>
+      <!-- Export menu items group -->
+      <Group guid="CommentsVS" id="ExportMenuItemsGroup" priority="0x0100">
+        <Parent guid="CommentsVS" id="ExportSplitButtonMenu"/>
+      </Group>
+      <!-- Export to file group (separator) -->
+      <Group guid="CommentsVS" id="ExportToFileGroup" priority="0x0200">
+        <Parent guid="CommentsVS" id="ExportSplitButtonMenu"/>
       </Group>
     </Groups>
 
@@ -205,6 +226,62 @@
           <LocCanonicalName>.CommentsVS.ToggleGroupByFile</LocCanonicalName>
         </Strings>
       </Button>
+      <!-- Export as TSV (primary/default) -->
+      <Button guid="CommentsVS" id="ExportAsTsv" priority="0x0100" type="Button">
+        <Parent guid="CommentsVS" id="ExportMenuItemsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Copy" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>FixMenuController</CommandFlag>
+        <Strings>
+          <ButtonText>Copy as TSV</ButtonText>
+          <CanonicalName>.CommentsVS.ExportAsTsv</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ExportAsTsv</LocCanonicalName>
+        </Strings>
+      </Button>
+      <!-- Export as CSV -->
+      <Button guid="CommentsVS" id="ExportAsCsv" priority="0x0200" type="Button">
+        <Parent guid="CommentsVS" id="ExportMenuItemsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Copy" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Copy as CSV</ButtonText>
+          <CanonicalName>.CommentsVS.ExportAsCsv</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ExportAsCsv</LocCanonicalName>
+        </Strings>
+      </Button>
+      <!-- Export as Markdown -->
+      <Button guid="CommentsVS" id="ExportAsMarkdown" priority="0x0300" type="Button">
+        <Parent guid="CommentsVS" id="ExportMenuItemsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="MarkdownFile" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Copy as Markdown</ButtonText>
+          <CanonicalName>.CommentsVS.ExportAsMarkdown</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ExportAsMarkdown</LocCanonicalName>
+        </Strings>
+      </Button>
+      <!-- Export as JSON -->
+      <Button guid="CommentsVS" id="ExportAsJson" priority="0x0400" type="Button">
+        <Parent guid="CommentsVS" id="ExportMenuItemsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="JSONScript" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Copy as JSON</ButtonText>
+          <CanonicalName>.CommentsVS.ExportAsJson</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ExportAsJson</LocCanonicalName>
+        </Strings>
+      </Button>
+      <!-- Export to File -->
+      <Button guid="CommentsVS" id="ExportToFile" priority="0x0100" type="Button">
+        <Parent guid="CommentsVS" id="ExportToFileGroup"/>
+        <Icon guid="ImageCatalogGuid" id="SaveAs" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Export to File...</ButtonText>
+          <CanonicalName>.CommentsVS.ExportToFile</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ExportToFile</LocCanonicalName>
+        </Strings>
+      </Button>
     </Buttons>
   </Commands>
 
@@ -252,6 +329,15 @@
       <IDSymbol name="ScopeFilterComboGetList" value="0x020D" />
       <IDSymbol name="TypeFilterCombo" value="0x020E" />
       <IDSymbol name="TypeFilterComboGetList" value="0x020F" />
+      <IDSymbol name="CodeAnchorsExportGroup" value="0x0210" />
+      <IDSymbol name="ExportSplitButtonMenu" value="0x0211" />
+      <IDSymbol name="ExportMenuItemsGroup" value="0x0212" />
+      <IDSymbol name="ExportToFileGroup" value="0x0213" />
+      <IDSymbol name="ExportAsTsv" value="0x0214" />
+      <IDSymbol name="ExportAsCsv" value="0x0215" />
+      <IDSymbol name="ExportAsMarkdown" value="0x0216" />
+      <IDSymbol name="ExportAsJson" value="0x0217" />
+      <IDSymbol name="ExportToFile" value="0x0218" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

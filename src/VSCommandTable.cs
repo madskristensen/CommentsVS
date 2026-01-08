@@ -48,5 +48,14 @@ namespace CommentsVS
         public const int ScopeFilterComboGetList = 0x020D;
         public const int TypeFilterCombo = 0x020E;
         public const int TypeFilterComboGetList = 0x020F;
+        public const int CodeAnchorsExportGroup = 0x0210;
+        public const int ExportSplitButtonMenu = 0x0211;
+        public const int ExportMenuItemsGroup = 0x0212;
+        public const int ExportToFileGroup = 0x0213;
+        public const int ExportAsTsv = 0x0214;
+        public const int ExportAsCsv = 0x0215;
+        public const int ExportAsMarkdown = 0x0216;
+        public const int ExportAsJson = 0x0217;
+        public const int ExportToFile = 0x0218;
     }
 }

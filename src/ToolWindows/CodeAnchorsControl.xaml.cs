@@ -153,6 +153,11 @@ namespace CommentsVS.ToolWindows
         public IReadOnlyList<AnchorItem> AllAnchors => [.. _allAnchors];
 
         /// <summary>
+        /// Gets the currently filtered/visible anchors (respects search and type filters).
+        /// </summary>
+        public IReadOnlyList<AnchorItem> FilteredAnchors => [.. _viewSource.View.Cast<AnchorItem>()];
+
+        /// <summary>
         /// Selects the next anchor in the list.
         /// </summary>
         /// <returns>The newly selected anchor, or null if none.</returns>
@@ -206,9 +211,7 @@ namespace CommentsVS.ToolWindows
         /// Updates the status bar with a custom message and progress.
         /// </summary>
         /// <param name="message">The status message to display.</param>
-        /// <param name="current">The current progress value (for progress display).</param>
-        /// <param name="total">The total progress value (for progress display).</param>
-        public void UpdateStatus(string message, int current)
+        public void UpdateStatus(string message)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             StatusText.Text = message;

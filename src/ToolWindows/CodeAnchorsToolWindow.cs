@@ -205,7 +205,7 @@ namespace CommentsVS.ToolWindows
 
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 _control?.ClearAnchors();
-                _control?.UpdateStatus("No solution loaded", 0);
+                _control?.UpdateStatus("No solution loaded");
             }).FireAndForget();
         }
 
@@ -272,7 +272,7 @@ namespace CommentsVS.ToolWindows
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                _control?.UpdateStatus("Scanning solution...", 0);
+                _control?.UpdateStatus("Scanning solution...");
             }).FireAndForget();
         }
 
@@ -281,7 +281,7 @@ namespace CommentsVS.ToolWindows
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                _control?.UpdateStatus($"Scanning... {e.ProcessedFiles}/{e.TotalFiles} files ({e.AnchorsFound} anchors)", e.ProcessedFiles);
+                _control?.UpdateStatus($"Scanning... {e.ProcessedFiles}/{e.TotalFiles} files ({e.AnchorsFound} anchors)");
             }).FireAndForget();
         }
 
@@ -293,7 +293,7 @@ namespace CommentsVS.ToolWindows
 
                 if (e.WasCancelled)
                 {
-                    _control?.UpdateStatus(e.ErrorMessage ?? "Scan cancelled", 0);
+                    _control?.UpdateStatus(e.ErrorMessage ?? "Scan cancelled");
                 }
                 else
                 {
@@ -322,7 +322,7 @@ namespace CommentsVS.ToolWindows
             ThreadHelper.JoinableTaskFactory.Run(async () =>
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                
+
                 IReadOnlyList<AnchorItem> allAnchors = _cache.GetAllAnchors();
                 IReadOnlyList<AnchorItem> filteredAnchors = await ApplyScopeFilterAsync(allAnchors);
                 _control.UpdateAnchors(filteredAnchors);
@@ -333,42 +333,33 @@ namespace CommentsVS.ToolWindows
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            switch (_currentScope)
+            return _currentScope switch
             {
-                case AnchorScope.EntireSolution:
-                    return anchors;
-
-                case AnchorScope.CurrentProject:
-                    return await FilterByCurrentProjectAsync(anchors);
-
-                case AnchorScope.CurrentDocument:
-                    return await FilterByCurrentDocumentAsync(anchors);
-
-                case AnchorScope.OpenDocuments:
-                    return await FilterByOpenDocumentsAsync(anchors);
-
-                default:
-                    return anchors;
-            }
+                AnchorScope.EntireSolution => anchors,
+                AnchorScope.CurrentProject => await FilterByCurrentProjectAsync(anchors),
+                AnchorScope.CurrentDocument => await FilterByCurrentDocumentAsync(anchors),
+                AnchorScope.OpenDocuments => await FilterByOpenDocumentsAsync(anchors),
+                _ => anchors,
+            };
         }
 
         private async Task<IReadOnlyList<AnchorItem>> FilterByCurrentProjectAsync(IReadOnlyList<AnchorItem> anchors)
         {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                
-                DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();
-                if (docView?.FilePath == null)
-                {
-                    return anchors;
-                }
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                string projectName = await GetProjectNameForFileAsync(docView.FilePath);
-                if (string.IsNullOrEmpty(projectName))
-                {
-                    return anchors;
-                }
+            DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();
+            if (docView?.FilePath == null)
+            {
+                return anchors;
+            }
 
-                return anchors.Where(a => a.Project?.Equals(projectName, StringComparison.OrdinalIgnoreCase) == true).ToList();
+            var projectName = await GetProjectNameForFileAsync(docView.FilePath);
+            if (string.IsNullOrEmpty(projectName))
+            {
+                return anchors;
+            }
+
+            return [.. anchors.Where(a => a.Project?.Equals(projectName, StringComparison.OrdinalIgnoreCase) == true)];
         }
 
         private async Task<IReadOnlyList<AnchorItem>> FilterByCurrentDocumentAsync(IReadOnlyList<AnchorItem> anchors)
@@ -376,13 +367,13 @@ namespace CommentsVS.ToolWindows
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();
-            
+
             if (docView?.FilePath == null)
             {
-                return new List<AnchorItem>();
+                return [];
             }
 
-            return anchors.Where(a => a.FilePath?.Equals(docView.FilePath, StringComparison.OrdinalIgnoreCase) == true).ToList();
+            return [.. anchors.Where(a => a.FilePath?.Equals(docView.FilePath, StringComparison.OrdinalIgnoreCase) == true)];
         }
 
         private async Task<IReadOnlyList<AnchorItem>> FilterByOpenDocumentsAsync(IReadOnlyList<AnchorItem> anchors)
@@ -392,7 +383,7 @@ namespace CommentsVS.ToolWindows
             try
             {
                 // Use DTE to get open documents
-                var dte = await VS.GetServiceAsync<EnvDTE.DTE, EnvDTE.DTE>();
+                EnvDTE.DTE dte = await VS.GetServiceAsync<EnvDTE.DTE, EnvDTE.DTE>();
                 if (dte?.Documents == null)
                 {
                     return anchors;
@@ -406,8 +397,8 @@ namespace CommentsVS.ToolWindows
                         openPathsSet.Add(doc.FullName);
                     }
                 }
-                
-                return anchors.Where(a => a.FilePath != null && openPathsSet.Contains(a.FilePath)).ToList();
+
+                return [.. anchors.Where(a => a.FilePath != null && openPathsSet.Contains(a.FilePath))];
             }
             catch
             {

@@ -17,7 +17,7 @@ namespace CommentsVS.Commands
         private OleMenuCommand _command;
 
         private static readonly string[] TypeOptions =
-        {
+        [
             "All Types",
             "TODO",
             "HACK",
@@ -27,7 +27,7 @@ namespace CommentsVS.Commands
             "UNDONE",
             "REVIEW",
             "ANCHOR"
-        };
+        ];
 
         private string _currentTypeText = "All Types";
 
@@ -60,7 +60,7 @@ namespace CommentsVS.Commands
 
             if (e is OleMenuCmdEventArgs eventArgs)
             {
-                object input = eventArgs.InValue;
+                var input = eventArgs.InValue;
                 IntPtr vOut = eventArgs.OutValue;
 
                 if (vOut != IntPtr.Zero)
@@ -71,7 +71,7 @@ namespace CommentsVS.Commands
                 else if (input != null)
                 {
                     // User selected something
-                    string selectedType = input.ToString();
+                    var selectedType = input.ToString();
                     if (Array.IndexOf(TypeOptions, selectedType) >= 0)
                     {
                         _currentTypeText = selectedType;
@@ -85,7 +85,7 @@ namespace CommentsVS.Commands
         {
             if (e is OleMenuCmdEventArgs eventArgs)
             {
-                object inParam = eventArgs.InValue;
+                var inParam = eventArgs.InValue;
                 IntPtr vOut = eventArgs.OutValue;
 
                 if (vOut != IntPtr.Zero)
@@ -101,7 +101,7 @@ namespace CommentsVS.Commands
             ThreadHelper.ThrowIfNotOnUIThread();
 
             // Convert "All Types" to "All" to match existing filter logic
-            string filterValue = typeText == "All Types" ? "All" : typeText;
+            var filterValue = typeText == "All Types" ? "All" : typeText;
 
             if (CodeAnchorsToolWindow.Instance != null)
             {

@@ -17,12 +17,12 @@ namespace CommentsVS.Commands
         private OleMenuCommand _command;
 
         private static readonly string[] ScopeOptions =
-        {
+        [
             "Entire Solution",
             "Current Project",
             "Current Document",
             "Open Documents"
-        };
+        ];
 
         private string _currentScopeText = "Entire Solution";
 
@@ -55,7 +55,7 @@ namespace CommentsVS.Commands
 
             if (e is OleMenuCmdEventArgs eventArgs)
             {
-                object input = eventArgs.InValue;
+                var input = eventArgs.InValue;
                 IntPtr vOut = eventArgs.OutValue;
 
                 if (vOut != IntPtr.Zero)
@@ -66,7 +66,7 @@ namespace CommentsVS.Commands
                 else if (input != null)
                 {
                     // User selected something
-                    string selectedScope = input.ToString();
+                    var selectedScope = input.ToString();
                     if (Array.IndexOf(ScopeOptions, selectedScope) >= 0)
                     {
                         _currentScopeText = selectedScope;
@@ -80,7 +80,7 @@ namespace CommentsVS.Commands
         {
             if (e is OleMenuCmdEventArgs eventArgs)
             {
-                object inParam = eventArgs.InValue;
+                var inParam = eventArgs.InValue;
                 IntPtr vOut = eventArgs.OutValue;
 
                 if (vOut != IntPtr.Zero)
