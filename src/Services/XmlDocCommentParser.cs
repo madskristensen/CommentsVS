@@ -91,7 +91,10 @@ namespace CommentsVS.Services
         /// <returns>A collection of parsed comment blocks.</returns>
         public IReadOnlyList<XmlDocCommentBlock> FindAllCommentBlocks(ITextSnapshot snapshot)
         {
-            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+            if (snapshot == null)
+            {
+                throw new ArgumentNullException(nameof(snapshot));
+            }
 
             var blocks = new List<XmlDocCommentBlock>();
             var lineCount = snapshot.LineCount;
@@ -122,7 +125,10 @@ namespace CommentsVS.Services
         /// <returns>The comment block at the position, or null if none.</returns>
         public XmlDocCommentBlock FindCommentBlockAtPosition(ITextSnapshot snapshot, int position)
         {
-            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+            if (snapshot == null)
+            {
+                throw new ArgumentNullException(nameof(snapshot));
+            }
 
             if (position < 0 || position > snapshot.Length)
             {
@@ -161,7 +167,10 @@ namespace CommentsVS.Services
         /// <returns>Comment blocks that intersect the span.</returns>
         public IReadOnlyList<XmlDocCommentBlock> FindCommentBlocksInSpan(ITextSnapshot snapshot, Span span)
         {
-            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+            if (snapshot == null)
+            {
+                throw new ArgumentNullException(nameof(snapshot));
+            }
 
             var blocks = new List<XmlDocCommentBlock>();
 
@@ -276,10 +285,10 @@ namespace CommentsVS.Services
 
                 if (xmlContentBuilder.Length > 0)
                 {
-                    xmlContentBuilder.AppendLine();
+                    _ = xmlContentBuilder.AppendLine();
                 }
 
-                xmlContentBuilder.Append(content.TrimEnd());
+                _ = xmlContentBuilder.Append(content.TrimEnd());
                 endLine = i;
             }
 
@@ -327,7 +336,7 @@ namespace CommentsVS.Services
             if (closeIndex >= 0)
             {
                 var content = openingContent.Substring(0, closeIndex).Trim();
-                xmlContentBuilder.Append(content);
+                _ = xmlContentBuilder.Append(content);
 
                 ITextSnapshotLine line = snapshot.GetLineFromLineNumber(startLine);
                 var span = new Span(line.Start.Position, line.End.Position - line.Start.Position);
@@ -345,7 +354,7 @@ namespace CommentsVS.Services
             // Multi-line: look for closing */
             if (!string.IsNullOrWhiteSpace(openingContent))
             {
-                xmlContentBuilder.Append(openingContent.Trim());
+                _ = xmlContentBuilder.Append(openingContent.Trim());
             }
 
             for (var i = startLine + 1; i < snapshot.LineCount; i++)
@@ -364,10 +373,10 @@ namespace CommentsVS.Services
 
                     if (xmlContentBuilder.Length > 0 && !string.IsNullOrWhiteSpace(content))
                     {
-                        xmlContentBuilder.AppendLine();
+                        _ = xmlContentBuilder.AppendLine();
                     }
 
-                    xmlContentBuilder.Append(content.Trim());
+                    _ = xmlContentBuilder.Append(content.Trim());
                     break;
                 }
 
@@ -376,10 +385,10 @@ namespace CommentsVS.Services
 
                 if (xmlContentBuilder.Length > 0)
                 {
-                    xmlContentBuilder.AppendLine();
+                    _ = xmlContentBuilder.AppendLine();
                 }
 
-                xmlContentBuilder.Append(middleContent);
+                _ = xmlContentBuilder.Append(middleContent);
             }
 
             ITextSnapshotLine firstSnapshotLine = snapshot.GetLineFromLineNumber(startLine);
@@ -459,31 +468,59 @@ namespace CommentsVS.Services
         /// <returns>A collection of parsed comment blocks.</returns>
         public IReadOnlyList<XmlDocCommentBlock> FindAllCommentBlocks(IReadOnlyList<string> lines)
         {
-            if (lines == null) throw new ArgumentNullException(nameof(lines));
+            if (lines == null)
+            {
+                throw new ArgumentNullException(nameof(lines));
+            }
 
             var blocks = new List<XmlDocCommentBlock>();
+            var lineCount = lines.Count;
             var currentLine = 0;
             var currentPosition = 0;
             var newLineLen = Environment.NewLine.Length;
 
-            while (currentLine < lines.Count)
+            // Cache frequently accessed values to avoid repeated property lookups
+            var singleLinePrefix = _commentStyle.SingleLineDocPrefix;
+            var supportsMultiLine = _commentStyle.SupportsMultiLineDoc;
+            var multiLineStart = supportsMultiLine ? _commentStyle.MultiLineDocStart : null;
+
+            while (currentLine < lineCount)
             {
-                XmlDocCommentBlock block = TryParseCommentBlockAt(lines, currentLine, currentPosition);
-                if (block != null)
+                var lineText = lines[currentLine];
+                var leadingWs = GetLeadingWhitespaceLength(lineText);
+
+                // Quick rejection: skip lines that can't start a comment block
+                var canBeComment = false;
+                if (leadingWs < lineText.Length)
                 {
-                    blocks.Add(block);
-                    // Advance position past the parsed block
-                    for (var i = currentLine; i <= block.EndLine; i++)
+                    // Check for single-line prefix first (most common case)
+                    canBeComment = StartsWithAtOffset(lineText, leadingWs, singleLinePrefix);
+
+                    // Check for multi-line start if not a single-line comment
+                    if (!canBeComment && supportsMultiLine)
                     {
-                        currentPosition += lines[i].Length + newLineLen;
+                        canBeComment = StartsWithAtOffset(lineText, leadingWs, multiLineStart);
                     }
-                    currentLine = block.EndLine + 1;
                 }
-                else
+
+                if (canBeComment)
                 {
-                    currentPosition += lines[currentLine].Length + newLineLen;
-                    currentLine++;
+                    XmlDocCommentBlock block = TryParseCommentBlockAt(lines, currentLine, currentPosition, singleLinePrefix, multiLineStart);
+                    if (block != null)
+                    {
+                        blocks.Add(block);
+                        // Advance position past the parsed block
+                        for (var i = currentLine; i <= block.EndLine; i++)
+                        {
+                            currentPosition += lines[i].Length + newLineLen;
+                        }
+                        currentLine = block.EndLine + 1;
+                        continue;
+                    }
                 }
+
+                currentPosition += lineText.Length + newLineLen;
+                currentLine++;
             }
 
             return blocks;
@@ -492,7 +529,12 @@ namespace CommentsVS.Services
         /// <summary>
         /// Attempts to parse a comment block starting at the given line (string-based).
         /// </summary>
-        private XmlDocCommentBlock TryParseCommentBlockAt(IReadOnlyList<string> lines, int startLine, int spanStart)
+        private XmlDocCommentBlock TryParseCommentBlockAt(
+            IReadOnlyList<string> lines,
+            int startLine,
+            int spanStart,
+            string singleLinePrefix,
+            string multiLineStart)
         {
             if (startLine < 0 || startLine >= lines.Count)
             {
@@ -502,16 +544,16 @@ namespace CommentsVS.Services
             var firstLineText = lines[startLine];
 
             // Try single-line doc comment style (///, ''')
-            XmlDocCommentBlock singleLineBlock = TryParseSingleLineCommentBlock(lines, startLine, firstLineText, spanStart);
+            XmlDocCommentBlock singleLineBlock = TryParseSingleLineCommentBlock(lines, startLine, firstLineText, spanStart, singleLinePrefix);
             if (singleLineBlock != null)
             {
                 return singleLineBlock;
             }
 
             // Try multi-line doc comment style (/** */)
-            if (_commentStyle.SupportsMultiLineDoc)
+            if (multiLineStart != null)
             {
-                XmlDocCommentBlock multiLineBlock = TryParseMultiLineCommentBlock(lines, startLine, firstLineText, spanStart);
+                XmlDocCommentBlock multiLineBlock = TryParseMultiLineCommentBlock(lines, startLine, firstLineText, spanStart, multiLineStart);
                 if (multiLineBlock != null)
                 {
                     return multiLineBlock;
@@ -528,9 +570,9 @@ namespace CommentsVS.Services
             IReadOnlyList<string> lines,
             int startLine,
             string firstLineText,
-            int spanStart)
+            int spanStart,
+            string prefix)
         {
-            var prefix = _commentStyle.SingleLineDocPrefix;
 
             // Fast path: check if line starts with prefix without allocating trimmed string
             var leadingWhitespace = GetLeadingWhitespaceLength(firstLineText);
@@ -570,12 +612,12 @@ namespace CommentsVS.Services
 
                 if (xmlContentBuilder.Length > 0)
                 {
-                    xmlContentBuilder.AppendLine();
+                    _ = xmlContentBuilder.AppendLine();
                 }
 
                 if (contentEnd > contentStart)
                 {
-                    xmlContentBuilder.Append(lineText, contentStart, contentEnd - contentStart);
+                    _ = xmlContentBuilder.Append(lineText, contentStart, contentEnd - contentStart);
                 }
 
                 spanLength += lineText.Length;
@@ -642,11 +684,11 @@ namespace CommentsVS.Services
             IReadOnlyList<string> lines,
             int startLine,
             string firstLineText,
-            int spanStart)
+            int spanStart,
+            string multiLineStart)
         {
             // Fast path: check for multi-line start without allocating trimmed string
             var leadingWs = GetLeadingWhitespaceLength(firstLineText);
-            var multiLineStart = _commentStyle.MultiLineDocStart;
 
             if (!StartsWithAtOffset(firstLineText, leadingWs, multiLineStart))
             {
@@ -657,11 +699,8 @@ namespace CommentsVS.Services
             var xmlContentBuilder = new StringBuilder();
             var endLine = startLine;
             var newLineLen = Environment.NewLine.Length;
-
-            // spanStart is now passed in - no O(n) recalculation needed
-
-            var openingContentStart = leadingWs + multiLineStart.Length;
             var multiLineEnd = _commentStyle.MultiLineDocEnd;
+            var openingContentStart = leadingWs + multiLineStart.Length;
             var closeIndex = firstLineText.IndexOf(multiLineEnd, openingContentStart, StringComparison.Ordinal);
 
             if (closeIndex >= 0)
@@ -683,7 +722,7 @@ namespace CommentsVS.Services
 
                 if (contentEnd > contentStart)
                 {
-                    xmlContentBuilder.Append(firstLineText, contentStart, contentEnd - contentStart);
+                    _ = xmlContentBuilder.Append(firstLineText, contentStart, contentEnd - contentStart);
                 }
 
                 var span = new Span(spanStart, lines[startLine].Length);
@@ -714,7 +753,7 @@ namespace CommentsVS.Services
 
                 if (contentEnd > contentStart)
                 {
-                    xmlContentBuilder.Append(firstLineText, contentStart, contentEnd - contentStart);
+                    _ = xmlContentBuilder.Append(firstLineText, contentStart, contentEnd - contentStart);
                 }
             }
 
@@ -754,12 +793,12 @@ namespace CommentsVS.Services
 
                     if (xmlContentBuilder.Length > 0 && contentEnd > contentStart)
                     {
-                        xmlContentBuilder.AppendLine();
+                        _ = xmlContentBuilder.AppendLine();
                     }
 
                     if (contentEnd > contentStart)
                     {
-                        xmlContentBuilder.Append(lineText, contentStart, contentEnd - contentStart);
+                        _ = xmlContentBuilder.Append(lineText, contentStart, contentEnd - contentStart);
                     }
 
                     break;
@@ -787,12 +826,12 @@ namespace CommentsVS.Services
 
                 if (xmlContentBuilder.Length > 0)
                 {
-                    xmlContentBuilder.AppendLine();
+                    _ = xmlContentBuilder.AppendLine();
                 }
 
                 if (middleEnd > middleStart)
                 {
-                    xmlContentBuilder.Append(lineText, middleStart, middleEnd - middleStart);
+                    _ = xmlContentBuilder.Append(lineText, middleStart, middleEnd - middleStart);
                 }
             }
 
