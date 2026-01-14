@@ -252,7 +252,7 @@ namespace CommentsVS.Services
             var prefix = _commentStyle.SingleLineDocPrefix;
             var trimmedFirst = firstLineText.TrimStart();
 
-            if (!trimmedFirst.StartsWith(prefix, StringComparison.Ordinal))
+            if (!IsValidDocCommentStart(trimmedFirst, prefix))
             {
                 return null;
             }
@@ -269,7 +269,7 @@ namespace CommentsVS.Services
                 var lineText = line.GetText();
                 var trimmedLine = lineText.TrimStart();
 
-                if (!trimmedLine.StartsWith(prefix, StringComparison.Ordinal))
+                if (!IsValidDocCommentStart(trimmedLine, prefix))
                 {
                     break;
                 }
@@ -440,7 +440,7 @@ namespace CommentsVS.Services
         {
             var trimmed = lineText.TrimStart();
 
-            if (trimmed.StartsWith(_commentStyle.SingleLineDocPrefix, StringComparison.Ordinal))
+            if (IsValidDocCommentStart(trimmed, _commentStyle.SingleLineDocPrefix))
             {
                 return true;
             }
@@ -456,6 +456,38 @@ namespace CommentsVS.Services
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Checks if a trimmed line is a valid doc comment start (not a commented-out doc comment).
+        /// For example, "/// text" is valid but "//// text" is not (it's a regular comment with extra slashes).
+        /// </summary>
+        /// <param name="trimmedLine">The line text with leading whitespace already removed.</param>
+        /// <param name="prefix">The doc comment prefix (e.g., "///" or "'''").</param>
+        /// <returns>True if this is a valid doc comment start; false if it's commented-out or not a doc comment.</returns>
+        private static bool IsValidDocCommentStart(string trimmedLine, string prefix)
+        {
+            if (!trimmedLine.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            // Check if there's an extra comment character after the prefix, which would make this
+            // a regular comment rather than a doc comment.
+            // For C#: "///" is doc, "////" is regular comment (4+ slashes)
+            // For VB: "'''" is doc, "''''" is regular comment (4+ apostrophes)
+            if (trimmedLine.Length > prefix.Length)
+            {
+                var charAfterPrefix = trimmedLine[prefix.Length];
+                var commentChar = prefix[0]; // '/' for C#, ''' for VB
+
+                if (charAfterPrefix == commentChar)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         #region String-based parsing (VS-independent, for benchmarking)
@@ -494,7 +526,8 @@ namespace CommentsVS.Services
                 if (leadingWs < lineText.Length)
                 {
                     // Check for single-line prefix first (most common case)
-                    canBeComment = StartsWithAtOffset(lineText, leadingWs, singleLinePrefix);
+                    // Use IsValidDocCommentStartAtOffset to exclude commented-out doc comments (e.g., ////)
+                    canBeComment = IsValidDocCommentStartAtOffset(lineText, leadingWs, singleLinePrefix);
 
                     // Check for multi-line start if not a single-line comment
                     if (!canBeComment && supportsMultiLine)
@@ -576,7 +609,7 @@ namespace CommentsVS.Services
 
             // Fast path: check if line starts with prefix without allocating trimmed string
             var leadingWhitespace = GetLeadingWhitespaceLength(firstLineText);
-            if (!StartsWithAtOffset(firstLineText, leadingWhitespace, prefix))
+            if (!IsValidDocCommentStartAtOffset(firstLineText, leadingWhitespace, prefix))
             {
                 return null;
             }
@@ -591,7 +624,7 @@ namespace CommentsVS.Services
                 var lineText = lines[i];
                 var lineLeadingWs = GetLeadingWhitespaceLength(lineText);
 
-                if (!StartsWithAtOffset(lineText, lineLeadingWs, prefix))
+                if (!IsValidDocCommentStartAtOffset(lineText, lineLeadingWs, prefix))
                 {
                     break;
                 }
@@ -669,6 +702,40 @@ namespace CommentsVS.Services
             for (var i = 0; i < value.Length; i++)
             {
                 if (s[offset + i] != value[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if a line is a valid doc comment start at the given offset (not a commented-out doc comment).
+        /// For example, "/// text" is valid but "//// text" is not (it's a regular comment with extra slashes).
+        /// </summary>
+        /// <param name="s">The full line text.</param>
+        /// <param name="offset">The offset where non-whitespace content starts.</param>
+        /// <param name="prefix">The doc comment prefix (e.g., "///" or "'''").</param>
+        /// <returns>True if this is a valid doc comment start; false otherwise.</returns>
+        private static bool IsValidDocCommentStartAtOffset(string s, int offset, string prefix)
+        {
+            if (!StartsWithAtOffset(s, offset, prefix))
+            {
+                return false;
+            }
+
+            // Check if there's an extra comment character after the prefix, which would make this
+            // a regular comment rather than a doc comment.
+            // For C#: "///" is doc, "////" is regular comment (4+ slashes)
+            // For VB: "'''" is doc, "''''" is regular comment (4+ apostrophes)
+            var afterPrefixIndex = offset + prefix.Length;
+            if (afterPrefixIndex < s.Length)
+            {
+                var charAfterPrefix = s[afterPrefixIndex];
+                var commentChar = prefix[0]; // '/' for C#, ''' for VB
+
+                if (charAfterPrefix == commentChar)
                 {
                     return false;
                 }
