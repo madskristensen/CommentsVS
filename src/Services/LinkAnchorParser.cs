@@ -100,7 +100,9 @@ namespace CommentsVS.Services
         /// </summary>
         /// <remarks>
         /// Pattern breakdown:
-        /// - (?&lt;prefix&gt;\bLINK\s*:?\s*) - LINK keyword with optional colon (captured to calculate target position)
+        /// - (?&lt;prefix&gt;...) - LINK keyword with specific rules:
+        ///   - LINK (uppercase) can be followed by space or colon
+        ///   - link (lowercase) MUST be followed by colon
         /// - (?:#(?&lt;localanchor&gt;[A-Za-z0-9_-]+)) - Local anchor only (#anchor-name)
         /// - OR: (?&lt;path&gt;...) - File path (can contain spaces, stops at :digit, #anchor, LINK keyword, or end of line)
         ///   - (?::(?&lt;line&gt;\d+)(?:-(?&lt;endline&gt;\d+))?)? - Optional :line or :line-endline
@@ -109,8 +111,8 @@ namespace CommentsVS.Services
         /// Trailing whitespace is trimmed from paths in code.
         /// </remarks>
         private static readonly Regex _linkRegex = new(
-            @"(?<prefix>\bLINK\s*:?\s*)(?:(?<localanchor>#[A-Za-z0-9_-]+)|(?<path>(?:[./\\@~])?(?:[^\r\n#:]|:(?!\d))+?)(?::(?<line>\d+)(?:-(?<endline>\d+))?)?(?:#(?<fileanchor>[A-Za-z0-9_-]+))?(?=\s*(?:\bLINK\b|$|\r|\n)))",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            @"(?<prefix>(?:\bLINK\s*:?\s*|\blink:\s*))(?:(?<localanchor>#[A-Za-z0-9_-]+)|(?<path>(?:[./\\@~])?(?:[^\r\n#:]|:(?!\d))+?)(?::(?<line>\d+)(?:-(?<endline>\d+))?)?(?:#(?<fileanchor>[A-Za-z0-9_-]+))?(?=\s*(?:\bLINK\b|\blink:|$|\r|\n)))",
+            RegexOptions.Compiled);
 
         /// <summary>
         /// Cached empty result list to avoid allocations for the common "no links" case.
@@ -129,15 +131,12 @@ namespace CommentsVS.Services
                 return _emptyResult;
             }
 
-            // Fast pre-check: skip expensive regex and case-insensitive search if 'L' or 'l' not present.
-            // This avoids the costly OrdinalIgnoreCase IndexOf for the common case of no links.
-            if (text.IndexOf('L') < 0 && text.IndexOf('l') < 0)
-            {
-                return _emptyResult;
-            }
+            // Fast pre-check: must contain "LINK" (uppercase, can be followed by space or colon)
+            // or "link:" (lowercase, must have colon)
+            var hasUppercaseLink = text.IndexOf("LINK", StringComparison.Ordinal) >= 0;
+            var hasLowercaseLink = text.IndexOf("link:", StringComparison.Ordinal) >= 0;
 
-            // Secondary check: verify LINK keyword exists (case-insensitive)
-            if (text.IndexOf("LINK", StringComparison.OrdinalIgnoreCase) < 0)
+            if (!hasUppercaseLink && !hasLowercaseLink)
             {
                 return _emptyResult;
             }
@@ -222,14 +221,11 @@ namespace CommentsVS.Services
                 return false;
             }
 
-            // Fast pre-check: skip expensive operations if 'L' or 'l' not present
-            if (text.IndexOf('L') < 0 && text.IndexOf('l') < 0)
-            {
-                return false;
-            }
+            // Fast pre-check: must contain "LINK" (uppercase) or "link:" (lowercase with colon)
+            var hasUppercaseLink = text.IndexOf("LINK", StringComparison.Ordinal) >= 0;
+            var hasLowercaseLink = text.IndexOf("link:", StringComparison.Ordinal) >= 0;
 
-            return text.IndexOf("LINK", StringComparison.OrdinalIgnoreCase) >= 0
-                   && _linkRegex.IsMatch(text);
+            return (hasUppercaseLink || hasLowercaseLink) && _linkRegex.IsMatch(text);
         }
 
         /// <summary>
