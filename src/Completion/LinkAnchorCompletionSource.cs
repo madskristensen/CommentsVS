@@ -282,16 +282,16 @@ namespace CommentsVS.Completion
             }
         }
 
-        private IEnumerable<CompletionItem> GetAnchorCompletions(string partialAnchor)
-        {
-            // Get anchors from the cache
-            CodeAnchorsToolWindow toolWindow = CodeAnchorsToolWindow.Instance;
-            if (toolWindow?.Cache == null)
-            {
-                yield break;
-            }
+                private IEnumerable<CompletionItem> GetAnchorCompletions(string partialAnchor)
+                {
+                    // Get anchors from the cache
+                    CodeAnchorsToolWindow toolWindow = CodeAnchorsToolWindow.Instance;
+                    if (toolWindow?.Cache == null)
+                    {
+                        yield break;
+                    }
 
-            // Get all ANCHOR type anchors
+                    // Get all ANCHOR type anchors
             IReadOnlyList<AnchorItem> allAnchors = toolWindow.Cache.GetAllAnchors();
             IEnumerable<AnchorItem> anchorItems = allAnchors
                 .Where(a => a.AnchorType == AnchorType.Anchor && !string.IsNullOrEmpty(a.AnchorId));

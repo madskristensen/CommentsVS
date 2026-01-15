@@ -10,9 +10,10 @@ namespace CommentsVS.Commands
     {
         protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
         {
-            if (CodeAnchorsToolWindow.Instance != null)
+            CodeAnchorsToolWindow toolWindow = await CodeAnchorsToolWindow.GetInstanceAsync();
+            if (toolWindow != null)
             {
-                await CodeAnchorsToolWindow.Instance.ScanSolutionAsync();
+                await toolWindow.ScanSolutionAsync();
             }
         }
     }

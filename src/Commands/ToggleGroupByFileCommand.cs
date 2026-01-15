@@ -17,10 +17,8 @@ namespace CommentsVS.Commands
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            if (CodeAnchorsToolWindow.Instance?.Control != null)
-            {
-                CodeAnchorsToolWindow.Instance.Control.ToggleGroupByFile();
-            }
+            CodeAnchorsToolWindow toolWindow = await CodeAnchorsToolWindow.GetInstanceAsync();
+            toolWindow?.Control?.ToggleGroupByFile();
         }
     }
 }

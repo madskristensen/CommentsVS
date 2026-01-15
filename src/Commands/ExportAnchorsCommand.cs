@@ -135,16 +135,16 @@ namespace CommentsVS.Commands
             }
         }
 
-        private static IReadOnlyList<AnchorItem> GetFilteredAnchors()
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
+                        private static IReadOnlyList<AnchorItem> GetFilteredAnchors()
+                        {
+                            ThreadHelper.ThrowIfNotOnUIThread();
 
-            if (CodeAnchorsToolWindow.Instance?.Control == null)
-            {
-                return null;
-            }
+                            if (CodeAnchorsToolWindow.Instance?.Control == null)
+                            {
+                                return null;
+                            }
 
-            return CodeAnchorsToolWindow.Instance.Control.FilteredAnchors;
-        }
-    }
-}
+                            return CodeAnchorsToolWindow.Instance.Control.FilteredAnchors;
+                        }
+                    }
+                }

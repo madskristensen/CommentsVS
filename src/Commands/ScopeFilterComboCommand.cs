@@ -91,23 +91,20 @@ namespace CommentsVS.Commands
             }
         }
 
-        private void ApplyScopeFilter(string scopeText)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
+                        private void ApplyScopeFilter(string scopeText)
+                        {
+                            ThreadHelper.ThrowIfNotOnUIThread();
 
-            AnchorScope scope = scopeText switch
-            {
-                "Entire Solution" => AnchorScope.EntireSolution,
-                "Current Project" => AnchorScope.CurrentProject,
-                "Current Document" => AnchorScope.CurrentDocument,
-                "Open Documents" => AnchorScope.OpenDocuments,
-                _ => AnchorScope.EntireSolution
-            };
+                            AnchorScope scope = scopeText switch
+                            {
+                                "Entire Solution" => AnchorScope.EntireSolution,
+                                "Current Project" => AnchorScope.CurrentProject,
+                                "Current Document" => AnchorScope.CurrentDocument,
+                                "Open Documents" => AnchorScope.OpenDocuments,
+                                _ => AnchorScope.EntireSolution
+                            };
 
-            if (CodeAnchorsToolWindow.Instance != null)
-            {
-                CodeAnchorsToolWindow.Instance.SetScope(scope);
-            }
-        }
-    }
-}
+                            CodeAnchorsToolWindow.Instance?.SetScope(scope);
+                        }
+                    }
+                }

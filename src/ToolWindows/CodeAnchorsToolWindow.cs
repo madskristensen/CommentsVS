@@ -30,6 +30,35 @@ namespace CommentsVS.ToolWindows
         public static CodeAnchorsToolWindow Instance { get; private set; }
 
         /// <summary>
+        /// Gets the tool window instance asynchronously.
+        /// This ensures the tool window has been created before returning the instance.
+        /// </summary>
+        /// <param name="create">If true, creates the tool window if it doesn't exist (but doesn't show it).</param>
+        /// <returns>The tool window instance, or null if not yet created and create is false.</returns>
+        public static async Task<CodeAnchorsToolWindow> GetInstanceAsync(bool create = false)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            if (Instance != null)
+            {
+                return Instance;
+            }
+
+            if (create)
+            {
+                // ShowAsync will create the window (triggering CreateAsync which sets Instance)
+                // but we immediately hide it if successful to avoid unwanted UI changes
+                ToolWindowPane pane = await ShowAsync(0, create: true);
+                if (pane != null)
+                {
+                    await HideAsync();
+                }
+            }
+
+            return Instance;
+        }
+
+        /// <summary>
         /// Gets the control hosted in this tool window.
         /// </summary>
         public CodeAnchorsControl Control => _control;

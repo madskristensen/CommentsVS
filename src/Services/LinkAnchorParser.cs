@@ -133,8 +133,8 @@ namespace CommentsVS.Services
 
             // Fast pre-check: must contain "LINK" (uppercase, can be followed by space or colon)
             // or "link:" (lowercase, must have colon)
-            var hasUppercaseLink = text.IndexOf("LINK", StringComparison.Ordinal) >= 0;
-            var hasLowercaseLink = text.IndexOf("link:", StringComparison.Ordinal) >= 0;
+            var hasUppercaseLink = text.Contains("LINK", StringComparison.Ordinal);
+            var hasLowercaseLink = text.Contains("link:", StringComparison.Ordinal);
 
             if (!hasUppercaseLink && !hasLowercaseLink)
             {
@@ -222,8 +222,8 @@ namespace CommentsVS.Services
             }
 
             // Fast pre-check: must contain "LINK" (uppercase) or "link:" (lowercase with colon)
-            var hasUppercaseLink = text.IndexOf("LINK", StringComparison.Ordinal) >= 0;
-            var hasLowercaseLink = text.IndexOf("link:", StringComparison.Ordinal) >= 0;
+            var hasUppercaseLink = text.Contains("LINK", StringComparison.Ordinal);
+            var hasLowercaseLink = text.Contains("link:", StringComparison.Ordinal);
 
             return (hasUppercaseLink || hasLowercaseLink) && _linkRegex.IsMatch(text);
         }

@@ -12,11 +12,12 @@ namespace CommentsVS.Commands
         {
             // Ensure the tool window is shown
             await CodeAnchorsToolWindow.ShowAsync();
-            
+
             // Navigate to the previous anchor
-            if (CodeAnchorsToolWindow.Instance != null)
+            CodeAnchorsToolWindow toolWindow = await CodeAnchorsToolWindow.GetInstanceAsync();
+            if (toolWindow != null)
             {
-                await CodeAnchorsToolWindow.Instance.NavigateToPreviousAnchorAsync();
+                await toolWindow.NavigateToPreviousAnchorAsync();
             }
         }
     }

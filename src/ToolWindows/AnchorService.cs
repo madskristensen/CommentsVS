@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
 using CommentsVS.Services;
 using Microsoft.VisualStudio.Text;
@@ -9,8 +8,6 @@ namespace CommentsVS.ToolWindows
     /// <summary>
     /// Service for scanning documents and finding anchors in comments.
     /// </summary>
-    [Export(typeof(AnchorService))]
-    [PartCreationPolicy(CreationPolicy.Shared)]
     public class AnchorService
     {
         /// <summary>

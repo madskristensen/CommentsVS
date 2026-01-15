@@ -153,7 +153,7 @@ namespace CommentsVS.Handlers
             }
 
             // First, check the solution anchor cache via the tool window
-            CodeAnchorsToolWindow toolWindow = CodeAnchorsToolWindow.Instance;
+            CodeAnchorsToolWindow toolWindow = await CodeAnchorsToolWindow.GetInstanceAsync();
             if (toolWindow?.Cache != null)
             {
                 System.Collections.Generic.IReadOnlyList<AnchorItem> anchors = toolWindow.Cache.GetAnchorsForFile(filePath);
