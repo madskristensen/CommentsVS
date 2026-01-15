@@ -3,7 +3,7 @@ using CommentsVS.ToolWindows;
 namespace CommentsVS.Commands
 {
     /// <summary>
-    /// Command to refresh the anchors list by re-scanning the entire solution.
+    /// Command to refresh the anchors list by re-scanning the solution or open documents.
     /// </summary>
     [Command(PackageIds.RefreshAnchors)]
     internal sealed class RefreshAnchorsCommand : BaseCommand<RefreshAnchorsCommand>
@@ -13,7 +13,7 @@ namespace CommentsVS.Commands
             CodeAnchorsToolWindow toolWindow = await CodeAnchorsToolWindow.GetInstanceAsync();
             if (toolWindow != null)
             {
-                await toolWindow.ScanSolutionAsync();
+                await toolWindow.RefreshAsync();
             }
         }
     }
