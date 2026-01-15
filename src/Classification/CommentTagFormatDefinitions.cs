@@ -46,7 +46,7 @@ namespace CommentsVS.Classification
         [Name(CommentTagClassificationTypes.Custom)]
         internal static ClassificationTypeDefinition CustomType = null;
 
-    [Export(typeof(ClassificationTypeDefinition))]
+        [Export(typeof(ClassificationTypeDefinition))]
         [Name(CommentTagClassificationTypes.Metadata)]
         internal static ClassificationTypeDefinition MetadataType = null;
 
@@ -214,107 +214,190 @@ namespace CommentsVS.Classification
     }
 
     [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.Metadata)]
-        [Name(CommentTagClassificationTypes.Metadata)]
-        [UserVisible(true)]
-        [Order(After = Priority.High)]
-        internal sealed class CommentTagMetadataFormatDefinition : ClassificationFormatDefinition
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.Metadata)]
+    [Name(CommentTagClassificationTypes.Metadata)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class CommentTagMetadataFormatDefinition : ClassificationFormatDefinition
+    {
+        public CommentTagMetadataFormatDefinition()
         {
-            public CommentTagMetadataFormatDefinition()
-            {
-                DisplayName = "Comment Tag - Metadata";
-                // Teal/cyan works well in both light and dark themes
-                ForegroundColor = Color.FromRgb(0, 128, 128);
-            }
+            DisplayName = "Comment Tag - Metadata";
+            // Teal/cyan works well in both light and dark themes
+            ForegroundColor = Color.FromRgb(0, 128, 128);
         }
-
-        #region Prefix-based comment highlighting (Better Comments style)
-
-        [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixAlert)]
-        [Name(CommentTagClassificationTypes.PrefixAlert)]
-        [UserVisible(true)]
-        [Order(After = Priority.High)]
-        internal sealed class PrefixAlertFormatDefinition : ClassificationFormatDefinition
-        {
-            public PrefixAlertFormatDefinition()
-            {
-                DisplayName = "Comment - Alert (!)";
-                ForegroundColor = Colors.Red;
-            }
-        }
-
-        [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixQuery)]
-        [Name(CommentTagClassificationTypes.PrefixQuery)]
-        [UserVisible(true)]
-        [Order(After = Priority.High)]
-        internal sealed class PrefixQueryFormatDefinition : ClassificationFormatDefinition
-        {
-            public PrefixQueryFormatDefinition()
-            {
-                DisplayName = "Comment - Query (?)";
-                ForegroundColor = Colors.DodgerBlue;
-            }
-        }
-
-        [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixImportant)]
-        [Name(CommentTagClassificationTypes.PrefixImportant)]
-        [UserVisible(true)]
-        [Order(After = Priority.High)]
-        internal sealed class PrefixImportantFormatDefinition : ClassificationFormatDefinition
-        {
-            public PrefixImportantFormatDefinition()
-            {
-                DisplayName = "Comment - Important (*)";
-                ForegroundColor = Colors.LimeGreen;
-            }
-        }
-
-        [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixStrikethrough)]
-        [Name(CommentTagClassificationTypes.PrefixStrikethrough)]
-        [UserVisible(true)]
-        [Order(After = Priority.High)]
-        internal sealed class PrefixStrikethroughFormatDefinition : ClassificationFormatDefinition
-        {
-            public PrefixStrikethroughFormatDefinition()
-            {
-                DisplayName = "Comment - Strikethrough (//)";
-                ForegroundColor = Colors.Gray;
-                TextDecorations = System.Windows.TextDecorations.Strikethrough;
-            }
-        }
-
-        [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixDisabled)]
-        [Name(CommentTagClassificationTypes.PrefixDisabled)]
-        [UserVisible(true)]
-        [Order(After = Priority.High)]
-        internal sealed class PrefixDisabledFormatDefinition : ClassificationFormatDefinition
-        {
-            public PrefixDisabledFormatDefinition()
-            {
-                DisplayName = "Comment - Disabled (-)";
-                ForegroundColor = Colors.DarkGray;
-            }
-        }
-
-        [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixQuote)]
-        [Name(CommentTagClassificationTypes.PrefixQuote)]
-        [UserVisible(true)]
-        [Order(After = Priority.High)]
-        internal sealed class PrefixQuoteFormatDefinition : ClassificationFormatDefinition
-        {
-            public PrefixQuoteFormatDefinition()
-            {
-                DisplayName = "Comment - Quote (>)";
-                ForegroundColor = Colors.MediumPurple;
-                IsItalic = true;
-            }
-        }
-
-        #endregion
     }
+
+    #region Prefix-based comment highlighting (Better Comments style)
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixAlert)]
+    [Name(CommentTagClassificationTypes.PrefixAlert)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class PrefixAlertFormatDefinition : ClassificationFormatDefinition
+    {
+        public PrefixAlertFormatDefinition()
+        {
+            DisplayName = "Comment - Alert (!)";
+            ForegroundColor = Colors.Red;
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixQuery)]
+    [Name(CommentTagClassificationTypes.PrefixQuery)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class PrefixQueryFormatDefinition : ClassificationFormatDefinition
+    {
+        public PrefixQueryFormatDefinition()
+        {
+            DisplayName = "Comment - Query (?)";
+            ForegroundColor = Colors.DodgerBlue;
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixImportant)]
+    [Name(CommentTagClassificationTypes.PrefixImportant)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class PrefixImportantFormatDefinition : ClassificationFormatDefinition
+    {
+        public PrefixImportantFormatDefinition()
+        {
+            DisplayName = "Comment - Important (*)";
+            ForegroundColor = Colors.LimeGreen;
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixStrikethrough)]
+    [Name(CommentTagClassificationTypes.PrefixStrikethrough)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class PrefixStrikethroughFormatDefinition : ClassificationFormatDefinition
+    {
+        public PrefixStrikethroughFormatDefinition()
+        {
+            DisplayName = "Comment - Strikethrough (//)";
+            ForegroundColor = Colors.Gray;
+            TextDecorations = System.Windows.TextDecorations.Strikethrough;
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixDisabled)]
+    [Name(CommentTagClassificationTypes.PrefixDisabled)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class PrefixDisabledFormatDefinition : ClassificationFormatDefinition
+    {
+        public PrefixDisabledFormatDefinition()
+        {
+            DisplayName = "Comment - Disabled (-)";
+            ForegroundColor = Colors.DarkGray;
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.PrefixQuote)]
+    [Name(CommentTagClassificationTypes.PrefixQuote)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class PrefixQuoteFormatDefinition : ClassificationFormatDefinition
+    {
+        public PrefixQuoteFormatDefinition()
+        {
+            DisplayName = "Comment - Quote (>)";
+            ForegroundColor = Colors.MediumPurple;
+            IsItalic = true;
+        }
+    }
+
+
+    #endregion
+
+    #region Rendered comment format definitions
+    public class MoreDefinitions
+    {
+        [Export(typeof(ClassificationTypeDefinition))]
+        [Name(CommentTagClassificationTypes.RenderedText)]
+        internal static ClassificationTypeDefinition RenderedTextType = null;
+
+        [Export(typeof(ClassificationTypeDefinition))]
+        [Name(CommentTagClassificationTypes.RenderedHeading)]
+        internal static ClassificationTypeDefinition RenderedHeadingType = null;
+
+        [Export(typeof(ClassificationTypeDefinition))]
+        [Name(CommentTagClassificationTypes.RenderedCode)]
+        internal static ClassificationTypeDefinition RenderedCodeType = null;
+
+        [Export(typeof(ClassificationTypeDefinition))]
+        [Name(CommentTagClassificationTypes.RenderedLink)]
+        internal static ClassificationTypeDefinition RenderedLinkType = null;
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.RenderedText)]
+    [Name(CommentTagClassificationTypes.RenderedText)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class RenderedTextFormatDefinition : ClassificationFormatDefinition
+    {
+        public RenderedTextFormatDefinition()
+        {
+            DisplayName = "Rendered Comment - Text";
+            // Gray works well for subtle comment text in both themes
+            ForegroundColor = Color.FromRgb(128, 128, 128);
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.RenderedHeading)]
+    [Name(CommentTagClassificationTypes.RenderedHeading)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class RenderedHeadingFormatDefinition : ClassificationFormatDefinition
+    {
+        public RenderedHeadingFormatDefinition()
+        {
+            DisplayName = "Rendered Comment - Heading";
+            // Green matches VS comment color association
+            ForegroundColor = Color.FromRgb(87, 166, 74);
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.RenderedCode)]
+    [Name(CommentTagClassificationTypes.RenderedCode)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class RenderedCodeFormatDefinition : ClassificationFormatDefinition
+    {
+        public RenderedCodeFormatDefinition()
+        {
+            DisplayName = "Rendered Comment - Code";
+            // Brownish color for inline code
+            ForegroundColor = Color.FromRgb(156, 120, 100);
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = CommentTagClassificationTypes.RenderedLink)]
+    [Name(CommentTagClassificationTypes.RenderedLink)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class RenderedLinkFormatDefinition : ClassificationFormatDefinition
+    {
+        public RenderedLinkFormatDefinition()
+        {
+            DisplayName = "Rendered Comment - Link";
+            // Blue for links and references
+            ForegroundColor = Color.FromRgb(86, 156, 214);
+        }
+    }
+
+    #endregion
+}

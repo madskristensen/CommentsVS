@@ -46,7 +46,7 @@ namespace CommentsVS.Adornments
         {
             // Detect if this is a significant structural change (lines added/removed)
             // In such cases, we need to invalidate more aggressively
-            bool hasLineCountChange = args.Changes.Any(c =>
+            var hasLineCountChange = args.Changes.Any(c =>
                 c.OldText.Contains('\n') != c.NewText.Contains('\n') ||
                 c.OldText.Count(ch => ch == '\n') != c.NewText.Count(ch => ch == '\n'));
 
@@ -101,7 +101,7 @@ namespace CommentsVS.Adornments
 
                 // If line count changed significantly, clear cache entirely
                 // This avoids stale adornments from incorrect span translations
-                int lineDelta = Math.Abs(snapshot.LineCount - oldSnapshot.LineCount);
+                var lineDelta = Math.Abs(snapshot.LineCount - oldSnapshot.LineCount);
                 if (lineDelta > 0)
                 {
                     _adornmentCache.Clear();

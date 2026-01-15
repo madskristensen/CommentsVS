@@ -169,9 +169,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <WCFMetadata Include="Connected Services\" />
-  </ItemGroup>
-  <ItemGroup>
     <Page Include="ToolWindows\CodeAnchorsControl.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>

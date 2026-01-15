@@ -71,9 +71,18 @@ You can also enable **Collapse XML Doc Comments by Default** from the **Edit > C
 - Clickable links for `<see>`, `<seealso>`, `<paramref>`, and `<typeparamref>` tags
 - Inline code formatting for `<c>` and `<code>` blocks  
 - Proper list rendering for `<list>` elements
-- Gray text color that matches Visual Studio's comment styling (works with light and dark themes)
+- Customizable colors via **Tools > Options > Environment > Fonts and Colors**
 
 **Quick editing:** Double-click a rendered comment or press **ESC** when the caret is on a rendered comment line to temporarily switch it to raw source view for editing. Move the caret away from the comment to restore the rendered view.
+
+**Customizing colors:** Rendered comment colors can be customized via **Tools > Options > Environment > Fonts and Colors** under these entries:
+
+| Entry | Description |
+|-------|-------------|
+| Rendered Comment - Text | Main comment text color |
+| Rendered Comment - Heading | Section headings (Returns, Remarks, params) |
+| Rendered Comment - Code | Inline code formatting |
+| Rendered Comment - Link | Links, param refs, and type refs |
 
 ![Rendered Comments](art/rendered-comments.png)
 
@@ -351,6 +360,8 @@ Configure the extension behavior via **Tools > Options > CommentsVS**.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Rendering Mode | Off | Controls how XML doc comments are displayed: Off (raw XML), Compact (outlining with stripped tags), or Full (rich formatted rendering) |
+
+Rendered comment colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Rendered Comment - [Type]" entries (Text, Heading, Code, Link).
 
 ### Comment Tags
 | Setting | Default | Description |

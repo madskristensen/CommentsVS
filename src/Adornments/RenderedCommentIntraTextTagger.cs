@@ -7,10 +7,12 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using CommentsVS.Classification;
 using CommentsVS.Commands;
 using CommentsVS.Options;
 using CommentsVS.Services;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
@@ -47,7 +49,8 @@ namespace CommentsVS.Adornments
     [TextViewRole(PredefinedTextViewRoles.Debuggable)]
     internal sealed class RenderedCommentIntraTextTaggerProvider : IViewTaggerProvider
     {
-
+        [Import]
+        internal IEditorFormatMapService FormatMapService = null;
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
@@ -57,8 +60,9 @@ namespace CommentsVS.Adornments
             if (textView.TextBuffer != buffer)
                 return null;
 
+            IEditorFormatMap formatMap = FormatMapService.GetEditorFormatMap(wpfTextView);
             return wpfTextView.Properties.GetOrCreateSingletonProperty(
-                () => new RenderedCommentIntraTextTagger(wpfTextView)) as ITagger<T>;
+                () => new RenderedCommentIntraTextTagger(wpfTextView, formatMap)) as ITagger<T>;
         }
     }
 
@@ -70,9 +74,19 @@ namespace CommentsVS.Adornments
         private GitRepositoryInfo _repoInfo;
         private bool _repoInfoInitialized;
         private readonly string _filePath;
+        private readonly IEditorFormatMap _formatMap;
 
-        public RenderedCommentIntraTextTagger(IWpfTextView view) : base(view)
+        // Cached brushes from format map
+        private Brush _textBrush;
+        private Brush _headingBrush;
+        private Brush _codeBrush;
+        private Brush _linkBrush;
+
+        public RenderedCommentIntraTextTagger(IWpfTextView view, IEditorFormatMap formatMap) : base(view)
         {
+            _formatMap = formatMap;
+            UpdateBrushesFromFormatMap();
+
             // Get file path for issue reference resolution
             if (view.TextBuffer.Properties.TryGetProperty(typeof(ITextDocument), out ITextDocument document))
             {
@@ -88,6 +102,9 @@ namespace CommentsVS.Adornments
             // Listen for zoom level changes to refresh adornments with new font size
             view.ZoomLevelChanged += OnZoomLevelChanged;
 
+            // Listen for format map changes (user changed colors in Fonts and Colors)
+            _formatMap.FormatMappingChanged += OnFormatMappingChanged;
+
             // Hook into keyboard events at multiple levels
             view.VisualElement.PreviewKeyDown += OnViewKeyDown;
 
@@ -102,6 +119,43 @@ namespace CommentsVS.Adornments
             view.Properties[typeof(RenderedCommentIntraTextTagger)] = this;
         }
 
+        private void OnFormatMappingChanged(object sender, FormatItemsEventArgs e)
+        {
+            // Check if any of our format definitions changed
+            if (e.ChangedItems.Any(item =>
+                item == CommentTagClassificationTypes.RenderedText ||
+                item == CommentTagClassificationTypes.RenderedHeading ||
+                item == CommentTagClassificationTypes.RenderedCode ||
+                item == CommentTagClassificationTypes.RenderedLink))
+            {
+                UpdateBrushesFromFormatMap();
+                ClearAdornmentCache();
+                RefreshTags();
+            }
+        }
+
+        private void UpdateBrushesFromFormatMap()
+        {
+            _textBrush = GetBrushFromFormatMap(CommentTagClassificationTypes.RenderedText)
+                ?? new SolidColorBrush(Color.FromRgb(128, 128, 128));
+            _headingBrush = GetBrushFromFormatMap(CommentTagClassificationTypes.RenderedHeading)
+                ?? new SolidColorBrush(Color.FromRgb(87, 166, 74));
+            _codeBrush = GetBrushFromFormatMap(CommentTagClassificationTypes.RenderedCode)
+                ?? new SolidColorBrush(Color.FromRgb(156, 120, 100));
+            _linkBrush = GetBrushFromFormatMap(CommentTagClassificationTypes.RenderedLink)
+                ?? new SolidColorBrush(Color.FromRgb(86, 156, 214));
+        }
+
+        private Brush GetBrushFromFormatMap(string classificationTypeName)
+        {
+            ResourceDictionary properties = _formatMap.GetProperties(classificationTypeName);
+            if (properties != null && properties.Contains(EditorFormatDefinition.ForegroundBrushId))
+            {
+                return properties[EditorFormatDefinition.ForegroundBrushId] as Brush;
+            }
+            return null;
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -111,6 +165,7 @@ namespace CommentsVS.Adornments
                 view.TextBuffer.Changed -= OnBufferChanged;
                 view.ZoomLevelChanged -= OnZoomLevelChanged;
                 view.VisualElement.PreviewKeyDown -= OnViewKeyDown;
+                _formatMap.FormatMappingChanged -= OnFormatMappingChanged;
 
                 // Remove from view properties
                 view.Properties.RemoveProperty(typeof(RenderedCommentIntraTextTagger));
@@ -437,10 +492,9 @@ namespace CommentsVS.Adornments
             FontFamily fontFamily = view.FormattedLineSource?.DefaultTextProperties?.Typeface?.FontFamily
                 ?? new FontFamily("Consolas");
 
-            // Gray color for subtle appearance
-            var textBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
-            // Green color for section headings (Returns, Remarks, params, etc.) - matches comment color association
-            var headingBrush = new SolidColorBrush(Color.FromRgb(87, 166, 74)); // VS comment green
+            // Use cached brushes from format map (user-customizable via Fonts and Colors)
+            Brush textBrush = _textBrush;
+            Brush headingBrush = _headingBrush;
 
             if (renderingMode == RenderingMode.Full)
             {
@@ -490,7 +544,6 @@ namespace CommentsVS.Adornments
 
             // Process markdown in the summary text and create formatted inlines (with issue reference support)
             List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText(strippedSummary, GetRepoInfo());
-            var headingBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100));
 
             var isFirstSegment = true;
             foreach (RenderedSegment segment in segments)
@@ -506,7 +559,7 @@ namespace CommentsVS.Adornments
                 if (string.IsNullOrEmpty(segmentToRender.Text))
                     continue;
 
-                Inline inline = CreateInlineForSegment(segmentToRender, textBrush, headingBrush);
+                Inline inline = CreateInlineForSegment(segmentToRender, textBrush, _headingBrush);
                 textBlock.Inlines.Add(inline);
             }
 
@@ -659,30 +712,30 @@ namespace CommentsVS.Adornments
                 lines.Add(currentLine.ToString());
             }
 
-            return lines;
-        }
+                return lines;
+            }
 
-        /// <summary>
-        /// Renders all content from a section, including prose text and list items.
-        /// </summary>
-        private static void RenderSectionContent(StackPanel panel, RenderedCommentSection section,
-            double fontSize, FontFamily fontFamily, Brush textBrush, Brush headingBrush,
-            double listIndent, double itemSpacing, bool isSummary)
-        {
-            var isFirstLine = true;
-            var previousWasListItem = false;
-
-            foreach (RenderedLine line in section.Lines)
+            /// <summary>
+            /// Renders all content from a section, including prose text and list items.
+            /// </summary>
+            private void RenderSectionContent(StackPanel panel, RenderedCommentSection section,
+                double fontSize, FontFamily fontFamily, Brush textBrush, Brush headingBrush,
+                double listIndent, double itemSpacing, bool isSummary)
             {
-                if (line.IsBlank)
+                var isFirstLine = true;
+                var previousWasListItem = false;
+
+                foreach (RenderedLine line in section.Lines)
                 {
-                    // Render blank lines as spacers for consistent spacing
-                    if (!isFirstLine) // Skip leading blank lines
+                    if (line.IsBlank)
                     {
-                        panel.Children.Add(CreateSpacer(itemSpacing * 1.5));
+                        // Render blank lines as spacers for consistent spacing
+                        if (!isFirstLine) // Skip leading blank lines
+                        {
+                            panel.Children.Add(CreateSpacer(itemSpacing * 1.5));
+                        }
+                        continue;
                     }
-                    continue;
-                }
 
                 // Build the text content from segments
                 var lineText = string.Join("", line.Segments.Select(s => s.Text));
@@ -790,7 +843,7 @@ namespace CommentsVS.Adornments
         /// Creates an Inline element for a rendered segment with appropriate formatting.
         /// Returns a Hyperlink for links and issue references, Run for other types.
         /// </summary>
-        private static Inline CreateInlineForSegment(RenderedSegment segment, Brush textBrush, Brush headingBrush)
+        private Inline CreateInlineForSegment(RenderedSegment segment, Brush textBrush, Brush headingBrush)
         {
             switch (segment.Type)
             {
@@ -798,7 +851,7 @@ namespace CommentsVS.Adornments
                 case RenderedSegmentType.IssueReference:
                     var hyperlink = new Hyperlink(new Run(segment.Text))
                     {
-                        Foreground = new SolidColorBrush(Color.FromRgb(86, 156, 214)), // Blue link color
+                        Foreground = _linkBrush,
                         TextDecorations = TextDecorations.Underline
                     };
 
@@ -840,7 +893,7 @@ namespace CommentsVS.Adornments
 
                         case RenderedSegmentType.Code:
                             run.FontFamily = new FontFamily("Consolas");
-                            run.Foreground = new SolidColorBrush(Color.FromRgb(156, 120, 100)); // Brownish code color
+                            run.Foreground = _codeBrush;
                             break;
 
                         case RenderedSegmentType.Strikethrough:
@@ -850,7 +903,7 @@ namespace CommentsVS.Adornments
                         case RenderedSegmentType.ParamRef:
                         case RenderedSegmentType.TypeParamRef:
                             run.FontStyle = FontStyles.Italic;
-                            run.Foreground = new SolidColorBrush(Color.FromRgb(86, 156, 214)); // Blue for refs
+                            run.Foreground = _linkBrush;
                             break;
 
                         case RenderedSegmentType.Heading:
@@ -938,32 +991,32 @@ namespace CommentsVS.Adornments
                         textBlock.Inlines.Add(new Run(" — ") { Foreground = textBrush });
                     }
                 }
-                else
-                {
-                    // Continuation lines are plain text
-                    textBlock.Text = lineText;
+                        else
+                        {
+                            // Continuation lines are plain text
+                            textBlock.Text = lineText;
+                        }
+
+                        panel.Children.Add(textBlock);
+                    }
                 }
 
-                panel.Children.Add(textBlock);
-            }
-        }
-
-        private static void AddSectionLine(StackPanel panel, RenderedCommentSection section,
-            double fontSize, FontFamily fontFamily, Brush textBrush, Brush headingBrush,
-            double listIndent, double itemSpacing)
-        {
-            var heading = GetSectionHeading(section);
-
-            // Check if section contains code blocks or list items (need special handling to preserve formatting)
-            var hasCodeBlock = section.Lines.Any(l => l.Segments.Any(s => s.Type == RenderedSegmentType.Code));
-            var hasListItems = section.ListContentStartIndex >= 0;
-
-            if (hasCodeBlock || hasListItems)
-            {
-                // For sections with code blocks or lists, render heading separately then preserve line structure
-                if (!string.IsNullOrEmpty(heading))
+                private void AddSectionLine(StackPanel panel, RenderedCommentSection section,
+                    double fontSize, FontFamily fontFamily, Brush textBrush, Brush headingBrush,
+                    double listIndent, double itemSpacing)
                 {
-                    var headingBlock = new TextBlock
+                    var heading = GetSectionHeading(section);
+
+                    // Check if section contains code blocks or list items (need special handling to preserve formatting)
+                    var hasCodeBlock = section.Lines.Any(l => l.Segments.Any(s => s.Type == RenderedSegmentType.Code));
+                    var hasListItems = section.ListContentStartIndex >= 0;
+
+                    if (hasCodeBlock || hasListItems)
+                    {
+                        // For sections with code blocks or lists, render heading separately then preserve line structure
+                        if (!string.IsNullOrEmpty(heading))
+                        {
+                            var headingBlock = new TextBlock
                     {
                         FontFamily = fontFamily,
                         FontSize = fontSize,
