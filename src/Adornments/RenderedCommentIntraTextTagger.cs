@@ -630,7 +630,7 @@ namespace CommentsVS.Adornments
             {
                 for (var i = 0; i < typeParamSections.Count; i++)
                 {
-                    AddParameterLine(panel, typeParamSections[i], fontSize, fontFamily, textBrush, headingBrush,
+                    AddParameterLine(panel, typeParamSections[i], fontSize, fontFamily, textBrush,
                         listIndent, itemSpacing, isLast: i == typeParamSections.Count - 1);
                 }
                 // Add spacing after type params group if there are more sections
@@ -645,7 +645,7 @@ namespace CommentsVS.Adornments
             {
                 for (var i = 0; i < paramSections.Count; i++)
                 {
-                    AddParameterLine(panel, paramSections[i], fontSize, fontFamily, textBrush, headingBrush,
+                    AddParameterLine(panel, paramSections[i], fontSize, fontFamily, textBrush,
                         listIndent, itemSpacing, isLast: i == paramSections.Count - 1);
                 }
                 // Add spacing after params group if there are more sections
@@ -712,30 +712,30 @@ namespace CommentsVS.Adornments
                 lines.Add(currentLine.ToString());
             }
 
-                return lines;
-            }
+            return lines;
+        }
 
-            /// <summary>
-            /// Renders all content from a section, including prose text and list items.
-            /// </summary>
-            private void RenderSectionContent(StackPanel panel, RenderedCommentSection section,
-                double fontSize, FontFamily fontFamily, Brush textBrush, Brush headingBrush,
-                double listIndent, double itemSpacing, bool isSummary)
+        /// <summary>
+        /// Renders all content from a section, including prose text and list items.
+        /// </summary>
+        private void RenderSectionContent(StackPanel panel, RenderedCommentSection section,
+            double fontSize, FontFamily fontFamily, Brush textBrush, Brush headingBrush,
+            double listIndent, double itemSpacing, bool isSummary)
+        {
+            var isFirstLine = true;
+            var previousWasListItem = false;
+
+            foreach (RenderedLine line in section.Lines)
             {
-                var isFirstLine = true;
-                var previousWasListItem = false;
-
-                foreach (RenderedLine line in section.Lines)
+                if (line.IsBlank)
                 {
-                    if (line.IsBlank)
+                    // Render blank lines as spacers for consistent spacing
+                    if (!isFirstLine) // Skip leading blank lines
                     {
-                        // Render blank lines as spacers for consistent spacing
-                        if (!isFirstLine) // Skip leading blank lines
-                        {
-                            panel.Children.Add(CreateSpacer(itemSpacing * 1.5));
-                        }
-                        continue;
+                        panel.Children.Add(CreateSpacer(itemSpacing * 1.5));
                     }
+                    continue;
+                }
 
                 // Build the text content from segments
                 var lineText = string.Join("", line.Segments.Select(s => s.Text));
@@ -944,7 +944,7 @@ namespace CommentsVS.Adornments
         }
 
         private static void AddParameterLine(StackPanel panel, RenderedCommentSection section,
-            double fontSize, FontFamily fontFamily, Brush textBrush, Brush headingBrush,
+            double fontSize, FontFamily fontFamily, Brush textBrush,
             double listIndent, double itemSpacing, bool isLast)
         {
             var content = GetSectionContent(section);
@@ -974,11 +974,12 @@ namespace CommentsVS.Adornments
 
                 if (i == 0)
                 {
-                    // First line has bullet, name (styled), and start of content
+                    // First line has bullet, name (bold), and start of content
                     textBlock.Inlines.Add(new Run("• ") { Foreground = textBrush });
                     textBlock.Inlines.Add(new Run(name)
                     {
-                        Foreground = headingBrush
+                        Foreground = textBrush,
+                        FontWeight = FontWeights.Bold
                     });
                     // Get the content part after the prefix
                     var contentStart = prefix.Length;
@@ -991,32 +992,32 @@ namespace CommentsVS.Adornments
                         textBlock.Inlines.Add(new Run(" — ") { Foreground = textBrush });
                     }
                 }
-                        else
-                        {
-                            // Continuation lines are plain text
-                            textBlock.Text = lineText;
-                        }
-
-                        panel.Children.Add(textBlock);
-                    }
+                else
+                {
+                    // Continuation lines are plain text
+                    textBlock.Text = lineText;
                 }
 
-                private void AddSectionLine(StackPanel panel, RenderedCommentSection section,
-                    double fontSize, FontFamily fontFamily, Brush textBrush, Brush headingBrush,
-                    double listIndent, double itemSpacing)
+                panel.Children.Add(textBlock);
+            }
+        }
+
+        private void AddSectionLine(StackPanel panel, RenderedCommentSection section,
+            double fontSize, FontFamily fontFamily, Brush textBrush, Brush headingBrush,
+            double listIndent, double itemSpacing)
+        {
+            var heading = GetSectionHeading(section);
+
+            // Check if section contains code blocks or list items (need special handling to preserve formatting)
+            var hasCodeBlock = section.Lines.Any(l => l.Segments.Any(s => s.Type == RenderedSegmentType.Code));
+            var hasListItems = section.ListContentStartIndex >= 0;
+
+            if (hasCodeBlock || hasListItems)
+            {
+                // For sections with code blocks or lists, render heading separately then preserve line structure
+                if (!string.IsNullOrEmpty(heading))
                 {
-                    var heading = GetSectionHeading(section);
-
-                    // Check if section contains code blocks or list items (need special handling to preserve formatting)
-                    var hasCodeBlock = section.Lines.Any(l => l.Segments.Any(s => s.Type == RenderedSegmentType.Code));
-                    var hasListItems = section.ListContentStartIndex >= 0;
-
-                    if (hasCodeBlock || hasListItems)
-                    {
-                        // For sections with code blocks or lists, render heading separately then preserve line structure
-                        if (!string.IsNullOrEmpty(heading))
-                        {
-                            var headingBlock = new TextBlock
+                    var headingBlock = new TextBlock
                     {
                         FontFamily = fontFamily,
                         FontSize = fontSize,
