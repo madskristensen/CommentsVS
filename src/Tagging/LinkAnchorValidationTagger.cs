@@ -37,11 +37,6 @@ namespace CommentsVS.Tagging
         private ITextDocument _document;
         private bool _disposed;
 
-        /// <summary>
-        /// Maximum file size (in characters) to process. Files larger than this are skipped for performance.
-        /// </summary>
-        private const int _maxFileSize = 150_000;
-
         public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
 
         public LinkAnchorValidationTagger(ITextBuffer buffer)
@@ -119,7 +114,7 @@ namespace CommentsVS.Tagging
             ITextSnapshot snapshot = spans[0].Snapshot;
 
             // Skip large files for performance
-            if (snapshot.Length > _maxFileSize)
+            if (snapshot.Length > Constants.MaxFileSize)
             {
                 yield break;
             }

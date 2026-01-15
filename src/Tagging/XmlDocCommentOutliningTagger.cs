@@ -37,9 +37,10 @@ namespace CommentsVS.Tagging
     /// Provides outlining regions for XML documentation comments. When rendered comments are enabled, outlining is
     /// disabled to avoid conflicts with the IntraTextAdornment that replaces the comment text.
     /// </summary>
-    internal sealed class XmlDocCommentOutliningTagger : ITagger<IOutliningRegionTag>
+    internal sealed class XmlDocCommentOutliningTagger : ITagger<IOutliningRegionTag>, IDisposable
     {
         private readonly ITextBuffer _buffer;
+        private bool _disposed;
 
         public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
 
@@ -117,8 +118,20 @@ namespace CommentsVS.Tagging
                     isDefaultCollapsed: collapseByDefault,
                     isImplementation: false);
 
-                yield return new TagSpan<IOutliningRegionTag>(blockSpan, tag);
-            }
-        }
-    }
-}
+                                yield return new TagSpan<IOutliningRegionTag>(blockSpan, tag);
+                            }
+                        }
+
+                        public void Dispose()
+                        {
+                            if (_disposed)
+                            {
+                                return;
+                            }
+
+                            _disposed = true;
+                            _buffer.Changed -= OnBufferChanged;
+                            SetRenderingModeHelper.RenderedCommentsStateChanged -= OnRenderedStateChanged;
+                        }
+                    }
+                }

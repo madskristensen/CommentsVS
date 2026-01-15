@@ -86,6 +86,7 @@
     <Compile Include="Services\AnchorExporter.cs" />
     <Compile Include="Services\CommentPatterns.cs" />
     <Compile Include="Services\CommentReflowEngine.cs" />
+    <Compile Include="Services\CommentSpanHelper.cs" />
     <Compile Include="Services\Constants.cs" />
     <Compile Include="Services\ContentTypes.cs" />
     <Compile Include="Services\FilePathResolver.cs" />

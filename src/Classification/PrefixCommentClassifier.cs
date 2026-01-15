@@ -25,11 +25,6 @@ namespace CommentsVS.Classification
         private readonly IClassificationType _disabledType;
         private readonly IClassificationType _quoteType;
 
-        /// <summary>
-        /// Maximum file size (in characters) to process. Files larger than this are skipped for performance.
-        /// </summary>
-        private const int _maxFileSize = 150_000;
-
         // Regex patterns for different comment styles
         // C-style: // ! text (C#, C++, TypeScript, JavaScript, Razor, F#)
         private static readonly Regex _cStyleRegex = new(
@@ -117,7 +112,7 @@ namespace CommentsVS.Classification
             }
 
             // Skip large files for performance
-            if (span.Snapshot.Length > _maxFileSize)
+            if (span.Snapshot.Length > Constants.MaxFileSize)
             {
                 return result;
             }
