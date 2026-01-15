@@ -952,12 +952,13 @@ namespace CommentsVS.Adornments
         {
             var heading = GetSectionHeading(section);
 
-            // Check if section contains code blocks (needs special handling to preserve formatting)
+            // Check if section contains code blocks or list items (need special handling to preserve formatting)
             var hasCodeBlock = section.Lines.Any(l => l.Segments.Any(s => s.Type == RenderedSegmentType.Code));
+            var hasListItems = section.ListContentStartIndex >= 0;
 
-            if (hasCodeBlock)
+            if (hasCodeBlock || hasListItems)
             {
-                // For sections with code blocks, render heading separately then preserve line structure
+                // For sections with code blocks or lists, render heading separately then preserve line structure
                 if (!string.IsNullOrEmpty(heading))
                 {
                     var headingBlock = new TextBlock
@@ -986,7 +987,8 @@ namespace CommentsVS.Adornments
                         FontFamily = fontFamily,
                         FontSize = fontSize,
                         Foreground = textBrush,
-                        TextWrapping = TextWrapping.NoWrap,
+                        TextWrapping = TextWrapping.Wrap,
+                        MaxWidth = 800,
                         Margin = new Thickness(0, 0, 0, 2)
                     };
 
@@ -996,7 +998,18 @@ namespace CommentsVS.Adornments
                     {
                         // Use monospace font for code
                         textBlock.FontFamily = new FontFamily("Consolas");
+                        textBlock.TextWrapping = TextWrapping.NoWrap;
                         textBlock.Margin = new Thickness(listIndent, 0, 0, 2);
+                    }
+
+                    // Check if this line is a list item (starts with bullet or number)
+                    var lineText = string.Join("", line.Segments.Select(s => s.Text));
+                    var trimmedText = lineText.TrimStart();
+                    var isListItem = trimmedText.StartsWith("•") ||
+                                      (trimmedText.Length > 0 && char.IsDigit(trimmedText[0]) && trimmedText.Contains(". "));
+                    if (isListItem)
+                    {
+                        textBlock.Margin = new Thickness(listIndent * 0.5, 0, 0, itemSpacing * 0.5);
                     }
 
                     foreach (RenderedSegment segment in line.Segments)
@@ -1010,7 +1023,7 @@ namespace CommentsVS.Adornments
             }
             else
             {
-                // For simple sections without code, use the original flattened approach
+                // For simple sections without code or lists, use the flattened approach
                 var content = GetSectionContent(section);
                 var fullText = heading + " " + content;
 
