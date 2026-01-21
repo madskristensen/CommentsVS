@@ -5,6 +5,7 @@ using CommentsVS.Options;
 using CommentsVS.Services;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Utilities;
 
 namespace CommentsVS.Classification
 {
@@ -67,7 +68,7 @@ namespace CommentsVS.Classification
 
         private static (Regex regex, string fastCheck) GetCommentPatternForContentType(ITextBuffer buffer)
         {
-            var contentType = buffer.ContentType;
+            IContentType contentType = buffer.ContentType;
 
             // VB uses ' for comments
             if (contentType.IsOfType(SupportedContentTypes.VisualBasic))

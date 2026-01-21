@@ -115,6 +115,23 @@ namespace CommentsVS.ToolWindows
 
 
         /// <summary>
+        /// Gets all distinct anchor type display names present in the cache.
+        /// </summary>
+        /// <returns>A set of unique type display names (e.g., "TODO", "HACK", "PERF").</returns>
+        public HashSet<string> GetDistinctTypes()
+        {
+            var types = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (IReadOnlyList<AnchorItem> anchors in _fileAnchors.Values)
+            {
+                foreach (AnchorItem anchor in anchors)
+                {
+                    types.Add(anchor.TypeDisplayName);
+                }
+            }
+            return types;
+        }
+
+        /// <summary>
         /// Clears all cached data.
         /// </summary>
         public void Clear()

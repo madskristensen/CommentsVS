@@ -1,12 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Linq;
 using System.Runtime.InteropServices;
-using CommentsVS.Options;
 using CommentsVS.ToolWindows;
-using Microsoft.VisualStudio;
-using Microsoft.VisualStudio.Shell;
 
 namespace CommentsVS.Commands
 {
@@ -17,9 +13,9 @@ namespace CommentsVS.Commands
     {
         private static TypeFilterComboCommand _instance;
         private readonly Package _package;
-        private OleMenuCommand _command;
+        private readonly OleMenuCommand _command;
 
-        private static readonly string[] BuiltInTypeOptions =
+        private static readonly string[] _builtInTypeOptions =
         [
             "All Types",
             "TODO",
@@ -102,22 +98,39 @@ namespace CommentsVS.Commands
         }
 
         /// <summary>
-        /// Gets all type options including built-in and custom tags from settings.
+        /// Gets type options filtered to only include types that exist in the current anchor list.
         /// </summary>
         private string[] GetAllTypeOptions()
         {
-            var customTags = General.Instance.GetCustomTagsSet();
-            if (customTags.Count == 0)
+            // Get distinct types from the current cache
+            HashSet<string> existingTypes = CodeAnchorsToolWindow.Instance?.Cache?.GetDistinctTypes();
+
+            if (existingTypes == null || existingTypes.Count == 0)
             {
-                return BuiltInTypeOptions;
+                // No anchors in cache - return just "All Types"
+                return ["All Types"];
             }
 
-            // Filter out custom tags that match built-in tags (case-insensitive)
-            // and return built-in options followed by sorted custom tags
-            var builtInTagNames = new HashSet<string>(BuiltInTypeOptions.Skip(1), StringComparer.OrdinalIgnoreCase); // Skip "All Types"
-            var uniqueCustomTags = customTags.Where(tag => !builtInTagNames.Contains(tag)).OrderBy(tag => tag);
-            
-            return [.. BuiltInTypeOptions, .. uniqueCustomTags];
+            // Build list with "All Types" first, then only types that exist in the cache
+            var result = new List<string> { "All Types" };
+
+            // Add built-in types that exist in the cache (preserving order)
+            foreach (var builtInType in _builtInTypeOptions.Skip(1)) // Skip "All Types" since we already added it
+            {
+                if (existingTypes.Contains(builtInType))
+                {
+                    result.Add(builtInType);
+                }
+            }
+
+            // Add custom types that exist in the cache (sorted)
+            var builtInSet = new HashSet<string>(_builtInTypeOptions.Skip(1), StringComparer.OrdinalIgnoreCase);
+            IOrderedEnumerable<string> customTypes = existingTypes
+                .Where(t => !builtInSet.Contains(t))
+                .OrderBy(t => t);
+            result.AddRange(customTypes);
+
+            return [.. result];
         }
 
         private void ApplyTypeFilter(string typeText)

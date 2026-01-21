@@ -57,5 +57,7 @@ namespace CommentsVS
         public const int ExportAsMarkdown = 0x0216;
         public const int ExportAsJson = 0x0217;
         public const int ExportToFile = 0x0218;
+        public const int CodeAnchorsSettingsGroup = 0x0219;
+        public const int ToolbarOpenSettings = 0x021A;
     }
 }

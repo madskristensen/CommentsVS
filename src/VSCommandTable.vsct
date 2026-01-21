@@ -75,6 +75,10 @@
       <Group guid="CommentsVS" id="CodeAnchorsExportGroup" priority="0x0300">
         <Parent guid="CommentsVS" id="CodeAnchorsToolbar"/>
       </Group>
+      <!-- Code Anchors settings group -->
+      <Group guid="CommentsVS" id="CodeAnchorsSettingsGroup" priority="0x0400">
+        <Parent guid="CommentsVS" id="CodeAnchorsToolbar"/>
+      </Group>
       <!-- Export menu items group -->
       <Group guid="CommentsVS" id="ExportMenuItemsGroup" priority="0x0100">
         <Parent guid="CommentsVS" id="ExportSplitButtonMenu"/>
@@ -282,6 +286,18 @@
           <LocCanonicalName>.CommentsVS.ExportToFile</LocCanonicalName>
         </Strings>
       </Button>
+      <!-- Settings (toolbar button - icon only) -->
+      <Button guid="CommentsVS" id="ToolbarOpenSettings" priority="0x0100" type="Button">
+        <Parent guid="CommentsVS" id="CodeAnchorsSettingsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Settings" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Settings</ButtonText>
+          <ToolTipText>Open Comment Studio settings</ToolTipText>
+          <CanonicalName>.CommentsVS.ToolbarOpenSettings</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ToolbarOpenSettings</LocCanonicalName>
+        </Strings>
+      </Button>
     </Buttons>
   </Commands>
 
@@ -335,6 +351,8 @@
       <IDSymbol name="ExportAsMarkdown" value="0x0216" />
       <IDSymbol name="ExportAsJson" value="0x0217" />
       <IDSymbol name="ExportToFile" value="0x0218" />
+      <IDSymbol name="CodeAnchorsSettingsGroup" value="0x0219" />
+      <IDSymbol name="ToolbarOpenSettings" value="0x021A" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>
