@@ -115,14 +115,14 @@ namespace CommentsVS.Commands
             return [.. BuiltInTypeOptions, .. customTags.OrderBy(tag => tag)];
         }
 
-                        private void ApplyTypeFilter(string typeText)
-                        {
-                            ThreadHelper.ThrowIfNotOnUIThread();
+        private void ApplyTypeFilter(string typeText)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
 
-                            // Convert "All Types" to "All" to match existing filter logic
-                            var filterValue = typeText == "All Types" ? "All" : typeText;
+            // Convert "All Types" to "All" to match existing filter logic
+            var filterValue = typeText == "All Types" ? "All" : typeText;
 
-                            CodeAnchorsToolWindow.Instance?.SetTypeFilter(filterValue);
-                        }
-                    }
-                }
+            CodeAnchorsToolWindow.Instance?.SetTypeFilter(filterValue);
+        }
+    }
+}
