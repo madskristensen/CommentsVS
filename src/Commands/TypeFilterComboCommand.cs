@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -111,8 +112,12 @@ namespace CommentsVS.Commands
                 return BuiltInTypeOptions;
             }
 
-            // Return built-in options followed by sorted custom tags
-            return [.. BuiltInTypeOptions, .. customTags.OrderBy(tag => tag)];
+            // Filter out custom tags that match built-in tags (case-insensitive)
+            // and return built-in options followed by sorted custom tags
+            var builtInTagNames = new HashSet<string>(BuiltInTypeOptions.Skip(1), StringComparer.OrdinalIgnoreCase); // Skip "All Types"
+            var uniqueCustomTags = customTags.Where(tag => !builtInTagNames.Contains(tag)).OrderBy(tag => tag);
+            
+            return [.. BuiltInTypeOptions, .. uniqueCustomTags];
         }
 
         private void ApplyTypeFilter(string typeText)
