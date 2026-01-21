@@ -1,6 +1,8 @@
 using System;
 using System.ComponentModel.Design;
+using System.Linq;
 using System.Runtime.InteropServices;
+using CommentsVS.Options;
 using CommentsVS.ToolWindows;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
@@ -16,7 +18,7 @@ namespace CommentsVS.Commands
         private readonly Package _package;
         private OleMenuCommand _command;
 
-        private static readonly string[] TypeOptions =
+        private static readonly string[] BuiltInTypeOptions =
         [
             "All Types",
             "TODO",
@@ -72,7 +74,8 @@ namespace CommentsVS.Commands
                 {
                     // User selected something
                     var selectedType = input.ToString();
-                    if (Array.IndexOf(TypeOptions, selectedType) >= 0)
+                    var allOptions = GetAllTypeOptions();
+                    if (Array.IndexOf(allOptions, selectedType) >= 0)
                     {
                         _currentTypeText = selectedType;
                         ApplyTypeFilter(selectedType);
@@ -90,10 +93,26 @@ namespace CommentsVS.Commands
 
                 if (vOut != IntPtr.Zero)
                 {
-                    // Return the list of options
-                    Marshal.GetNativeVariantForObject(TypeOptions, vOut);
+                    // Return the list of options (built-in + custom tags)
+                    var allOptions = GetAllTypeOptions();
+                    Marshal.GetNativeVariantForObject(allOptions, vOut);
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets all type options including built-in and custom tags from settings.
+        /// </summary>
+        private string[] GetAllTypeOptions()
+        {
+            var customTags = General.Instance.GetCustomTagsSet();
+            if (customTags.Count == 0)
+            {
+                return BuiltInTypeOptions;
+            }
+
+            // Return built-in options followed by sorted custom tags
+            return [.. BuiltInTypeOptions, .. customTags.OrderBy(tag => tag)];
         }
 
                         private void ApplyTypeFilter(string typeText)
