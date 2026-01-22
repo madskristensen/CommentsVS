@@ -14,14 +14,14 @@
         <Strings>
           <ButtonText>Comment Studio</ButtonText>
           <CommandName>Comment Studio</CommandName>
-          <CanonicalName>.CommentsVS.CommentStudio</CanonicalName>
+          <LocCanonicalName>.CommentsVS.CommentStudio</LocCanonicalName>
         </Strings>
       </Menu>
       <!-- Code Anchors Tool Window Toolbar -->
       <Menu guid="CommentsVS" id="CodeAnchorsToolbar" type="ToolWindowToolbar">
         <Strings>
           <ButtonText>Code Anchors Toolbar</ButtonText>
-          <CanonicalName>.CommentsVS.CodeAnchorsToolbar</CanonicalName>
+          <LocCanonicalName>.CommentsVS.CodeAnchorsToolbar</LocCanonicalName>
         </Strings>
       </Menu>
       <!-- Export Split Button Menu -->
@@ -30,7 +30,7 @@
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
           <ButtonText>Export</ButtonText>
-          <CanonicalName>.CommentsVS.ExportSplitButtonMenu</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ExportSplitButtonMenu</LocCanonicalName>
         </Strings>
       </Menu>
     </Menus>
@@ -95,7 +95,7 @@
         <Parent guid="CommentsVS" id="CodeAnchorsScopeGroup"/>
         <Strings>
           <ButtonText>Entire Solution</ButtonText>
-          <CanonicalName>.CommentsVS.ScopeFilterCombo</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ScopeFilterCombo</LocCanonicalName>
         </Strings>
       </Combo>
       <!-- Type Filter Combo for Code Anchors toolbar -->
@@ -103,7 +103,7 @@
         <Parent guid="CommentsVS" id="CodeAnchorsTypeFilterGroup"/>
         <Strings>
           <ButtonText>All Types</ButtonText>
-          <CanonicalName>.CommentsVS.TypeFilterCombo</CanonicalName>
+          <LocCanonicalName>.CommentsVS.TypeFilterCombo</LocCanonicalName>
         </Strings>
       </Combo>
     </Combos>
@@ -220,7 +220,7 @@
       <!-- Toggle Group by File (toolbar button) -->
       <Button guid="CommentsVS" id="ToggleGroupByFile" priority="0x0200" type="Button">
         <Parent guid="CommentsVS" id="CodeAnchorsToolbarGroup"/>
-        <Icon guid="ImageCatalogGuid" id="GroupByType" />
+        <Icon guid="ImageCatalogGuid" id="BuildCollection" />
         <CommandFlag>IconIsMoniker</CommandFlag>
         <CommandFlag>DynamicVisibility</CommandFlag>
         <CommandFlag>IconAndText</CommandFlag>
