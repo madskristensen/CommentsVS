@@ -143,7 +143,7 @@ namespace CommentsVS.Services
 
         private static void EnsurePatternsCurrent()
         {
-            var currentCustomTags = General.Instance.CustomTags ?? string.Empty;
+            var currentCustomTags = General.Instance?.CustomTags ?? string.Empty;
 
             if (_cachedAnchorKeywordsPattern != null && _cachedCustomTags == currentCustomTags)
             {
@@ -157,7 +157,7 @@ namespace CommentsVS.Services
 
         private static string BuildAnchorKeywordsPattern()
         {
-            HashSet<string> customTags = General.Instance.GetCustomTagsSet();
+            HashSet<string> customTags = General.Instance?.GetCustomTagsSet() ?? [];
             if (customTags.Count == 0)
             {
                 return BuiltInAnchorKeywordsPattern;
