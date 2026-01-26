@@ -92,7 +92,7 @@ namespace CommentsVS.Handlers
 
                 // Schedule debounced reflow check
                 // Note: Fire-and-forget is intentional here for debouncing UX, but we catch all exceptions
-                _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                 {
                     try
                     {
@@ -121,7 +121,7 @@ namespace CommentsVS.Handlers
                         // Log unexpected exceptions to prevent silent failures
                         await ex.LogAsync();
                     }
-                });
+                }).FireAndForget();
             }
 
             private static bool IsSingleCharacterTyping(TextContentChangedEventArgs e)

@@ -1,3 +1,4 @@
+#nullable disable
 using Microsoft.VisualStudio.Text;
 
 namespace CommentsVS.Services;
@@ -8,7 +9,7 @@ namespace CommentsVS.Services;
 /// </summary>
 internal sealed class XmlDocCommentCache
 {
-    public static XmlDocCommentCache? GetOrCreate(ITextBuffer buffer) => null;
-    
-    public IReadOnlyList<XmlDocCommentBlock>? GetCommentBlocks(ITextSnapshot snapshot, LanguageCommentStyle commentStyle) => null;
+    public static XmlDocCommentCache GetOrCreate(ITextBuffer buffer) => null;
+
+    public IReadOnlyList<XmlDocCommentBlock> GetCommentBlocks(ITextSnapshot snapshot, LanguageCommentStyle commentStyle) => null;
 }

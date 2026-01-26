@@ -146,17 +146,20 @@ namespace CommentsVS.ToolWindows
 
         private void OnCacheUpdated(object sender, System.EventArgs e)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             RefreshAnchorsFromCache();
         }
 
         private void OnSolutionClosedEvent(object sender, System.EventArgs e)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             _control?.ClearAnchors();
             _control?.UpdateStatus("No solution loaded");
         }
 
         private void OnDocumentScanned(object sender, System.EventArgs e)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             RefreshAnchorsFromCache();
         }
 
