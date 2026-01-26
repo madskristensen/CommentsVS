@@ -227,124 +227,124 @@ namespace CommentsVS.ToolWindows
                 }
 
                 // Refresh UI with scanned anchors
-                        RefreshAnchorsFromCache();
+                RefreshAnchorsFromCache();
 
-                        // Show scan result in VS StatusBar
-                        await VS.StatusBar.ShowMessageAsync($"Code Anchors: Scanned {documentCount} document(s), found {anchorCount} anchor(s)");
-                    }
-                    catch
-                    {
-                        // Ignore errors getting open documents
-                    }
-                }
+                // Show scan result in VS StatusBar
+                await VS.StatusBar.ShowMessageAsync($"Code Anchors: Scanned {documentCount} document(s), found {anchorCount} anchor(s)");
+            }
+            catch
+            {
+                // Ignore errors getting open documents
+            }
+        }
 
-                /// <summary>
-                /// Scans open documents that are not part of the solution (miscellaneous files).
-                /// </summary>
-                /// <returns>The number of miscellaneous files scanned and anchors found.</returns>
-                private async Task<(int fileCount, int anchorCount)> ScanMiscellaneousFilesAsync()
+        /// <summary>
+        /// Scans open documents that are not part of the solution (miscellaneous files).
+        /// </summary>
+        /// <returns>The number of miscellaneous files scanned and anchors found.</returns>
+        private async Task<(int fileCount, int anchorCount)> ScanMiscellaneousFilesAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            var fileCount = 0;
+            var anchorCount = 0;
+
+            try
+            {
+                // Use DTE to get all open documents
+                EnvDTE.DTE dte = await VS.GetServiceAsync<EnvDTE.DTE, EnvDTE.DTE>();
+                if (dte?.Documents == null || dte.Documents.Count == 0)
                 {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                    var fileCount = 0;
-                    var anchorCount = 0;
-
-                    try
-                    {
-                        // Use DTE to get all open documents
-                        EnvDTE.DTE dte = await VS.GetServiceAsync<EnvDTE.DTE, EnvDTE.DTE>();
-                        if (dte?.Documents == null || dte.Documents.Count == 0)
-                        {
-                            return (0, 0);
-                        }
-
-                        // Get the set of files already in the cache (from solution scan)
-                        var cachedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                        foreach (AnchorItem anchor in _cache.GetAllAnchors())
-                        {
-                            if (!string.IsNullOrEmpty(anchor.FilePath))
-                            {
-                                cachedFiles.Add(anchor.FilePath);
-                            }
-                        }
-
-                        // Also get all files that were scanned (even if they had no anchors)
-                        // by checking which open documents are part of the solution
-                        Solution solution = await VS.Solutions.GetCurrentSolutionAsync();
-                        var solutionDir = !string.IsNullOrEmpty(solution?.FullPath)
-                            ? System.IO.Path.GetDirectoryName(solution.FullPath)
-                            : null;
-
-                        foreach (EnvDTE.Document doc in dte.Documents)
-                        {
-                            var filePath = doc?.FullName;
-                            if (string.IsNullOrEmpty(filePath))
-                            {
-                                continue;
-                            }
-
-                            // Skip if file is already in cache (was part of solution scan)
-                            if (cachedFiles.Contains(filePath))
-                            {
-                                continue;
-                            }
-
-                            // Skip if file is within solution directory (likely part of solution, just had no anchors)
-                            if (!string.IsNullOrEmpty(solutionDir) &&
-                                filePath.StartsWith(solutionDir, StringComparison.OrdinalIgnoreCase))
-                            {
-                                continue;
-                            }
-
-                            // This is a miscellaneous file - scan it
-                            IReadOnlyList<AnchorItem> anchors = await _scanner.ScanFileAsync(filePath, projectName: null);
-                            _cache.AddOrUpdateFile(filePath, anchors);
-                            fileCount++;
-                            anchorCount += anchors.Count;
-                        }
-                    }
-                    catch
-                    {
-                        // Ignore errors
-                    }
-
-                    return (fileCount, anchorCount);
+                    return (0, 0);
                 }
 
-                /// <summary>
-                /// Refreshes the anchors by scanning either the solution or open documents.
-                /// </summary>
-                public async Task RefreshAsync()
+                // Get the set of files already in the cache (from solution scan)
+                var cachedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (AnchorItem anchor in _cache.GetAllAnchors())
                 {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                    // Check if a solution is open
-                    var solutionOpen = await VS.Solutions.IsOpenAsync();
-
-                    if (solutionOpen)
+                    if (!string.IsNullOrEmpty(anchor.FilePath))
                     {
-                        // Scan the full solution
-                        await ScanSolutionAsync();
-
-                        // Also scan any miscellaneous files that are open but not part of the solution
-                        (int miscFileCount, int miscAnchorCount) = await ScanMiscellaneousFilesAsync();
-                        if (miscFileCount > 0)
-                        {
-                            // Refresh UI to include misc file anchors
-                            RefreshAnchorsFromCache();
-
-                            // Update status bar to include misc files info
-                            var totalAnchors = _cache.TotalAnchorCount;
-                            await VS.StatusBar.ShowMessageAsync(
-                                $"Code Anchors: Found {totalAnchors} anchor(s) ({miscAnchorCount} from {miscFileCount} misc file(s))");
-                        }
-                    }
-                    else
-                    {
-                        // No solution - scan open documents instead
-                        await ScanOpenDocumentsAsync();
+                        cachedFiles.Add(anchor.FilePath);
                     }
                 }
+
+                // Also get all files that were scanned (even if they had no anchors)
+                // by checking which open documents are part of the solution
+                Solution solution = await VS.Solutions.GetCurrentSolutionAsync();
+                var solutionDir = !string.IsNullOrEmpty(solution?.FullPath)
+                    ? System.IO.Path.GetDirectoryName(solution.FullPath)
+                    : null;
+
+                foreach (EnvDTE.Document doc in dte.Documents)
+                {
+                    var filePath = doc?.FullName;
+                    if (string.IsNullOrEmpty(filePath))
+                    {
+                        continue;
+                    }
+
+                    // Skip if file is already in cache (was part of solution scan)
+                    if (cachedFiles.Contains(filePath))
+                    {
+                        continue;
+                    }
+
+                    // Skip if file is within solution directory (likely part of solution, just had no anchors)
+                    if (!string.IsNullOrEmpty(solutionDir) &&
+                        filePath.StartsWith(solutionDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    // This is a miscellaneous file - scan it
+                    IReadOnlyList<AnchorItem> anchors = await _scanner.ScanFileAsync(filePath, projectName: null);
+                    _cache.AddOrUpdateFile(filePath, anchors);
+                    fileCount++;
+                    anchorCount += anchors.Count;
+                }
+            }
+            catch
+            {
+                // Ignore errors
+            }
+
+            return (fileCount, anchorCount);
+        }
+
+        /// <summary>
+        /// Refreshes the anchors by scanning either the solution or open documents.
+        /// </summary>
+        public async Task RefreshAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            // Check if a solution is open
+            var solutionOpen = await VS.Solutions.IsOpenAsync();
+
+            if (solutionOpen)
+            {
+                // Scan the full solution
+                await ScanSolutionAsync();
+
+                // Also scan any miscellaneous files that are open but not part of the solution
+                (var miscFileCount, var miscAnchorCount) = await ScanMiscellaneousFilesAsync();
+                if (miscFileCount > 0)
+                {
+                    // Refresh UI to include misc file anchors
+                    RefreshAnchorsFromCache();
+
+                    // Update status bar to include misc files info
+                    var totalAnchors = _cache.TotalAnchorCount;
+                    await VS.StatusBar.ShowMessageAsync(
+                        $"Code Anchors: Found {totalAnchors} anchor(s) ({miscAnchorCount} from {miscFileCount} misc file(s))");
+                }
+            }
+            else
+            {
+                // No solution - scan open documents instead
+                await ScanOpenDocumentsAsync();
+            }
+        }
 
         /// <summary>
         /// Scans the entire solution for anchors in the background.
@@ -413,34 +413,34 @@ namespace CommentsVS.ToolWindows
         {
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                        _control?.UpdateStatus($"Scanning... {e.ProcessedFiles}/{e.TotalFiles} files ({e.AnchorsFound} anchors)");
-                    }).FireAndForget();
-                }
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                _control?.UpdateStatus($"Scanning... {e.ProcessedFiles}/{e.TotalFiles} files ({e.AnchorsFound} anchors)");
+            }).FireAndForget();
+        }
 
-                private void OnScanCompleted(object sender, ScanCompletedEventArgs e)
+        private void OnScanCompleted(object sender, ScanCompletedEventArgs e)
+        {
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                if (e.WasCancelled)
                 {
-                    ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-                    {
-                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                        if (e.WasCancelled)
-                        {
-                            _control?.UpdateStatus(e.ErrorMessage ?? "Scan cancelled");
-                        }
-                        else
-                        {
-                            // Update the control with all anchors from cache
-                            RefreshAnchorsFromCache();
-
-                            // Save cache to disk after successful scan
-                            await _solutionEventCoordinator.SaveCacheAsync();
-
-                            // Show scan result in VS StatusBar
-                            await VS.StatusBar.ShowMessageAsync($"Code Anchors: Found {e.TotalAnchors} anchor(s)");
-                        }
-                    }).FireAndForget();
+                    _control?.UpdateStatus(e.ErrorMessage ?? "Scan cancelled");
                 }
+                else
+                {
+                    // Update the control with all anchors from cache
+                    RefreshAnchorsFromCache();
+
+                    // Save cache to disk after successful scan
+                    await _solutionEventCoordinator.SaveCacheAsync();
+
+                    // Show scan result in VS StatusBar
+                    await VS.StatusBar.ShowMessageAsync($"Code Anchors: Found {e.TotalAnchors} anchor(s)");
+                }
+            }).FireAndForget();
+        }
 
         private void RefreshAnchorsFromCache()
         {
