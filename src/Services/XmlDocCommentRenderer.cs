@@ -995,6 +995,13 @@ namespace CommentsVS.Services
             {
                 var doc = XDocument.Parse(wrappedXml);
 
+                // Check for inheritdoc tag
+                XElement inheritdocNode = doc.Root.Element("inheritdoc");
+                if (inheritdocNode != null)
+                {
+                    return "(Documentation inherited)";
+                }
+
                 // Find the summary element
                 XElement summaryNode = doc.Root.Element("summary");
                 if (summaryNode == null)

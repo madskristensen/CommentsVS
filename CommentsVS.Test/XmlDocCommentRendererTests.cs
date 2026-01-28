@@ -378,4 +378,76 @@ public sealed class XmlDocCommentRendererTests
     }
 
     #endregion
+
+    #region InheritDoc Tests
+
+    [TestMethod]
+    public void GetStrippedSummary_WithInheritDocSelfClosing_ReturnsInheritedMessage()
+    {
+        var block = new XmlDocCommentBlock(
+            span: new Microsoft.VisualStudio.Text.Span(0, 20),
+            startLine: 0,
+            endLine: 0,
+            indentation: "    ",
+            xmlContent: "<inheritdoc />",
+            commentStyle: LanguageCommentStyles.CSharp,
+            isMultiLineStyle: false);
+
+        string result = XmlDocCommentRenderer.GetStrippedSummary(block);
+
+        Assert.AreEqual("(Documentation inherited)", result);
+    }
+
+    [TestMethod]
+    public void GetStrippedSummary_WithInheritDocOpenClose_ReturnsInheritedMessage()
+    {
+        var block = new XmlDocCommentBlock(
+            span: new Microsoft.VisualStudio.Text.Span(0, 30),
+            startLine: 0,
+            endLine: 0,
+            indentation: "    ",
+            xmlContent: "<inheritdoc></inheritdoc>",
+            commentStyle: LanguageCommentStyles.CSharp,
+            isMultiLineStyle: false);
+
+        string result = XmlDocCommentRenderer.GetStrippedSummary(block);
+
+        Assert.AreEqual("(Documentation inherited)", result);
+    }
+
+    [TestMethod]
+    public void GetStrippedSummary_WithInheritDocCref_ReturnsInheritedMessage()
+    {
+        var block = new XmlDocCommentBlock(
+            span: new Microsoft.VisualStudio.Text.Span(0, 40),
+            startLine: 0,
+            endLine: 0,
+            indentation: "    ",
+            xmlContent: "<inheritdoc cref=\"BaseClass.Method\" />",
+            commentStyle: LanguageCommentStyles.CSharp,
+            isMultiLineStyle: false);
+
+        string result = XmlDocCommentRenderer.GetStrippedSummary(block);
+
+        Assert.AreEqual("(Documentation inherited)", result);
+    }
+
+    [TestMethod]
+    public void GetStrippedSummary_WithSummary_ReturnsContent()
+    {
+        var block = new XmlDocCommentBlock(
+            span: new Microsoft.VisualStudio.Text.Span(0, 50),
+            startLine: 0,
+            endLine: 0,
+            indentation: "    ",
+            xmlContent: "<summary>This is a test summary</summary>",
+            commentStyle: LanguageCommentStyles.CSharp,
+            isMultiLineStyle: false);
+
+        string result = XmlDocCommentRenderer.GetStrippedSummary(block);
+
+        Assert.AreEqual("This is a test summary", result);
+    }
+
+    #endregion
 }
