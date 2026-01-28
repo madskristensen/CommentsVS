@@ -390,7 +390,7 @@ public sealed class XmlDocCommentRendererTests
             endLine: 0,
             indentation: "    ",
             xmlContent: "<inheritdoc />",
-            commentStyle: LanguageCommentStyles.CSharp,
+            commentStyle: LanguageCommentStyle.CSharp,
             isMultiLineStyle: false);
 
         string result = XmlDocCommentRenderer.GetStrippedSummary(block);
@@ -407,7 +407,7 @@ public sealed class XmlDocCommentRendererTests
             endLine: 0,
             indentation: "    ",
             xmlContent: "<inheritdoc></inheritdoc>",
-            commentStyle: LanguageCommentStyles.CSharp,
+            commentStyle: LanguageCommentStyle.CSharp,
             isMultiLineStyle: false);
 
         string result = XmlDocCommentRenderer.GetStrippedSummary(block);
@@ -424,7 +424,7 @@ public sealed class XmlDocCommentRendererTests
             endLine: 0,
             indentation: "    ",
             xmlContent: "<inheritdoc cref=\"BaseClass.Method\" />",
-            commentStyle: LanguageCommentStyles.CSharp,
+            commentStyle: LanguageCommentStyle.CSharp,
             isMultiLineStyle: false);
 
         string result = XmlDocCommentRenderer.GetStrippedSummary(block);
@@ -441,7 +441,7 @@ public sealed class XmlDocCommentRendererTests
             endLine: 0,
             indentation: "    ",
             xmlContent: "<summary>This is a test summary</summary>",
-            commentStyle: LanguageCommentStyles.CSharp,
+            commentStyle: LanguageCommentStyle.CSharp,
             isMultiLineStyle: false);
 
         string result = XmlDocCommentRenderer.GetStrippedSummary(block);
@@ -459,7 +459,7 @@ public sealed class XmlDocCommentRendererTests
             endLine: 0,
             indentation: "    ",
             xmlContent: "<inheritdoc /><summary>This should be ignored</summary>",
-            commentStyle: LanguageCommentStyles.CSharp,
+            commentStyle: LanguageCommentStyle.CSharp,
             isMultiLineStyle: false);
 
         string result = XmlDocCommentRenderer.GetStrippedSummary(block);
