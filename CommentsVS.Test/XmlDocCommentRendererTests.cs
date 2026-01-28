@@ -449,5 +449,24 @@ public sealed class XmlDocCommentRendererTests
         Assert.AreEqual("This is a test summary", result);
     }
 
+    [TestMethod]
+    public void GetStrippedSummary_WithInheritDocAndSummary_PrioritizesInheritDoc()
+    {
+        // While technically invalid, test behavior when both tags are present
+        var block = new XmlDocCommentBlock(
+            span: new Microsoft.VisualStudio.Text.Span(0, 80),
+            startLine: 0,
+            endLine: 0,
+            indentation: "    ",
+            xmlContent: "<inheritdoc /><summary>This should be ignored</summary>",
+            commentStyle: LanguageCommentStyles.CSharp,
+            isMultiLineStyle: false);
+
+        string result = XmlDocCommentRenderer.GetStrippedSummary(block);
+
+        Assert.AreEqual("(Documentation inherited)", result,
+            "inheritdoc should take precedence over summary");
+    }
+
     #endregion
 }
