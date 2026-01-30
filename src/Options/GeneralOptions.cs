@@ -190,6 +190,12 @@ namespace CommentsVS.Options
         [DefaultValue("")]
         public string CustomTags { get; set; } = "";
 
+        [Category(_tagsCategory)]
+        [DisplayName("Show scrollbar markers")]
+        [Description("When enabled, comment tags will be shown as colored marks in the vertical scrollbar (overview margin). Colors can be customized in Tools > Options > Environment > Fonts and Colors under 'Comment Tag Scrollbar Mark - [Type]'.")]
+        [DefaultValue(true)]
+        public bool EnableScrollbarMarkers { get; set; } = true;
+
         private const string _linksCategory = "Issue Links";
 
         [Category(_linksCategory)]

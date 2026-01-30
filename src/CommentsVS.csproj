@@ -57,6 +57,7 @@
     <Compile Include="Classification\CommentTagClassifier.cs" />
     <Compile Include="Classification\CommentTagClassifierProvider.cs" />
     <Compile Include="Classification\CommentTagFormatDefinitions.cs" />
+    <Compile Include="Classification\CommentTagOverviewMarkFormatDefinitions.cs" />
     <Compile Include="Classification\PrefixCommentClassifier.cs" />
     <Compile Include="Classification\PrefixCommentClassifierProvider.cs" />
     <Compile Include="Commands\ExportAnchorsCommand.cs" />
@@ -118,6 +119,7 @@
     </Compile>
     <Compile Include="SuggestedActions\ReflowCommentSuggestedAction.cs" />
     <Compile Include="SuggestedActions\ReflowCommentSuggestedActionsSource.cs" />
+    <Compile Include="Tagging\CommentTagOverviewTagger.cs" />
     <Compile Include="Tagging\IssueReferenceTagger.cs" />
     <Compile Include="Tagging\LinkAnchorTagger.cs" />
     <Compile Include="Tagging\LinkAnchorValidationTagger.cs" />
