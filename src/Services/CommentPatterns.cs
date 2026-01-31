@@ -15,12 +15,13 @@ namespace CommentsVS.Services
         /// </summary>
         public const string BuiltInAnchorKeywordsPattern = "TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR";
 
-        private static string _cachedCustomTags;
-        private static string _cachedAnchorKeywordsPattern;
-        private static Regex _cachedAnchorClassificationRegex;
-        private static Regex _cachedAnchorWithMetadataRegex;
-        private static Regex _cachedAnchorServiceRegex;
-        private static Regex _cachedMetadataParseRegex;
+        private static readonly object _syncLock = new();
+        private static volatile string _cachedCustomTags;
+        private static volatile string _cachedAnchorKeywordsPattern;
+        private static volatile Regex _cachedAnchorClassificationRegex;
+        private static volatile Regex _cachedAnchorWithMetadataRegex;
+        private static volatile Regex _cachedAnchorServiceRegex;
+        private static volatile Regex _cachedMetadataParseRegex;
 
         /// <summary>
         /// Gets the current anchor keywords pattern including custom tags.
@@ -150,21 +151,46 @@ namespace CommentsVS.Services
                 return;
             }
 
-            _cachedCustomTags = currentCustomTags;
-            _cachedAnchorKeywordsPattern = BuildAnchorKeywordsPattern();
-            RebuildRegexPatterns();
+            lock (_syncLock)
+            {
+                if (_cachedAnchorKeywordsPattern != null && _cachedCustomTags == currentCustomTags)
+                {
+                    return;
+                }
+
+                _cachedAnchorKeywordsPattern = BuildAnchorKeywordsPattern(currentCustomTags);
+                RebuildRegexPatterns();
+
+                // Update the tag cache last to ensure readers see consistent state
+                _cachedCustomTags = currentCustomTags;
+            }
         }
 
-        private static string BuildAnchorKeywordsPattern()
+        private static string BuildAnchorKeywordsPattern(string customTagsStr)
         {
-            HashSet<string> customTags = General.Instance?.GetCustomTagsSet() ?? [];
-            if (customTags.Count == 0)
+            // Parse custom tags directly here instead of calling General.Instance.GetCustomTagsSet()
+            // to avoid race conditions if General.Instance changes during execution
+            var tags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (!string.IsNullOrWhiteSpace(customTagsStr))
+            {
+                foreach (var tag in customTagsStr.Split([','], StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var trimmed = tag.Trim();
+                    if (!string.IsNullOrEmpty(trimmed))
+                    {
+                        tags.Add(trimmed);
+                    }
+                }
+            }
+
+            if (tags.Count == 0)
             {
                 return BuiltInAnchorKeywordsPattern;
             }
 
             // Escape custom tags for regex safety and join with built-in pattern
-            IEnumerable<string> escapedCustomTags = customTags.Select(Regex.Escape);
+            IEnumerable<string> escapedCustomTags = tags.Select(Regex.Escape);
             return BuiltInAnchorKeywordsPattern + "|" + string.Join("|", escapedCustomTags);
         }
 
