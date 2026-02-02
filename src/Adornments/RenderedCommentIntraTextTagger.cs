@@ -16,6 +16,7 @@ using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
+using static CommentsVS.Services.RenderedSegment;
 
 namespace CommentsVS.Adornments
 {
@@ -1074,7 +1075,8 @@ namespace CommentsVS.Adornments
 
         private static string GetSectionContent(RenderedCommentSection section)
         {
-            return string.Join(" ", section.Lines
+            // Preserve original spacing; segments already contain needed spaces
+            return string.Concat(section.Lines
                 .Where(l => !l.IsBlank)
                 .SelectMany(l => l.Segments)
                 .Select(s => s.Text));

@@ -1,6 +1,7 @@
 using BenchmarkDotNet.Attributes;
 using CommentsVS.Services;
 using Microsoft.VisualStudio.Text;
+using static CommentsVS.Services.RenderedSegment;
 
 namespace CommentsVS.Benchmarks;
 

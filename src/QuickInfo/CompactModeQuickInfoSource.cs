@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.Language.StandardClassification;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Utilities;
+using static CommentsVS.Services.RenderedSegment;
 
 
 namespace CommentsVS.QuickInfo

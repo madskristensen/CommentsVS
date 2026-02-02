@@ -1,10 +1,13 @@
 using CommentsVS.Services;
+using static CommentsVS.Services.RenderedSegment;
 
 namespace CommentsVS.Test;
 
 [TestClass]
 public sealed class XmlDocCommentRendererTests
 {
+    private const string NoSummaryPlaceholder = "(No summary provided)";
+
     #region Markdown Bold Tests
 
     [TestMethod]
@@ -375,6 +378,57 @@ public sealed class XmlDocCommentRendererTests
         // The #123 inside code should not be an issue reference
         Assert.IsFalse(segments.Any(s => s.Type == RenderedSegmentType.IssueReference && s.Text == "#123"),
             "Issue refs inside code blocks should not be converted");
+    }
+
+    #endregion
+
+    #region Missing Summary Tests
+
+    [TestMethod]
+    public void GetStrippedSummaryFromXml_WithoutSummary_ReturnsPlaceholder()
+    {
+        var xml = "<remarks>Only remarks.</remarks>";
+
+        var result = XmlDocCommentRenderer.GetStrippedSummaryFromXml(xml);
+
+        Assert.AreEqual(NoSummaryPlaceholder, result);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_WithoutSummary_AddsPlaceholderSummarySection()
+    {
+        var xml = "<remarks>Only remarks.</remarks>";
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        Assert.IsNotNull(result.Summary, "Summary section should be created when missing.");
+        Assert.IsFalse(result.Summary.IsEmpty, "Summary section should contain placeholder text.");
+        Assert.IsTrue(result.Summary.Lines.SelectMany(l => l.Segments)
+            .Any(s => s.Text == NoSummaryPlaceholder),
+            "Summary should include the placeholder text.");
+    }
+
+    [TestMethod]
+    public void GetStrippedSummaryFromXml_WithEmptySummary_ReturnsPlaceholder()
+    {
+        var xml = "<summary>   </summary><returns>value</returns>";
+
+        var result = XmlDocCommentRenderer.GetStrippedSummaryFromXml(xml);
+
+        Assert.AreEqual(NoSummaryPlaceholder, result);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_WithEmptySummary_AddsPlaceholderSummarySection()
+    {
+        var xml = "<summary>   </summary><returns>value</returns>";
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        Assert.IsNotNull(result.Summary, "Summary section should exist.");
+        Assert.IsFalse(result.Summary.IsEmpty, "Summary section should contain placeholder when empty.");
+        Assert.IsTrue(result.Summary.Lines.SelectMany(l => l.Segments)
+            .Any(s => s.Text == NoSummaryPlaceholder));
     }
 
     #endregion
