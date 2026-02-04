@@ -22,6 +22,13 @@ namespace CommentsVS.Services
         private List<XmlDocCommentBlock> _cachedBlocks;
         private LanguageCommentStyle _cachedCommentStyle;
 
+        // Track affected line range to enable smart cache invalidation
+        private int _invalidatedStartLine = -1;
+        private int _invalidatedEndLine = -1;
+
+        // Store buffer reference for event subscription (using instance method avoids lambda allocation)
+        private ITextBuffer _subscribedBuffer;
+
         /// <summary>
         /// Gets the cached comment blocks for the buffer, parsing if necessary.
         /// Returns null if the file is too large to process.
@@ -44,7 +51,7 @@ namespace CommentsVS.Services
 
             lock (_lock)
             {
-                // Check if cache is valid
+                // Check if cache is valid (same version means no changes since last parse)
                 if (_cachedSnapshot != null &&
                     _cachedSnapshot.Version.VersionNumber == snapshot.Version.VersionNumber &&
                     _cachedCommentStyle == commentStyle)
@@ -57,6 +64,10 @@ namespace CommentsVS.Services
                 _cachedBlocks = [.. parser.FindAllCommentBlocks(snapshot)];
                 _cachedSnapshot = snapshot;
                 _cachedCommentStyle = commentStyle;
+
+                // Reset invalidation tracking
+                _invalidatedStartLine = -1;
+                _invalidatedEndLine = -1;
 
                 return _cachedBlocks;
             }
@@ -72,6 +83,8 @@ namespace CommentsVS.Services
                 _cachedSnapshot = null;
                 _cachedBlocks = null;
                 _cachedCommentStyle = null;
+                _invalidatedStartLine = -1;
+                _invalidatedEndLine = -1;
             }
         }
 
@@ -92,10 +105,18 @@ namespace CommentsVS.Services
                 () =>
                 {
                     var cache = new XmlDocCommentCache();
-                    // Subscribe to buffer changes to invalidate cache
-                    buffer.Changed += (s, e) => cache.OnBufferChanged(e);
+                    cache.SubscribeToBuffer(buffer);
                     return cache;
                 });
+        }
+
+        /// <summary>
+        /// Subscribes to buffer change events using an instance method (avoids lambda closure allocation).
+        /// </summary>
+        private void SubscribeToBuffer(ITextBuffer buffer)
+        {
+            _subscribedBuffer = buffer;
+            _subscribedBuffer.Changed += OnBufferChanged;
         }
 
         /// <summary>
@@ -108,12 +129,36 @@ namespace CommentsVS.Services
             return snapshot != null && snapshot.Length <= MaxFileSize;
         }
 
-        private void OnBufferChanged(TextContentChangedEventArgs e)
+        /// <summary>
+        /// Handles buffer changes. The version check in GetCommentBlocks will trigger 
+        /// a re-parse on next access when the snapshot version differs.
+        /// </summary>
+        private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
         {
-            // For now, invalidate entire cache on any change.
-            // Future optimization: could do incremental updates for changes
-            // that don't affect comment structure.
-            Invalidate();
+            // The snapshot version comparison in GetCommentBlocks will automatically
+            // trigger a re-parse when the snapshot version changes.
+            // We don't need to explicitly invalidate here - just let the version
+            // check handle it. This avoids unnecessary work when multiple changes
+            // occur before the next GetCommentBlocks call.
+
+            // Track which lines were affected for potential future incremental updates
+            lock (_lock)
+            {
+                foreach (ITextChange change in e.Changes)
+                {
+                    var startLine = e.After.GetLineFromPosition(change.NewPosition).LineNumber;
+                    var endLine = e.After.GetLineFromPosition(change.NewEnd).LineNumber;
+
+                    if (_invalidatedStartLine < 0 || startLine < _invalidatedStartLine)
+                    {
+                        _invalidatedStartLine = startLine;
+                    }
+                    if (endLine > _invalidatedEndLine)
+                    {
+                        _invalidatedEndLine = endLine;
+                    }
+                }
+            }
         }
     }
 }

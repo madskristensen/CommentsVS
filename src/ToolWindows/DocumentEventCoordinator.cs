@@ -43,36 +43,35 @@ namespace CommentsVS.ToolWindows
             }
 
             // Rescan the saved file and update the cache
-            if (_cache != null && _scanner != null)
-            {
-                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-                {
-                    var projectName = await GetProjectNameForFileAsync(filePath);
-                    IReadOnlyList<AnchorItem> anchors = await _scanner.ScanFileAsync(filePath, projectName);
-                    _cache.AddOrUpdateFile(filePath, anchors);
-
-                    // Notify UI to refresh
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    DocumentScanned?.Invoke(this, EventArgs.Empty);
-                }).FireAndForget();
-            }
+            ScanAndUpdateCacheAsync(filePath).FireAndForget();
         }
 
         private void OnDocumentOpened(string filePath)
         {
             // Scan the opened file and add to cache (for misc files without a solution)
-            if (_cache != null && _scanner != null)
-            {
-                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-                {
-                    var projectName = await GetProjectNameForFileAsync(filePath);
-                    IReadOnlyList<AnchorItem> anchors = await _scanner.ScanFileAsync(filePath, projectName);
-                    _cache.AddOrUpdateFile(filePath, anchors);
+            ScanAndUpdateCacheAsync(filePath).FireAndForget();
+        }
 
-                    // Notify UI to refresh
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    DocumentScanned?.Invoke(this, EventArgs.Empty);
-                }).FireAndForget();
+        /// <summary>
+        /// Shared async method for scanning a file and updating the cache.
+        /// Reduces lambda allocations compared to inline async delegates.
+        /// </summary>
+        private async Task ScanAndUpdateCacheAsync(string filePath)
+        {
+            if (_cache == null || _scanner == null || _disposed)
+            {
+                return;
+            }
+
+            var projectName = await GetProjectNameForFileAsync(filePath);
+            IReadOnlyList<AnchorItem> anchors = await _scanner.ScanFileAsync(filePath, projectName);
+            _cache.AddOrUpdateFile(filePath, anchors);
+
+            // Notify UI to refresh
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (!_disposed)
+            {
+                DocumentScanned?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -80,21 +79,29 @@ namespace CommentsVS.ToolWindows
         {
             // Remove the file from cache when closed (for misc files without a solution)
             // Only do this when no solution is loaded, otherwise the file stays in cache
-            if (_cache != null)
-            {
-                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-                {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            HandleDocumentClosedAsync(filePath).FireAndForget();
+        }
 
-                    // Check if a solution is loaded
-                    var solutionLoaded = await VS.Solutions.IsOpenAsync();
-                    if (!solutionLoaded)
-                    {
-                        // No solution - remove the file from cache
-                        _cache.RemoveFile(filePath);
-                        DocumentScanned?.Invoke(this, EventArgs.Empty);
-                    }
-                }).FireAndForget();
+        /// <summary>
+        /// Shared async method for handling document close.
+        /// Reduces lambda allocations compared to inline async delegates.
+        /// </summary>
+        private async Task HandleDocumentClosedAsync(string filePath)
+        {
+            if (_cache == null || _disposed)
+            {
+                return;
+            }
+
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            // Check if a solution is loaded
+            var solutionLoaded = await VS.Solutions.IsOpenAsync();
+            if (!solutionLoaded && !_disposed)
+            {
+                // No solution - remove the file from cache
+                _cache.RemoveFile(filePath);
+                DocumentScanned?.Invoke(this, EventArgs.Empty);
             }
         }
 

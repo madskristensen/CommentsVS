@@ -242,10 +242,17 @@ namespace CommentsVS.Adornments
 
         private void DeferredRefreshTags()
         {
+            // Early exit if already disposed
+            if (IsDisposed)
+            {
+                return;
+            }
+
 #pragma warning disable VSTHRD001, VSTHRD110 // Intentional fire-and-forget for UI update
             _ = view.VisualElement.Dispatcher.BeginInvoke(new Action(() =>
             {
-                if (!view.IsClosed)
+                // Double-check disposed state and view closure on dispatcher thread
+                if (!IsDisposed && !view.IsClosed)
                 {
                     RefreshTags();
                 }

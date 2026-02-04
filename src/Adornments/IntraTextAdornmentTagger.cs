@@ -23,6 +23,11 @@ namespace CommentsVS.Adornments
         private readonly List<SnapshotSpan> _invalidatedSpans = [];
         private bool _disposed;
 
+        /// <summary>
+        /// Gets whether this tagger has been disposed.
+        /// </summary>
+        protected bool IsDisposed => _disposed;
+
         protected IntraTextAdornmentTagger(IWpfTextView view)
         {
             this.view = view;
@@ -46,9 +51,18 @@ namespace CommentsVS.Adornments
         {
             // Detect if this is a significant structural change (lines added/removed)
             // In such cases, we need to invalidate more aggressively
-            var hasLineCountChange = args.Changes.Any(c =>
-                c.OldText.Contains('\n') != c.NewText.Contains('\n') ||
-                c.OldText.Count(ch => ch == '\n') != c.NewText.Count(ch => ch == '\n'));
+            // Use manual loops instead of LINQ to avoid delegate/enumerator allocations in this hot path
+            var hasLineCountChange = false;
+            foreach (ITextChange c in args.Changes)
+            {
+                var oldNewlines = CountNewlines(c.OldText);
+                var newNewlines = CountNewlines(c.NewText);
+                if (oldNewlines != newNewlines)
+                {
+                    hasLineCountChange = true;
+                    break;
+                }
+            }
 
             if (hasLineCountChange)
             {
@@ -76,6 +90,22 @@ namespace CommentsVS.Adornments
             }
 
             InvalidateSpans(editedSpans);
+        }
+
+        /// <summary>
+        /// Counts newline characters in a string without allocations.
+        /// </summary>
+        private static int CountNewlines(string text)
+        {
+            var count = 0;
+            foreach (var ch in text)
+            {
+                if (ch == '\n')
+                {
+                    count++;
+                }
+            }
+            return count;
         }
 
         protected void InvalidateSpans(IList<SnapshotSpan> spans)
