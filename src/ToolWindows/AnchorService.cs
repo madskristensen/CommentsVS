@@ -33,113 +33,20 @@ namespace CommentsVS.ToolWindows
         /// <returns>A list of anchors found in the buffer.</returns>
         public IReadOnlyList<AnchorItem> ScanBuffer(ITextBuffer buffer, string filePath, string projectName = null)
         {
-            var anchors = new List<AnchorItem>();
-
             if (buffer == null)
             {
-                return anchors;
+                return [];
             }
 
             ITextSnapshot snapshot = buffer.CurrentSnapshot;
             var fullText = snapshot.GetText();
 
-            // Get all anchor tags and regex for this file (built-in + custom from .editorconfig/Options)
-            IReadOnlyList<string> anchorTags = EditorConfigSettings.GetAllAnchorTags(filePath);
-            Regex anchorRegex = EditorConfigSettings.GetAnchorServiceRegex(filePath);
-
-            // Fast pre-check: skip if no anchor keywords are present
-            var hasAnyAnchor = false;
-            foreach (var keyword in anchorTags)
-            {
-                if (fullText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    hasAnyAnchor = true;
-                    break;
-                }
-            }
-
-            if (!hasAnyAnchor)
-            {
-                return anchors;
-            }
-
-            // Scan each line for anchors
-            for (var lineNumber = 0; lineNumber < snapshot.LineCount; lineNumber++)
-            {
-                ITextSnapshotLine line = snapshot.GetLineFromLineNumber(lineNumber);
-                var lineText = line.GetText();
-
-                // Fast pre-check for this line
-                var lineHasAnchor = false;
-                foreach (var keyword in anchorTags)
-                {
-                    if (lineText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        lineHasAnchor = true;
-                        break;
-                    }
-                }
-
-                if (!lineHasAnchor)
-                {
-                    continue;
-                }
-
-                foreach (Match match in anchorRegex.Matches(lineText))
-                {
-                    Group tagGroup = match.Groups["tag"];
-                    if (!tagGroup.Success)
-                    {
-                        continue;
-                    }
-
-                    AnchorType? anchorType = AnchorTypeExtensions.ParseWithCustom(tagGroup.Value, filePath, out var customTagName);
-                    if (anchorType == null)
-                    {
-                        continue;
-                    }
-
-                    // Extract message
-                    string message = null;
-                    Group messageGroup = match.Groups["message"];
-                    if (messageGroup.Success)
-                    {
-                        message = messageGroup.Value.Trim();
-                    }
-
-                    // Extract metadata
-                    string rawMetadata = null;
-                    string owner = null;
-                    string issueReference = null;
-                    string anchorId = null;
-
-                    Group metadataGroup = match.Groups["metadata"];
-                    if (metadataGroup.Success && metadataGroup.Length > 0)
-                    {
-                        rawMetadata = metadataGroup.Value;
-                        (owner, issueReference, anchorId) = ParseMetadata(rawMetadata, anchorType.Value);
-                    }
-
-                    var anchor = new AnchorItem
-                    {
-                        AnchorType = anchorType.Value,
-                        CustomTagName = customTagName,
-                        FilePath = filePath,
-                        LineNumber = lineNumber + 1, // 1-based line numbers
-                        Column = tagGroup.Index,
-                        Project = projectName,
-                        Message = message,
-                        RawMetadata = rawMetadata,
-                        Owner = owner,
-                        IssueReference = issueReference,
-                        AnchorId = anchorId
-                    };
-
-                    anchors.Add(anchor);
-                }
-            }
-
-            return anchors;
+            return ScanLines(
+                fullText,
+                snapshot.LineCount,
+                lineNumber => snapshot.GetLineFromLineNumber(lineNumber).GetText(),
+                filePath,
+                projectName);
         }
 
         /// <summary>
@@ -151,110 +58,140 @@ namespace CommentsVS.ToolWindows
         /// <returns>A list of anchors found in the text.</returns>
         public IReadOnlyList<AnchorItem> ScanText(string text, string filePath, string projectName = null)
         {
-            var anchors = new List<AnchorItem>();
-
             if (string.IsNullOrEmpty(text))
             {
-                return anchors;
+                return [];
             }
 
+            var lines = text.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
+
+            return ScanLines(
+                text,
+                lines.Length,
+                lineNumber => lines[lineNumber],
+                filePath,
+                projectName);
+        }
+
+        /// <summary>
+        /// Core scanning logic shared by ScanBuffer and ScanText.
+        /// </summary>
+        /// <param name="fullText">The full text content for pre-checking.</param>
+        /// <param name="lineCount">The number of lines to scan.</param>
+        /// <param name="getLineText">Function to retrieve text for a given line number.</param>
+        /// <param name="filePath">The file path associated with the content.</param>
+        /// <param name="projectName">The project name (optional).</param>
+        /// <returns>A list of anchors found.</returns>
+        private IReadOnlyList<AnchorItem> ScanLines(
+            string fullText,
+            int lineCount,
+            Func<int, string> getLineText,
+            string filePath,
+            string projectName)
+        {
             // Get all anchor tags and regex for this file (built-in + custom from .editorconfig/Options)
             IReadOnlyList<string> anchorTags = EditorConfigSettings.GetAllAnchorTags(filePath);
             Regex anchorRegex = EditorConfigSettings.GetAnchorServiceRegex(filePath);
 
             // Fast pre-check: skip if no anchor keywords are present
-            var hasAnyAnchor = false;
-            foreach (var keyword in anchorTags)
+            if (!ContainsAnyKeyword(fullText, anchorTags))
             {
-                if (text.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    hasAnyAnchor = true;
-                    break;
-                }
+                return [];
             }
 
-            if (!hasAnyAnchor)
-            {
-                return anchors;
-            }
+            var anchors = new List<AnchorItem>();
 
-            var lines = text.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
-
-            for (var lineNumber = 0; lineNumber < lines.Length; lineNumber++)
+            // Scan each line for anchors
+            for (var lineNumber = 0; lineNumber < lineCount; lineNumber++)
             {
-                var lineText = lines[lineNumber];
+                var lineText = getLineText(lineNumber);
 
                 // Fast pre-check for this line
-                var lineHasAnchor = false;
-                foreach (var keyword in anchorTags)
-                {
-                    if (lineText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        lineHasAnchor = true;
-                        break;
-                    }
-                }
-
-                if (!lineHasAnchor)
+                if (!ContainsAnyKeyword(lineText, anchorTags))
                 {
                     continue;
                 }
 
                 foreach (Match match in anchorRegex.Matches(lineText))
                 {
-                    Group tagGroup = match.Groups["tag"];
-                    if (!tagGroup.Success)
+                    AnchorItem anchor = CreateAnchorFromMatch(match, filePath, projectName, lineNumber);
+                    if (anchor != null)
                     {
-                        continue;
+                        anchors.Add(anchor);
                     }
-
-                    AnchorType? anchorType = AnchorTypeExtensions.ParseWithCustom(tagGroup.Value, filePath, out var customTagName);
-                    if (anchorType == null)
-                    {
-                        continue;
-                    }
-
-                    // Extract message
-                    string message = null;
-                    Group messageGroup = match.Groups["message"];
-                    if (messageGroup.Success)
-                    {
-                        message = messageGroup.Value.Trim();
-                    }
-
-                    // Extract metadata
-                    string rawMetadata = null;
-                    string owner = null;
-                    string issueReference = null;
-                    string anchorId = null;
-
-                    Group metadataGroup = match.Groups["metadata"];
-                    if (metadataGroup.Success && metadataGroup.Length > 0)
-                    {
-                        rawMetadata = metadataGroup.Value;
-                        (owner, issueReference, anchorId) = ParseMetadata(rawMetadata, anchorType.Value);
-                    }
-
-                    var anchor = new AnchorItem
-                    {
-                        AnchorType = anchorType.Value,
-                        CustomTagName = customTagName,
-                        FilePath = filePath,
-                        LineNumber = lineNumber + 1, // 1-based line numbers
-                        Column = tagGroup.Index,
-                        Project = projectName,
-                        Message = message,
-                        RawMetadata = rawMetadata,
-                        Owner = owner,
-                        IssueReference = issueReference,
-                        AnchorId = anchorId
-                    };
-
-                    anchors.Add(anchor);
                 }
             }
 
             return anchors;
+        }
+
+        /// <summary>
+        /// Checks if the text contains any of the specified keywords (case-insensitive).
+        /// </summary>
+        private static bool ContainsAnyKeyword(string text, IReadOnlyList<string> keywords)
+        {
+            foreach (var keyword in keywords)
+            {
+                if (text.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Creates an AnchorItem from a regex match, or returns null if the match is invalid.
+        /// </summary>
+        private AnchorItem CreateAnchorFromMatch(Match match, string filePath, string projectName, int lineNumber)
+        {
+            Group tagGroup = match.Groups["tag"];
+            if (!tagGroup.Success)
+            {
+                return null;
+            }
+
+            AnchorType? anchorType = AnchorTypeExtensions.ParseWithCustom(tagGroup.Value, filePath, out var customTagName);
+            if (anchorType == null)
+            {
+                return null;
+            }
+
+            // Extract message
+            string message = null;
+            Group messageGroup = match.Groups["message"];
+            if (messageGroup.Success)
+            {
+                message = messageGroup.Value.Trim();
+            }
+
+            // Extract metadata
+            string rawMetadata = null;
+            string owner = null;
+            string issueReference = null;
+            string anchorId = null;
+
+            Group metadataGroup = match.Groups["metadata"];
+            if (metadataGroup.Success && metadataGroup.Length > 0)
+            {
+                rawMetadata = metadataGroup.Value;
+                (owner, issueReference, anchorId) = ParseMetadata(rawMetadata, anchorType.Value);
+            }
+
+            return new AnchorItem
+            {
+                AnchorType = anchorType.Value,
+                CustomTagName = customTagName,
+                FilePath = filePath,
+                LineNumber = lineNumber + 1, // 1-based line numbers
+                Column = tagGroup.Index,
+                Project = projectName,
+                Message = message,
+                RawMetadata = rawMetadata,
+                Owner = owner,
+                IssueReference = issueReference,
+                AnchorId = anchorId
+            };
         }
 
         /// <summary>
