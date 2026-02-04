@@ -118,27 +118,30 @@ namespace CommentsVS.Tagging
                 // Find all comment portions in the text (both full-line and inline comments)
                 foreach ((int Start, int Length) commentSpan in CommentSpanHelper.FindCommentSpans(text))
                 {
-                    var commentText = text.Substring(commentSpan.Start, commentSpan.Length);
+                    // Use Regex.Match with startAt and check bounds instead of Substring allocation
+                    var commentEnd = commentSpan.Start + commentSpan.Length;
+                    Match match = _issueReferenceRegex.Match(text, commentSpan.Start, commentSpan.Length);
 
-                    foreach (Match match in _issueReferenceRegex.Matches(commentText))
+                    while (match.Success && match.Index < commentEnd)
                     {
                         if (int.TryParse(match.Groups["number"].Value, out var issueNumber))
                         {
                             var url = _repoInfo.GetIssueUrl(issueNumber);
                             if (!string.IsNullOrEmpty(url))
                             {
-                                // Adjust match position to be relative to the full span
-                                var matchStartInSpan = commentSpan.Start + match.Index;
-                                var tagSpan = new SnapshotSpan(span.Snapshot, span.Start + matchStartInSpan, match.Length);
+                                // match.Index is already relative to the full text
+                                var tagSpan = new SnapshotSpan(span.Snapshot, span.Start + match.Index, match.Length);
                                 yield return new TagSpan<IUrlTag>(tagSpan, new UrlTag(new Uri(url)));
                             }
                         }
+
+                        match = match.NextMatch();
                     }
                 }
-                }
             }
+        }
 
-            private async Task InitializeRepoInfoAsync()
+        private async Task InitializeRepoInfoAsync()
         {
             if (string.IsNullOrEmpty(_filePath))
             {

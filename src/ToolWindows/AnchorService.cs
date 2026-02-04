@@ -39,14 +39,13 @@ namespace CommentsVS.ToolWindows
             }
 
             ITextSnapshot snapshot = buffer.CurrentSnapshot;
-            var fullText = snapshot.GetText();
 
-            return ScanLines(
-                fullText,
-                snapshot.LineCount,
-                lineNumber => snapshot.GetLineFromLineNumber(lineNumber).GetText(),
-                filePath,
-                projectName);
+            // Get all anchor tags and regex for this file (built-in + custom from .editorconfig/Options)
+            IReadOnlyList<string> anchorTags = EditorConfigSettings.GetAllAnchorTags(filePath);
+            Regex anchorRegex = EditorConfigSettings.GetAnchorServiceRegex(filePath);
+
+            // Scan line-by-line without allocating full text copy
+            return ScanSnapshotLines(snapshot, anchorTags, anchorRegex, filePath, projectName);
         }
 
         /// <summary>
@@ -63,48 +62,30 @@ namespace CommentsVS.ToolWindows
                 return [];
             }
 
-            var lines = text.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
-
-            return ScanLines(
-                text,
-                lines.Length,
-                lineNumber => lines[lineNumber],
-                filePath,
-                projectName);
-        }
-
-        /// <summary>
-        /// Core scanning logic shared by ScanBuffer and ScanText.
-        /// </summary>
-        /// <param name="fullText">The full text content for pre-checking.</param>
-        /// <param name="lineCount">The number of lines to scan.</param>
-        /// <param name="getLineText">Function to retrieve text for a given line number.</param>
-        /// <param name="filePath">The file path associated with the content.</param>
-        /// <param name="projectName">The project name (optional).</param>
-        /// <returns>A list of anchors found.</returns>
-        private IReadOnlyList<AnchorItem> ScanLines(
-            string fullText,
-            int lineCount,
-            Func<int, string> getLineText,
-            string filePath,
-            string projectName)
-        {
             // Get all anchor tags and regex for this file (built-in + custom from .editorconfig/Options)
             IReadOnlyList<string> anchorTags = EditorConfigSettings.GetAllAnchorTags(filePath);
             Regex anchorRegex = EditorConfigSettings.GetAnchorServiceRegex(filePath);
 
-            // Fast pre-check: skip if no anchor keywords are present
-            if (!ContainsAnyKeyword(fullText, anchorTags))
-            {
-                return [];
-            }
+            // Scan using line reader to avoid Split() allocation
+            return ScanTextLines(text, anchorTags, anchorRegex, filePath, projectName);
+        }
 
+        /// <summary>
+        /// Scans snapshot lines without allocating full text.
+        /// </summary>
+        private IReadOnlyList<AnchorItem> ScanSnapshotLines(
+            ITextSnapshot snapshot,
+            IReadOnlyList<string> anchorTags,
+            Regex anchorRegex,
+            string filePath,
+            string projectName)
+        {
             var anchors = new List<AnchorItem>();
+            var lineCount = snapshot.LineCount;
 
-            // Scan each line for anchors
             for (var lineNumber = 0; lineNumber < lineCount; lineNumber++)
             {
-                var lineText = getLineText(lineNumber);
+                var lineText = snapshot.GetLineFromLineNumber(lineNumber).GetText();
 
                 // Fast pre-check for this line
                 if (!ContainsAnyKeyword(lineText, anchorTags))
@@ -119,6 +100,45 @@ namespace CommentsVS.ToolWindows
                     {
                         anchors.Add(anchor);
                     }
+                }
+            }
+
+            return anchors;
+        }
+
+        /// <summary>
+        /// Scans text lines without allocating a string array via Split().
+        /// Uses StringReader for memory-efficient line enumeration.
+        /// </summary>
+        private IReadOnlyList<AnchorItem> ScanTextLines(
+            string text,
+            IReadOnlyList<string> anchorTags,
+            Regex anchorRegex,
+            string filePath,
+            string projectName)
+        {
+            var anchors = new List<AnchorItem>();
+            var lineNumber = 0;
+
+            using (var reader = new System.IO.StringReader(text))
+            {
+                string lineText;
+                while ((lineText = reader.ReadLine()) != null)
+                {
+                    // Fast pre-check for this line
+                    if (ContainsAnyKeyword(lineText, anchorTags))
+                    {
+                        foreach (Match match in anchorRegex.Matches(lineText))
+                        {
+                            AnchorItem anchor = CreateAnchorFromMatch(match, filePath, projectName, lineNumber);
+                            if (anchor != null)
+                            {
+                                anchors.Add(anchor);
+                            }
+                        }
+                    }
+
+                    lineNumber++;
                 }
             }
 

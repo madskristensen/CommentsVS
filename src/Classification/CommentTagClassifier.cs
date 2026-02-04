@@ -22,6 +22,11 @@ namespace CommentsVS.Classification
         private readonly IClassificationType _metadataType;
         private bool _disposed;
 
+        // Cached option value to avoid repeated singleton access in hot path
+        private bool _enableHighlighting;
+        private int _optionCheckCounter;
+        private const int OptionCheckInterval = 100; // Re-check option every N calls
+
         public event EventHandler<ClassificationChangedEventArgs> ClassificationChanged;
 
         public CommentTagClassifier(ITextBuffer buffer, IClassificationTypeRegistryService registry)
@@ -37,6 +42,9 @@ namespace CommentsVS.Classification
             _customTags = EditorConfigSettings.GetCustomAnchorTags(filePath);
             _anchorRegex = EditorConfigSettings.GetAnchorClassificationRegex(filePath);
             _metadataRegex = EditorConfigSettings.GetAnchorWithMetadataRegex(filePath);
+
+            // Cache initial option value
+            _enableHighlighting = General.Instance.EnableCommentTagHighlighting;
         }
 
         private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
@@ -53,7 +61,14 @@ namespace CommentsVS.Classification
         {
             var result = new List<ClassificationSpan>();
 
-            if (!General.Instance.EnableCommentTagHighlighting)
+            // Periodically refresh cached option value (avoids per-call singleton access)
+            if (++_optionCheckCounter >= OptionCheckInterval)
+            {
+                _optionCheckCounter = 0;
+                _enableHighlighting = General.Instance.EnableCommentTagHighlighting;
+            }
+
+            if (!_enableHighlighting)
             {
                 return result;
             }

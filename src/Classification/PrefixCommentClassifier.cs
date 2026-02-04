@@ -26,6 +26,11 @@ namespace CommentsVS.Classification
         private readonly IClassificationType _disabledType;
         private readonly IClassificationType _quoteType;
 
+        // Cached option value to avoid repeated singleton access in hot path
+        private bool _enableHighlighting;
+        private int _optionCheckCounter;
+        private const int OptionCheckInterval = 100; // Re-check option every N calls
+
         // Regex patterns for different comment styles
         // C-style: // ! text (C#, C++, TypeScript, JavaScript, Razor, F#)
         private static readonly Regex _cStyleRegex = new(
@@ -62,6 +67,9 @@ namespace CommentsVS.Classification
             _strikethroughType = registry.GetClassificationType(CommentTagClassificationTypes.PrefixStrikethrough);
             _disabledType = registry.GetClassificationType(CommentTagClassificationTypes.PrefixDisabled);
             _quoteType = registry.GetClassificationType(CommentTagClassificationTypes.PrefixQuote);
+
+            // Cache initial option value
+            _enableHighlighting = General.Instance.EnablePrefixHighlighting;
 
             _buffer.Changed += OnBufferChanged;
         }
@@ -106,8 +114,14 @@ namespace CommentsVS.Classification
         {
             var result = new List<ClassificationSpan>();
 
-            General options = General.Instance;
-            if (!options.EnablePrefixHighlighting)
+            // Periodically refresh cached option value (avoids per-call singleton access)
+            if (++_optionCheckCounter >= OptionCheckInterval)
+            {
+                _optionCheckCounter = 0;
+                _enableHighlighting = General.Instance.EnablePrefixHighlighting;
+            }
+
+            if (!_enableHighlighting)
             {
                 return result;
             }
