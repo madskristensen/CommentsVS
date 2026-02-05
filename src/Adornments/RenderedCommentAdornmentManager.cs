@@ -1,6 +1,8 @@
 using System.ComponentModel.Composition;
 using CommentsVS.Commands;
+using CommentsVS.Options;
 using CommentsVS.Services;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Outlining;
@@ -88,6 +90,32 @@ namespace CommentsVS.Adornments
 
         private void OnRegionsCollapsed(object sender, RegionsCollapsedEventArgs e)
         {
+            // In Compact/Full mode, VS's collapsed outlining regions interfere with
+            // IntraText adornments. Immediately re-expand any XML doc comment regions
+            // that get collapsed (e.g. via Collapse to Definition or margin toggle).
+            // This fires on the UI thread after the collapse, so synchronous Expand is safe
+            // and prevents any visible flicker.
+            RenderingMode mode = General.Instance.CommentRenderingMode;
+            if (mode is RenderingMode.Compact or RenderingMode.Full)
+            {
+                ITextSnapshot snapshot = _textView.TextSnapshot;
+
+                foreach (ICollapsible region in e.CollapsedRegions)
+                {
+                    if (region is ICollapsed collapsed && IsXmlDocCommentRegion(region, snapshot))
+                    {
+                        try
+                        {
+                            _outliningManager.Expand(collapsed);
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            // Region may no longer be valid
+                        }
+                    }
+                }
+            }
+
             DeferredUpdateAdornments();
         }
 
@@ -126,6 +154,13 @@ namespace CommentsVS.Adornments
             // In Compact/Full mode, IntraTextAdornment handles display
             // This manager is no longer needed for those modes
             // Keep this for potential future overlay needs
+        }
+
+        private static bool IsXmlDocCommentRegion(ICollapsible region, ITextSnapshot snapshot)
+        {
+            SnapshotSpan extent = region.Extent.GetSpan(snapshot);
+            var text = extent.GetText().TrimStart();
+            return text.StartsWith("///") || text.StartsWith("'''");
         }
 
         private void OnViewClosed(object sender, EventArgs e)
