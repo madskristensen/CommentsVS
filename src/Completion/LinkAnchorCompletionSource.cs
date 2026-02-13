@@ -198,6 +198,12 @@ namespace CommentsVS.Completion
                 yield break;
             }
 
+            // Early validation: check for illegal path characters to prevent exceptions
+            if (ContainsIllegalPathChars(fullPathContext))
+            {
+                yield break;
+            }
+
             var searchDirectory = _currentDirectory;
             var prefix = "";
 
@@ -221,8 +227,18 @@ namespace CommentsVS.Completion
             {
                 var subDir = fullPathContext.Substring(0, lastSep);
                 partialName = fullPathContext.Substring(lastSep + 1);
-                searchDirectory = Path.Combine(searchDirectory, subDir);
-                prefix += subDir + "/";
+                
+                // Safely combine paths with exception handling
+                try
+                {
+                    searchDirectory = Path.Combine(searchDirectory, subDir);
+                    prefix += subDir + "/";
+                }
+                catch (ArgumentException)
+                {
+                    // Invalid path characters in subDir, bail out
+                    yield break;
+                }
             }
             else
             {
@@ -433,6 +449,20 @@ namespace CommentsVS.Completion
             {
                 return null;
             }
+        }
+
+        private static bool ContainsIllegalPathChars(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                return false;
+            }
+
+            // Check for illegal path characters that would cause Path.Combine to throw
+            // GetInvalidPathChars() includes platform-specific chars; we explicitly check
+            // common problematic chars for robustness across .NET Framework versions
+            char[] invalidChars = Path.GetInvalidPathChars();
+            return path.IndexOfAny(invalidChars) >= 0 || path.IndexOfAny(['<', '>', '"', '|', '\0']) >= 0;
         }
 
         private static bool ShouldSkipFolder(string folderName)
