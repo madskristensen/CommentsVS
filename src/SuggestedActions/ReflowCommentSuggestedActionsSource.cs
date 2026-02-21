@@ -114,6 +114,13 @@ namespace CommentsVS.SuggestedActions
 
             // Check if any line exceeds the threshold
             ITextSnapshot snapshot = textBuffer.CurrentSnapshot;
+
+            // Guard against stale block (buffer may have been modified since block was created)
+            if (block.Span.End > snapshot.Length || block.EndLine >= snapshot.LineCount)
+            {
+                return false;
+            }
+
             for (var lineNum = block.StartLine; lineNum <= block.EndLine; lineNum++)
             {
                 ITextSnapshotLine line = snapshot.GetLineFromLineNumber(lineNum);
