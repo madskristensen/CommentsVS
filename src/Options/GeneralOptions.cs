@@ -105,6 +105,24 @@ namespace CommentsVS.Options
     }
 
     /// <summary>
+    /// Controls what triggers switching from rendered to raw XML editing mode.
+    /// </summary>
+    public enum EditTrigger
+    {
+        /// <summary>
+        /// Requires an explicit action (double-click or Escape) to show raw XML.
+        /// </summary>
+        [Description("Double-click or Escape")]
+        Explicit = 0,
+
+        /// <summary>
+        /// Automatically shows raw XML when the caret enters the comment.
+        /// </summary>
+        [Description("When caret enters comment")]
+        OnCaretEnter = 1
+    }
+
+    /// <summary>
     /// Options provider for the CommentsVS extension.
     /// </summary>
     internal partial class OptionsProvider
@@ -228,6 +246,13 @@ namespace CommentsVS.Options
         [DefaultValue(BorderStyle.MultilineOnly)]
         [TypeConverter(typeof(EnumDescriptionTypeConverter))]
         public BorderStyle LeftBorder { get; set; } = BorderStyle.MultilineOnly;
+
+        [Category(_renderingCategory)]
+        [DisplayName("Edit trigger")]
+        [Description("Controls how to switch from rendered to raw XML for editing. Explicit requires double-click or Escape. OnCaretEnter automatically shows raw XML when the caret moves into the comment.")]
+        [DefaultValue(EditTrigger.Explicit)]
+        [TypeConverter(typeof(EnumDescriptionTypeConverter))]
+        public EditTrigger EditTrigger { get; set; } = EditTrigger.Explicit;
 
         private const string _anchorsCategory = "Code Anchors";
 

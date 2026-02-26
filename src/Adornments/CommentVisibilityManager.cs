@@ -134,6 +134,11 @@ namespace CommentsVS.Adornments
         }
 
         /// <summary>
+        /// Determines whether any comments are currently hidden.
+        /// </summary>
+        public bool HasAnyHiddenComments => _temporarilyHiddenComments.Count > 0;
+
+        /// <summary>
         /// Determines whether any lines have been recently edited.
         /// </summary>
         public bool HasAnyRecentlyEditedLines => _recentlyEditedLines.Count > 0;

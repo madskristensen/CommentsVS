@@ -77,7 +77,16 @@ You can also enable **Collapse XML Doc Comments by Default** from the **Edit > C
 
 **Quick editing:** Double-click a rendered comment or press **ESC** when the caret is on a rendered comment line to temporarily switch it to raw source view for editing. Move the caret away from the comment to restore the rendered view.
 
-**Customizing colors:** Rendered comment colors can be customized via **Tools > Options > Environment > Fonts and Colors** under these entries:
+**Edit trigger options:** Control how you switch to raw XML editing via **Tools > Options > Comments > Edit Trigger**:
+
+| Option                     | Description                                                       |
+| -------------------------- | ----------------------------------------------------------------- |
+| Double-click or Escape     | Requires explicit action to edit (default)                        |
+| When caret enters comment  | Automatically shows raw XML when the caret moves into the comment |
+
+The "When caret enters comment" option provides a Rider-like editing experience—comments expand automatically as you navigate into them and re-render when you move away.
+
+**Customizing colors:**
 
 | Entry                      | Description                                 |
 | -------------------------- | ------------------------------------------- |

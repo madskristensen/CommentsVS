@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using CommentsVS.Options;
 using CommentsVS.Services;
 using Microsoft.VisualStudio.Text.Editor;
 
@@ -55,59 +56,85 @@ namespace CommentsVS.Adornments
         {
             var currentLine = e.NewPosition.BufferPosition.GetContainingLine().LineNumber;
 
-            // If caret moved to a different line, check if we need to update rendering
-            if (_lastCaretLine.HasValue && _lastCaretLine.Value != currentLine)
+            // Fast path: no line change means no work needed
+            if (!_lastCaretLine.HasValue || _lastCaretLine.Value == currentLine)
             {
-                var shouldRefresh = false;
+                _lastCaretLine = currentLine;
+                return;
+            }
 
-                // Use cached blocks for performance - avoids full document parse on every caret move
-                IReadOnlyList<XmlDocCommentBlock> blocks = XmlDocCommentParser.GetCachedCommentBlocks(_view.TextBuffer);
+            var lastLine = _lastCaretLine.Value;
+            _lastCaretLine = currentLine;
 
-                if (blocks != null)
+            // Cache settings to avoid repeated property access
+            General settings = General.Instance;
+            var isRenderingEnabled = settings.CommentRenderingMode is RenderingMode.Full or RenderingMode.Compact;
+            var isCaretEnterMode = settings.EditTrigger == EditTrigger.OnCaretEnter;
+
+            // Early exit: if rendering is off, no hidden comments, and no edit tracking, nothing to do
+            var hasHiddenComments = _visibilityManager.HasAnyHiddenComments;
+            var hasEditTracking = _visibilityManager.HasAnyRecentlyEditedLines;
+
+            if (!isRenderingEnabled && !hasHiddenComments && !hasEditTracking)
+            {
+                return;
+            }
+
+            // Only fetch blocks if we actually need them
+            var needBlocksForEnter = isRenderingEnabled && isCaretEnterMode;
+            if (!needBlocksForEnter && !hasHiddenComments && !hasEditTracking)
+            {
+                return;
+            }
+
+            IReadOnlyList<XmlDocCommentBlock> blocks = XmlDocCommentParser.GetCachedCommentBlocks(_view.TextBuffer);
+            if (blocks == null || blocks.Count == 0)
+            {
+                return;
+            }
+
+            var shouldRefresh = false;
+
+            // Single pass through blocks to handle all scenarios
+            foreach (XmlDocCommentBlock block in blocks)
+            {
+                var wasInComment = lastLine >= block.StartLine && lastLine <= block.EndLine;
+                var nowInComment = currentLine >= block.StartLine && currentLine <= block.EndLine;
+
+                // Scenario 1: Entering a comment (OnCaretEnter mode)
+                if (needBlocksForEnter && !wasInComment && nowInComment)
                 {
-                    // Check if we moved away from any temporarily hidden comments (ESC key)
-                    foreach (var hiddenLine in _visibilityManager.GetHiddenCommentLines())
+                    if (!_visibilityManager.IsCommentHidden(block.StartLine))
                     {
-                        XmlDocCommentBlock block = blocks.FirstOrDefault(b => b.StartLine == hiddenLine);
-                        if (block != null)
-                        {
-                            // Check if caret is outside this comment's range
-                            if (currentLine < block.StartLine || currentLine > block.EndLine)
-                            {
-                                _visibilityManager.ShowComment(hiddenLine);
-                                shouldRefresh = true;
-                            }
-                        }
-                    }
-
-                    // Check if we moved away from a recently edited comment - clear edit tracking
-                    if (_visibilityManager.HasAnyRecentlyEditedLines)
-                    {
-                        // Find which comment block (if any) we moved away from
-                        foreach (XmlDocCommentBlock block in blocks)
-                        {
-                            var wasInComment = _lastCaretLine.Value >= block.StartLine && _lastCaretLine.Value <= block.EndLine;
-                            var nowInComment = currentLine >= block.StartLine && currentLine <= block.EndLine;
-
-                            // If we moved out of a comment, clear the edit tracking for those lines
-                            if (wasInComment && !nowInComment)
-                            {
-                                if (_visibilityManager.ClearEditTracking(block.StartLine, block.EndLine))
-                                {
-                                    shouldRefresh = true;
-                                }
-                            }
-                        }
+                        _visibilityManager.HideComment(block.StartLine);
+                        shouldRefresh = true;
                     }
                 }
 
-                if (shouldRefresh)
+                // Scenario 2: Leaving a hidden comment - restore rendering
+                if (hasHiddenComments && wasInComment && !nowInComment)
                 {
-                    RefreshRequested?.Invoke(this, EventArgs.Empty);
+                    if (_visibilityManager.IsCommentHidden(block.StartLine))
+                    {
+                        _visibilityManager.ShowComment(block.StartLine);
+                        shouldRefresh = true;
+                    }
+                }
+
+                // Scenario 3: Leaving an edited comment - clear edit tracking
+                if (hasEditTracking && wasInComment && !nowInComment)
+                {
+                    if (_visibilityManager.ClearEditTracking(block.StartLine, block.EndLine))
+                    {
+                        shouldRefresh = true;
+                    }
                 }
             }
 
-            _lastCaretLine = currentLine;
+            if (shouldRefresh)
+            {
+                RefreshRequested?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         public void Dispose()
