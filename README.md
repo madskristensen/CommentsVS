@@ -252,9 +252,11 @@ Notes:
 | `// !`  | Red       | Normal        | Alerts and warnings   |
 | `// ?`  | Blue      | Normal        | Questions and queries |
 | `// *`  | Green     | Normal        | Important highlights  |
-| `// //` | Gray      | Strikethrough | Deprecated/old code   |
+| `// //` | Gray      | Normal*       | Deprecated/old code   |
 | `// -`  | Dark Gray | Normal        | Disabled/removed      |
 | `// >`  | Purple    | Italic        | Quotes and references |
+
+*\*Strikethrough can be enabled via **Tools > Options > Environment > Fonts and Colors** under "Comment - Strikethrough (//)". Check the Strikethrough checkbox to apply the strikethrough effect.*
 
 Example:
 

@@ -283,7 +283,8 @@ namespace CommentsVS.Classification
         {
             DisplayName = "Comment - Strikethrough (//)";
             ForegroundColor = Colors.Gray;
-            TextDecorations = System.Windows.TextDecorations.Strikethrough;
+            // Don't set TextDecorations here - VS doesn't properly persist "no strikethrough"
+            // when users remove it. Users can opt-in to strikethrough via Fonts & Colors.
         }
     }
 
