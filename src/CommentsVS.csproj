@@ -124,6 +124,7 @@
     <Compile Include="Tagging\IssueReferenceTagger.cs" />
     <Compile Include="Tagging\LinkAnchorTagger.cs" />
     <Compile Include="Tagging\LinkAnchorValidationTagger.cs" />
+    <Compile Include="Tagging\XmlDocCommentOutliningTagger.cs" />
     <Compile Include="ToolWindows\AnchorCacheSerializer.cs" />
     <Compile Include="ToolWindows\AnchorItem.cs" />
     <Compile Include="ToolWindows\AnchorNavigationService.cs" />
