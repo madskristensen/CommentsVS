@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace CommentsVS.ToolWindows
 {
@@ -19,6 +20,9 @@ namespace CommentsVS.ToolWindows
         private string _currentSearchFilter = string.Empty;
         private bool _currentMatchCase;
         private bool _groupByFile;
+        private readonly DispatcherTimer _searchRefreshTimer;
+        private bool _searchRefreshPending;
+        private int _visibleAnchorCount;
 
         /// <summary>
         /// Event raised when an anchor is activated (double-click or Enter).
@@ -33,8 +37,19 @@ namespace CommentsVS.ToolWindows
             _viewSource.Filter += ViewSource_Filter;
             AnchorDataGrid.ItemsSource = _viewSource.View;
 
+            _searchRefreshTimer = new DispatcherTimer(
+                TimeSpan.FromMilliseconds(75),
+                DispatcherPriority.Background,
+                OnSearchRefreshTimerTick,
+                Dispatcher.CurrentDispatcher)
+            {
+                IsEnabled = false
+            };
+
             // Set up icon binding after data grid is loaded
             AnchorDataGrid.LoadingRow += AnchorDataGrid_LoadingRow;
+
+            RefreshViewAndStatus();
         }
 
         /// <summary>
@@ -48,10 +63,8 @@ namespace CommentsVS.ToolWindows
             _currentSearchFilter = searchText ?? string.Empty;
             _currentMatchCase = matchCase;
 
-            _viewSource.View.Refresh();
-            UpdateStatus();
-
-            return (uint)_viewSource.View.Cast<object>().Count();
+            QueueSearchRefresh();
+            return (uint)_visibleAnchorCount;
         }
 
         /// <summary>
@@ -61,9 +74,7 @@ namespace CommentsVS.ToolWindows
         public void SetTypeFilter(string typeFilter)
         {
             _currentTypeFilter = string.IsNullOrEmpty(typeFilter) ? "All" : typeFilter;
-
-            _viewSource.View.Refresh();
-            UpdateStatus();
+            RefreshViewAndStatus();
         }
 
         /// <summary>
@@ -74,8 +85,7 @@ namespace CommentsVS.ToolWindows
             _currentSearchFilter = string.Empty;
             _currentMatchCase = false;
 
-            _viewSource.View.Refresh();
-            UpdateStatus();
+            RefreshViewAndStatus();
         }
 
         /// <summary>
@@ -92,8 +102,7 @@ namespace CommentsVS.ToolWindows
                 _allAnchors.Add(anchor);
             }
 
-            UpdateStatus();
-            _viewSource.View.Refresh();
+            RefreshViewAndStatus();
         }
 
         /// <summary>
@@ -109,8 +118,7 @@ namespace CommentsVS.ToolWindows
                 _allAnchors.Add(anchor);
             }
 
-            UpdateStatus();
-            _viewSource.View.Refresh();
+            RefreshViewAndStatus();
         }
 
         /// <summary>
@@ -127,8 +135,7 @@ namespace CommentsVS.ToolWindows
                 _allAnchors.Remove(anchor);
             }
 
-            UpdateStatus();
-            _viewSource.View.Refresh();
+            RefreshViewAndStatus();
         }
 
         /// <summary>
@@ -139,7 +146,7 @@ namespace CommentsVS.ToolWindows
             ThreadHelper.ThrowIfNotOnUIThread();
 
             _allAnchors.Clear();
-            UpdateStatus();
+            RefreshViewAndStatus();
         }
 
         /// <summary>
@@ -220,7 +227,7 @@ namespace CommentsVS.ToolWindows
         private void UpdateStatus()
         {
             var totalCount = _allAnchors.Count;
-            var visibleCount = _viewSource.View.Cast<object>().Count();
+            var visibleCount = _visibleAnchorCount;
 
             var hasTypeFilter = _currentTypeFilter != "All";
             var hasSearchFilter = !string.IsNullOrWhiteSpace(_currentSearchFilter);
@@ -242,6 +249,33 @@ namespace CommentsVS.ToolWindows
                 }
                 StatusText.Text = $"{visibleCount} of {totalCount} anchor(s) shown ({string.Join(", ", filterParts)})";
             }
+        }
+
+        private void QueueSearchRefresh()
+        {
+            _searchRefreshPending = true;
+            _searchRefreshTimer.Stop();
+            _searchRefreshTimer.Start();
+        }
+
+        private void OnSearchRefreshTimerTick(object sender, EventArgs e)
+        {
+            _searchRefreshTimer.Stop();
+
+            if (!_searchRefreshPending)
+            {
+                return;
+            }
+
+            _searchRefreshPending = false;
+            RefreshViewAndStatus();
+        }
+
+        private void RefreshViewAndStatus()
+        {
+            _viewSource.View.Refresh();
+            _visibleAnchorCount = _viewSource.View.Cast<object>().Count();
+            UpdateStatus();
         }
 
         private void ViewSource_Filter(object sender, FilterEventArgs e)

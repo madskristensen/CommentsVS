@@ -114,29 +114,50 @@ namespace CommentsVS.Tagging
 
                 var lineStart = span.Start.Position;
 
-                foreach (Match match in _anchorRegex.Matches(text))
+                foreach ((int Start, int Length) commentSpan in CommentSpanHelper.FindCommentSpans(text))
                 {
-                    Group tagGroup = match.Groups["tag"];
-                    if (!tagGroup.Success)
+                    var commentText = text.Substring(commentSpan.Start, commentSpan.Length);
+
+                    // Skip comment spans that don't contain anchor keywords
+                    var hasAnchorInComment = false;
+                    foreach (var keyword in _anchorTags)
+                    {
+                        if (commentText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            hasAnchorInComment = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasAnchorInComment)
                     {
                         continue;
                     }
 
-                    var tag = tagGroup.Value.TrimEnd(':').ToUpperInvariant();
-                    var formatName = GetOverviewMarkFormatName(tag);
-
-                    if (formatName == null)
+                    foreach (Match match in _anchorRegex.Matches(commentText))
                     {
-                        continue;
+                        Group tagGroup = match.Groups["tag"];
+                        if (!tagGroup.Success)
+                        {
+                            continue;
+                        }
+
+                        var tag = tagGroup.Value.TrimEnd(':').ToUpperInvariant();
+                        var formatName = GetOverviewMarkFormatName(tag);
+
+                        if (formatName == null)
+                        {
+                            continue;
+                        }
+
+                        // Extend span to include the optional tag prefix (e.g., @ in @TODO)
+                        Group pfxGroup = match.Groups["tagprefix"];
+                        var spanStart = pfxGroup.Success ? pfxGroup.Index : tagGroup.Index;
+                        var spanLength = (tagGroup.Index + tagGroup.Length) - spanStart;
+                        var tagSpan = new SnapshotSpan(snapshot, lineStart + commentSpan.Start + spanStart, spanLength);
+
+                        yield return new TagSpan<OverviewMarkTag>(tagSpan, new OverviewMarkTag(formatName));
                     }
-
-                    // Extend span to include the optional tag prefix (e.g., @ in @TODO)
-                    Group pfxGroup = match.Groups["tagprefix"];
-                    var spanStart = pfxGroup.Success ? pfxGroup.Index : tagGroup.Index;
-                    var spanLength = (tagGroup.Index + tagGroup.Length) - spanStart;
-                    var tagSpan = new SnapshotSpan(snapshot, lineStart + spanStart, spanLength);
-
-                    yield return new TagSpan<OverviewMarkTag>(tagSpan, new OverviewMarkTag(formatName));
                 }
             }
         }

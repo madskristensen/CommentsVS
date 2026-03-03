@@ -18,6 +18,8 @@ namespace CommentsVS.Classification
         private readonly HashSet<string> _customTags;
         private readonly Regex _anchorRegex;
         private readonly Regex _metadataRegex;
+        private readonly Dictionary<string, IClassificationType> _classificationTypes;
+        private readonly IClassificationType _customType;
         private readonly BufferedTagChangeNotifier _changeNotifier;
 
         private readonly IClassificationType _metadataType;
@@ -45,6 +47,20 @@ namespace CommentsVS.Classification
             _customTags = EditorConfigSettings.GetCustomAnchorTags(filePath);
             _anchorRegex = EditorConfigSettings.GetAnchorClassificationRegex(filePath);
             _metadataRegex = EditorConfigSettings.GetAnchorWithMetadataRegex(filePath);
+
+            _classificationTypes = new Dictionary<string, IClassificationType>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["TODO"] = _registry.GetClassificationType(CommentTagClassificationTypes.Todo),
+                ["HACK"] = _registry.GetClassificationType(CommentTagClassificationTypes.Hack),
+                ["NOTE"] = _registry.GetClassificationType(CommentTagClassificationTypes.Note),
+                ["BUG"] = _registry.GetClassificationType(CommentTagClassificationTypes.Bug),
+                ["FIXME"] = _registry.GetClassificationType(CommentTagClassificationTypes.Fixme),
+                ["UNDONE"] = _registry.GetClassificationType(CommentTagClassificationTypes.Undone),
+                ["REVIEW"] = _registry.GetClassificationType(CommentTagClassificationTypes.Review),
+                ["ANCHOR"] = _registry.GetClassificationType(CommentTagClassificationTypes.Anchor)
+            };
+
+            _customType = _registry.GetClassificationType(CommentTagClassificationTypes.Custom);
 
             // Cache initial option value
             _enableHighlighting = General.Instance.EnableCommentTagHighlighting;
@@ -96,39 +112,66 @@ namespace CommentsVS.Classification
 
             var lineStart = span.Start.Position;
 
-            foreach (Match match in _anchorRegex.Matches(text))
+            foreach ((int Start, int Length) commentSpan in CommentSpanHelper.FindCommentSpans(text))
             {
-                Group tagGroup = match.Groups["tag"];
-                if (!tagGroup.Success)
+                var commentText = text.Substring(commentSpan.Start, commentSpan.Length);
+
+                // Skip comment spans that don't contain anchor keywords
+                var hasAnchorInComment = false;
+                foreach (var keyword in _anchorTags)
+                {
+                    if (commentText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        hasAnchorInComment = true;
+                        break;
+                    }
+                }
+
+                if (!hasAnchorInComment)
                 {
                     continue;
                 }
 
-                var tag = tagGroup.Value.TrimEnd(':').ToUpperInvariant();
-                IClassificationType classificationType = GetClassificationType(tag);
-
-                if (classificationType != null)
+                foreach (Match match in _anchorRegex.Matches(commentText))
                 {
-                    // Extend span to include the optional tag prefix (e.g., @ in @TODO)
-                    Group pfxGroup = match.Groups["tagprefix"];
-                    var spanStart = pfxGroup.Success ? pfxGroup.Index : tagGroup.Index;
-                    var spanLength = (tagGroup.Index + tagGroup.Length) - spanStart;
-                    var tagSpan = new SnapshotSpan(span.Snapshot, lineStart + spanStart, spanLength);
-                    result.Add(new ClassificationSpan(tagSpan, classificationType));
-                }
-
-                if (_metadataType != null)
-                {
-                    // Classify the optional metadata right after the anchor.
-                    // Examples: TODO(@mads): ...  TODO[#123]: ...  ANCHOR(section-name): ...
-                    Match metaMatch = _metadataRegex.Match(text, tagGroup.Index);
-                    if (metaMatch.Success && metaMatch.Index == tagGroup.Index)
+                    Group tagGroup = match.Groups["tag"];
+                    if (!tagGroup.Success)
                     {
-                        Group metaGroup = metaMatch.Groups["metadata"];
-                        if (metaGroup.Success && metaGroup.Length > 0)
+                        continue;
+                    }
+
+                    var tag = tagGroup.Value.TrimEnd(':').ToUpperInvariant();
+                    IClassificationType classificationType = GetClassificationType(tag);
+
+                    if (classificationType != null)
+                    {
+                        // Extend span to include the optional tag prefix (e.g., @ in @TODO)
+                        Group pfxGroup = match.Groups["tagprefix"];
+                        var spanStart = pfxGroup.Success ? pfxGroup.Index : tagGroup.Index;
+                        var spanLength = (tagGroup.Index + tagGroup.Length) - spanStart;
+                        var tagSpan = new SnapshotSpan(
+                            span.Snapshot,
+                            lineStart + commentSpan.Start + spanStart,
+                            spanLength);
+                        result.Add(new ClassificationSpan(tagSpan, classificationType));
+                    }
+
+                    if (_metadataType != null)
+                    {
+                        // Classify the optional metadata right after the anchor.
+                        // Examples: TODO(@mads): ...  TODO[#123]: ...  ANCHOR(section-name): ...
+                        Match metaMatch = _metadataRegex.Match(commentText, tagGroup.Index);
+                        if (metaMatch.Success && metaMatch.Index == tagGroup.Index)
                         {
-                            var metaSpan = new SnapshotSpan(span.Snapshot, lineStart + metaGroup.Index, metaGroup.Length);
-                            result.Add(new ClassificationSpan(metaSpan, _metadataType));
+                            Group metaGroup = metaMatch.Groups["metadata"];
+                            if (metaGroup.Success && metaGroup.Length > 0)
+                            {
+                                var metaSpan = new SnapshotSpan(
+                                    span.Snapshot,
+                                    lineStart + commentSpan.Start + metaGroup.Index,
+                                    metaGroup.Length);
+                                result.Add(new ClassificationSpan(metaSpan, _metadataType));
+                            }
                         }
                     }
                 }
@@ -139,28 +182,15 @@ namespace CommentsVS.Classification
 
         private IClassificationType GetClassificationType(string tag)
         {
-            var typeName = tag switch
+            if (_classificationTypes.TryGetValue(tag, out IClassificationType classificationType))
             {
-                "TODO" => CommentTagClassificationTypes.Todo,
-                "HACK" => CommentTagClassificationTypes.Hack,
-                "NOTE" => CommentTagClassificationTypes.Note,
-                "BUG" => CommentTagClassificationTypes.Bug,
-                "FIXME" => CommentTagClassificationTypes.Fixme,
-                "UNDONE" => CommentTagClassificationTypes.Undone,
-                "REVIEW" => CommentTagClassificationTypes.Review,
-                "ANCHOR" => CommentTagClassificationTypes.Anchor,
-                _ => null
-            };
-
-            if (typeName != null)
-            {
-                return _registry.GetClassificationType(typeName);
+                return classificationType;
             }
 
             // Check if it's a custom tag (from .editorconfig or Options page)
             if (_customTags.Contains(tag))
             {
-                return _registry.GetClassificationType(CommentTagClassificationTypes.Custom);
+                return _customType;
             }
 
             return null;
