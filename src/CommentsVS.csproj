@@ -95,6 +95,8 @@
     <Compile Include="QuickInfo\IssueReferenceQuickInfoSource.cs" />
     <Compile Include="QuickInfo\LinkAnchorQuickInfoSource.cs" />
     <Compile Include="Services\AnchorExporter.cs" />
+    <Compile Include="Services\BufferedTagChangeNotifier.cs" />
+    <Compile Include="Services\CommentLineParseCache.cs" />
     <Compile Include="Services\CommentPatterns.cs" />
     <Compile Include="Services\CommentReflowEngine.cs" />
     <Compile Include="Services\CommentRemovalService.cs" />

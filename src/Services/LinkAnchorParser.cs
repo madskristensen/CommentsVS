@@ -99,9 +99,7 @@ namespace CommentsVS.Services
         /// </summary>
         /// <remarks>
         /// Pattern breakdown:
-        /// - (?&lt;prefix&gt;...) - LINK keyword with specific rules:
-        ///   - LINK (uppercase) can be followed by space or colon
-        ///   - link (lowercase) MUST be followed by colon
+        /// - (?&lt;prefix&gt;...) - LINK keyword (case-insensitive) followed by optional colon and whitespace
         /// - (?:#(?&lt;localanchor&gt;[A-Za-z0-9_-]+)) - Local anchor only (#anchor-name)
         /// - OR: (?&lt;path&gt;...) - File path (can contain spaces, stops at :digit, #anchor, LINK keyword, or end of line)
         ///   - (?::(?&lt;line&gt;\d+)(?:-(?&lt;endline&gt;\d+))?)? - Optional :line or :line-endline
@@ -110,12 +108,12 @@ namespace CommentsVS.Services
         /// Trailing whitespace is trimmed from paths in code.
         /// </remarks>
         private const string _linkCorePattern =
-            @"(?<prefix>(?:\bLINK\s*:?\s*|\blink:\s*))(?:(?<localanchor>#[A-Za-z0-9_-]+)|(?<path>(?:[./\\@~])?(?:[^\r\n#:]|:(?!\d))+?)(?::(?<line>\d+)(?:-(?<endline>\d+))?)?(?:#(?<fileanchor>[A-Za-z0-9_-]+))?(?=\s*(?:\bLINK\b|\blink:|$|\r|\n)))";
+            @"(?<prefix>\bLINK\b\s*:?\s*)(?:(?<localanchor>#[A-Za-z0-9_-]+)|(?<path>(?:[./\\@~])?(?:[^\r\n#:]|:(?!\d))+?)(?::(?<line>\d+)(?:-(?<endline>\d+))?)?(?:#(?<fileanchor>[A-Za-z0-9_-]+))?(?=\s*(?:\bLINK\b|$|\r|\n)))";
 
         /// <summary>
         /// Default compiled regex (no tag prefixes).
         /// </summary>
-        private static readonly Regex _defaultLinkRegex = new(_linkCorePattern, RegexOptions.Compiled);
+        private static readonly Regex _defaultLinkRegex = new(_linkCorePattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         /// <summary>
         /// Cached regex for the current tag prefix setting.
@@ -153,7 +151,7 @@ namespace CommentsVS.Services
 
             // Prepend optional prefix before the LINK keyword
             var pattern = @"(?:" + prefixPattern + @")?\s*" + _linkCorePattern;
-            _cachedPrefixRegex = new Regex(pattern, RegexOptions.Compiled);
+            _cachedPrefixRegex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
             _cachedPrefixPattern = prefixPattern;
             return _cachedPrefixRegex;
         }
@@ -170,12 +168,8 @@ namespace CommentsVS.Services
                 return _emptyResult;
             }
 
-            // Fast pre-check: must contain "LINK" (uppercase, can be followed by space or colon)
-            // or "link:" (lowercase, must have colon)
-            var hasUppercaseLink = text.IndexOf("LINK", StringComparison.Ordinal) >= 0;
-            var hasLowercaseLink = text.IndexOf("link:", StringComparison.Ordinal) >= 0;
-
-            if (!hasUppercaseLink && !hasLowercaseLink)
+            // Fast pre-check: must contain LINK in any casing
+            if (text.IndexOf("link", StringComparison.OrdinalIgnoreCase) < 0)
             {
                 return _emptyResult;
             }
@@ -187,6 +181,20 @@ namespace CommentsVS.Services
                 // Calculate target position (excludes "LINK:" prefix)
                 Group prefixGroup = match.Groups["prefix"];
                 var prefixLength = prefixGroup.Success ? prefixGroup.Length : 0;
+                var targetStartIndex = match.Index + prefixLength;
+                var targetLength = match.Length - prefixLength;
+
+                // Guard against leading/trailing whitespace being included in the clickable target span
+                while (targetLength > 0 && char.IsWhiteSpace(text[targetStartIndex]))
+                {
+                    targetStartIndex++;
+                    targetLength--;
+                }
+
+                while (targetLength > 0 && char.IsWhiteSpace(text[targetStartIndex + targetLength - 1]))
+                {
+                    targetLength--;
+                }
 
                 string filePath = null;
                 int? lineNumber = null;
@@ -234,8 +242,8 @@ namespace CommentsVS.Services
                     FullMatch = match.Value,
                     StartIndex = match.Index,
                     Length = match.Length,
-                    TargetStartIndex = match.Index + prefixLength,
-                    TargetLength = match.Length - prefixLength,
+                    TargetStartIndex = targetStartIndex,
+                    TargetLength = targetLength,
                     FilePath = filePath,
                     LineNumber = lineNumber,
                     EndLineNumber = endLineNumber,
@@ -260,11 +268,8 @@ namespace CommentsVS.Services
                 return false;
             }
 
-            // Fast pre-check: must contain "LINK" (uppercase) or "link:" (lowercase with colon)
-            var hasUppercaseLink = text.IndexOf("LINK", StringComparison.Ordinal) >= 0;
-            var hasLowercaseLink = text.IndexOf("link:", StringComparison.Ordinal) >= 0;
-
-            return (hasUppercaseLink || hasLowercaseLink) && GetLinkRegex().IsMatch(text);
+            // Fast pre-check: must contain LINK in any casing
+            return text.IndexOf("link", StringComparison.OrdinalIgnoreCase) >= 0 && GetLinkRegex().IsMatch(text);
         }
 
         /// <summary>
@@ -285,7 +290,7 @@ namespace CommentsVS.Services
             foreach (LinkAnchorInfo link in links)
             {
                 // Only match if position is within the target portion (path/anchor), not the "LINK:" prefix
-                if (position >= link.TargetStartIndex && position <= link.TargetStartIndex + link.TargetLength)
+                if (position >= link.TargetStartIndex && position < link.TargetStartIndex + link.TargetLength)
                 {
                     return link;
                 }

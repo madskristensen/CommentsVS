@@ -26,15 +26,31 @@ namespace CommentsVS.Services
                 yield break;
             }
 
-            // Look for inline single-line comments (//)
-            var inlineCommentIndex = text.IndexOf("//");
-            if (inlineCommentIndex >= 0)
+            // Look for inline single-line comments (//), skipping URL-like tokens such as http://
+            var searchIndex = 0;
+            while (searchIndex < text.Length)
             {
+                var inlineCommentIndex = text.IndexOf("//", searchIndex, StringComparison.Ordinal);
+                if (inlineCommentIndex < 0)
+                {
+                    break;
+                }
+
+                // Skip URI-like schemes (http://, https://, file://, etc.)
+                if (inlineCommentIndex > 0 && text[inlineCommentIndex - 1] == ':')
+                {
+                    searchIndex = inlineCommentIndex + 2;
+                    continue;
+                }
+
                 // Make sure it's not inside a string literal
                 if (!IsInsideStringLiteral(text, inlineCommentIndex))
                 {
                     yield return (inlineCommentIndex, text.Length - inlineCommentIndex);
+                    yield break;
                 }
+
+                searchIndex = inlineCommentIndex + 2;
             }
         }
 

@@ -212,14 +212,14 @@ public sealed class LinkAnchorParserTests
     }
 
     [TestMethod]
-    public void Parse_MixedCaseLink_ReturnsEmptyList()
+    public void Parse_MixedCaseLink_ParsesCorrectly()
     {
-        // Mixed case "Link:" is not supported - must be "LINK" or "link:"
         var text = "// Link: path/to/file.cs";
 
         IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
 
-        Assert.IsEmpty(results);
+        Assert.HasCount(1, results);
+        Assert.AreEqual("path/to/file.cs", results[0].FilePath);
     }
 
     #endregion
@@ -230,6 +230,16 @@ public sealed class LinkAnchorParserTests
     public void Parse_EmptyString_ReturnsEmptyList()
     {
         var text = "";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.IsEmpty(results);
+    }
+
+    [TestMethod]
+    public void Parse_WordContainingLinks_ReturnsEmptyList()
+    {
+        var text = "// these links are great too";
 
         IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
 
@@ -288,6 +298,16 @@ public sealed class LinkAnchorParserTests
     public void ContainsLinkAnchor_WithoutLink_ReturnsFalse()
     {
         var text = "// This is just a comment";
+
+        var result = LinkAnchorParser.ContainsLinkAnchor(text);
+
+        Assert.IsFalse(result);
+    }
+
+    [TestMethod]
+    public void ContainsLinkAnchor_WordContainingLinks_ReturnsFalse()
+    {
+        var text = "// these links are great too";
 
         var result = LinkAnchorParser.ContainsLinkAnchor(text);
 
@@ -416,6 +436,18 @@ public sealed class LinkAnchorParserTests
         Assert.HasCount(1, results);
         // Target includes "file.cs:42#section"
         Assert.AreEqual("file.cs:42#section".Length, results[0].TargetLength);
+    }
+
+    [TestMethod]
+    public void Parse_WithMultipleSpacesAfterColon_TargetStartsAtValue()
+    {
+        var text = "// LINK:   file.cs";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual(11, results[0].TargetStartIndex);
+        Assert.AreEqual("file.cs".Length, results[0].TargetLength);
     }
 
 

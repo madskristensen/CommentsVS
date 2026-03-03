@@ -12,6 +12,7 @@ public class LinkAnchorParserBenchmarks
     private string _noLinkLine = null!;
     private string _simpleLinkLine = null!;
     private string _complexLinkLine = null!;
+    private string _mixedCaseLinkLine = null!;
     private string _multipleLinkLine = null!;
     private string[] _fileWithLinks = null!;
     private string[] _fileWithoutLinks = null!;
@@ -27,6 +28,9 @@ public class LinkAnchorParserBenchmarks
 
         // Complex link with line number and anchor
         _complexLinkLine = "    // LINK: Database/Schema.sql:45-67#create-tables and LINK: ./config.json:10#connection-string";
+
+        // Mixed-case keyword variant
+        _mixedCaseLinkLine = "    // Link: Services/MixedCase.cs:42#method";
 
         // Multiple links on one line
         _multipleLinkLine = "    // Related: LINK: Models/User.cs LINK: Models/Role.cs:20 LINK: #local-anchor LINK: ../tests/UserTests.cs:100-150#setup";
@@ -84,6 +88,12 @@ public class LinkAnchorParserBenchmarks
     public IReadOnlyList<LinkAnchorInfo> ParseComplexLinkLine()
     {
         return LinkAnchorParser.Parse(_complexLinkLine);
+    }
+
+    [Benchmark(Description = "Parse mixed-case Link keyword")]
+    public IReadOnlyList<LinkAnchorInfo> ParseMixedCaseLinkLine()
+    {
+        return LinkAnchorParser.Parse(_mixedCaseLinkLine);
     }
 
     [Benchmark(Description = "Parse multiple LINK references in one line")]

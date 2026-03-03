@@ -87,20 +87,7 @@ namespace CommentsVS.ToolWindows
             {
                 var lineText = snapshot.GetLineFromLineNumber(lineNumber).GetText();
 
-                // Fast pre-check for this line
-                if (!ContainsAnyKeyword(lineText, anchorTags))
-                {
-                    continue;
-                }
-
-                foreach (Match match in anchorRegex.Matches(lineText))
-                {
-                    AnchorItem anchor = CreateAnchorFromMatch(match, filePath, projectName, lineNumber);
-                    if (anchor != null)
-                    {
-                        anchors.Add(anchor);
-                    }
-                }
+                ScanCommentSpansInLine(lineText, lineNumber, filePath, projectName, anchorTags, anchorRegex, anchors);
             }
 
             return anchors;
@@ -125,24 +112,43 @@ namespace CommentsVS.ToolWindows
                 string lineText;
                 while ((lineText = reader.ReadLine()) != null)
                 {
-                    // Fast pre-check for this line
-                    if (ContainsAnyKeyword(lineText, anchorTags))
-                    {
-                        foreach (Match match in anchorRegex.Matches(lineText))
-                        {
-                            AnchorItem anchor = CreateAnchorFromMatch(match, filePath, projectName, lineNumber);
-                            if (anchor != null)
-                            {
-                                anchors.Add(anchor);
-                            }
-                        }
-                    }
+                    ScanCommentSpansInLine(lineText, lineNumber, filePath, projectName, anchorTags, anchorRegex, anchors);
 
                     lineNumber++;
                 }
             }
 
             return anchors;
+        }
+
+        private void ScanCommentSpansInLine(
+            string lineText,
+            int lineNumber,
+            string filePath,
+            string projectName,
+            IReadOnlyList<string> anchorTags,
+            Regex anchorRegex,
+            List<AnchorItem> anchors)
+        {
+            foreach ((int Start, int Length) commentSpan in CommentSpanHelper.FindCommentSpans(lineText))
+            {
+                var commentText = lineText.Substring(commentSpan.Start, commentSpan.Length);
+
+                // Fast pre-check for this comment span
+                if (!ContainsAnyKeyword(commentText, anchorTags))
+                {
+                    continue;
+                }
+
+                foreach (Match match in anchorRegex.Matches(commentText))
+                {
+                    AnchorItem anchor = CreateAnchorFromMatch(match, filePath, projectName, lineNumber, commentSpan.Start);
+                    if (anchor != null)
+                    {
+                        anchors.Add(anchor);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -163,7 +169,7 @@ namespace CommentsVS.ToolWindows
         /// <summary>
         /// Creates an AnchorItem from a regex match, or returns null if the match is invalid.
         /// </summary>
-        private AnchorItem CreateAnchorFromMatch(Match match, string filePath, string projectName, int lineNumber)
+        private AnchorItem CreateAnchorFromMatch(Match match, string filePath, string projectName, int lineNumber, int columnOffset = 0)
         {
             Group tagGroup = match.Groups["tag"];
             if (!tagGroup.Success)
@@ -204,7 +210,7 @@ namespace CommentsVS.ToolWindows
                 CustomTagName = customTagName,
                 FilePath = filePath,
                 LineNumber = lineNumber + 1, // 1-based line numbers
-                Column = tagGroup.Index,
+                Column = columnOffset + tagGroup.Index,
                 Project = projectName,
                 Message = message,
                 RawMetadata = rawMetadata,

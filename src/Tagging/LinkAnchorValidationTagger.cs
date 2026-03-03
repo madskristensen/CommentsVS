@@ -33,7 +33,11 @@ namespace CommentsVS.Tagging
     internal sealed class LinkAnchorValidationTagger : ITagger<IErrorTag>, IDisposable
     {
         private readonly ITextBuffer _buffer;
+        private readonly CommentLineParseCache _lineParseCache;
+        private readonly BufferedTagChangeNotifier _changeNotifier;
         private string _currentFilePath;
+        private FilePathResolver _resolver;
+        private string _resolverFilePath;
         private ITextDocument _document;
         private bool _disposed;
 
@@ -42,6 +46,8 @@ namespace CommentsVS.Tagging
         public LinkAnchorValidationTagger(ITextBuffer buffer)
         {
             _buffer = buffer;
+            _lineParseCache = CommentLineParseCache.GetOrCreate(buffer);
+            _changeNotifier = new BufferedTagChangeNotifier(args => TagsChanged?.Invoke(this, args));
             _buffer.Changed += OnBufferChanged;
             TryInitializeDocument();
         }
@@ -67,6 +73,8 @@ namespace CommentsVS.Tagging
             if (e.FileActionType == FileActionTypes.DocumentRenamed)
             {
                 _currentFilePath = e.FilePath;
+                _resolver = null;
+                _resolverFilePath = null;
                 RaiseTagsChangedForEntireBuffer();
             }
         }
@@ -74,8 +82,7 @@ namespace CommentsVS.Tagging
         private void RaiseTagsChangedForEntireBuffer()
         {
             ITextSnapshot snapshot = _buffer.CurrentSnapshot;
-            TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(
-                new SnapshotSpan(snapshot, 0, snapshot.Length)));
+            _changeNotifier.QueueFullBuffer(snapshot);
         }
 
         public void Dispose()
@@ -92,16 +99,13 @@ namespace CommentsVS.Tagging
             {
                 _document.FileActionOccurred -= OnFileActionOccurred;
             }
+
+            _changeNotifier.Dispose();
         }
 
         private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
         {
-            foreach (ITextChange change in e.Changes)
-            {
-                ITextSnapshotLine line = e.After.GetLineFromPosition(change.NewPosition);
-                TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(
-                    new SnapshotSpan(e.After, line.Start, line.Length)));
-            }
+            _changeNotifier.Queue(e);
         }
 
         public IEnumerable<ITagSpan<IErrorTag>> GetTags(NormalizedSnapshotSpanCollection spans)
@@ -128,7 +132,7 @@ namespace CommentsVS.Tagging
                 yield break;
             }
 
-            var resolver = new FilePathResolver(_currentFilePath);
+            FilePathResolver resolver = GetOrCreateResolver();
 
             // Process each line that intersects with the requested spans
             foreach (SnapshotSpan span in spans)
@@ -140,22 +144,13 @@ namespace CommentsVS.Tagging
                 for (var lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber++)
                 {
                     ITextSnapshotLine line = snapshot.GetLineFromLineNumber(lineNumber);
-                    var text = line.GetText();
-
-                    // Fast pre-check: skip if no LINK keyword
-                    if (text.IndexOf("LINK", StringComparison.OrdinalIgnoreCase) < 0)
+                    ParsedCommentLineData lineData = _lineParseCache.GetLineData(snapshot, lineNumber);
+                    if (lineData.Links.Count == 0)
                     {
                         continue;
                     }
 
-                    // Check if this line is a comment
-                    if (!LanguageCommentStyle.IsCommentLine(text))
-                    {
-                        continue;
-                    }
-
-                    IReadOnlyList<LinkAnchorInfo> links = LinkAnchorParser.Parse(text);
-                    foreach (LinkAnchorInfo link in links)
+                    foreach (LinkAnchorInfo link in lineData.Links)
                     {
                         // Skip local anchors for now (would need to scan current file)
                         if (link.IsLocalAnchor)
@@ -174,6 +169,18 @@ namespace CommentsVS.Tagging
                     }
                 }
             }
+        }
+
+        private FilePathResolver GetOrCreateResolver()
+        {
+            if (_resolver != null && string.Equals(_resolverFilePath, _currentFilePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return _resolver;
+            }
+
+            _resolver = new FilePathResolver(_currentFilePath);
+            _resolverFilePath = _currentFilePath;
+            return _resolver;
         }
     }
 }

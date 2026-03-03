@@ -37,6 +37,8 @@ namespace CommentsVS.Tagging
     {
         private readonly ITextBuffer _buffer;
         private readonly IClassificationType _linkClassificationType;
+        private readonly CommentLineParseCache _lineParseCache;
+        private readonly BufferedTagChangeNotifier _changeNotifier;
         private bool _disposed;
 
         public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
@@ -45,17 +47,14 @@ namespace CommentsVS.Tagging
         {
             _buffer = buffer;
             _linkClassificationType = registry.GetClassificationType(LinkAnchorClassificationDefinition.LinkAnchorClassificationType);
+            _lineParseCache = CommentLineParseCache.GetOrCreate(buffer);
+            _changeNotifier = new BufferedTagChangeNotifier(args => TagsChanged?.Invoke(this, args));
             _buffer.Changed += OnBufferChanged;
         }
 
         private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
         {
-            foreach (ITextChange change in e.Changes)
-            {
-                ITextSnapshotLine line = e.After.GetLineFromPosition(change.NewPosition);
-                TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(
-                    new SnapshotSpan(e.After, line.Start, line.Length)));
-            }
+            _changeNotifier.Queue(e);
         }
 
         public IEnumerable<ITagSpan<IClassificationTag>> GetTags(NormalizedSnapshotSpanCollection spans)
@@ -78,27 +77,29 @@ namespace CommentsVS.Tagging
 
             foreach (SnapshotSpan span in spans)
             {
-                var text = span.GetText();
+                var startLineNumber = span.Start.GetContainingLine().LineNumber;
+                var endLineNumber = span.End.GetContainingLine().LineNumber;
 
-                // Fast pre-check: skip if no LINK keyword
-                if (text.IndexOf("LINK", StringComparison.OrdinalIgnoreCase) < 0)
+                for (var lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber++)
                 {
-                    continue;
-                }
+                    ITextSnapshotLine line = span.Snapshot.GetLineFromLineNumber(lineNumber);
+                    ParsedCommentLineData lineData = _lineParseCache.GetLineData(span.Snapshot, lineNumber);
 
-                // Check if this line is a comment
-                if (!LanguageCommentStyle.IsCommentLine(text))
-                {
-                    continue;
-                }
+                    if (lineData.Links.Count == 0)
+                    {
+                        continue;
+                    }
 
+                    foreach (LinkAnchorInfo link in lineData.Links)
+                    {
+                        var tagStart = line.Start.Position + link.TargetStartIndex;
+                        var tagSpan = new SnapshotSpan(span.Snapshot, tagStart, link.TargetLength);
 
-                IReadOnlyList<LinkAnchorInfo> links = LinkAnchorParser.Parse(text);
-                foreach (LinkAnchorInfo link in links)
-                {
-                    // Only underline the target portion (path/anchor), not the "LINK:" prefix
-                    var tagSpan = new SnapshotSpan(span.Snapshot, span.Start + link.TargetStartIndex, link.TargetLength);
-                    yield return new TagSpan<IClassificationTag>(tagSpan, new ClassificationTag(_linkClassificationType));
+                        if (tagSpan.IntersectsWith(span))
+                        {
+                            yield return new TagSpan<IClassificationTag>(tagSpan, new ClassificationTag(_linkClassificationType));
+                        }
+                    }
                 }
             }
         }
@@ -112,6 +113,7 @@ namespace CommentsVS.Tagging
 
             _disposed = true;
             _buffer.Changed -= OnBufferChanged;
+            _changeNotifier.Dispose();
         }
     }
 

@@ -4,9 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommentsVS.Options;
 using EnvDTE80;
-using DTEProject = EnvDTE.Project;
-using DTEProjectItem = EnvDTE.ProjectItem;
-using DTEProjectItems = EnvDTE.ProjectItems;
 using DTESolution = EnvDTE.Solution;
 
 namespace CommentsVS.ToolWindows
@@ -98,7 +95,7 @@ namespace CommentsVS.ToolWindows
 
                 // Collect all files to scan
                 var filesToScan = new List<(string FilePath, string ProjectName)>();
-                await CollectFilesFromSolutionAsync(solution, filesToScan, extensionsToScan, foldersToIgnore, ct);
+                await CollectFilesFromFileSystemAsync(solutionDir, solution.FullName, filesToScan, extensionsToScan, foldersToIgnore, ct).ConfigureAwait(false);
 
                 if (ct.IsCancellationRequested)
                 {
@@ -226,159 +223,75 @@ namespace CommentsVS.ToolWindows
             return dte?.Solution;
         }
 
-        private async Task CollectFilesFromSolutionAsync(
-            DTESolution solution,
+        private static Task CollectFilesFromFileSystemAsync(
+            string solutionDir,
+            string solutionFullName,
             List<(string, string)> filesToScan,
             HashSet<string> extensionsToScan,
             HashSet<string> foldersToIgnore,
             CancellationToken ct)
         {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
-
-            if (solution?.Projects == null)
+            return Task.Run(() =>
             {
-                return;
-            }
+                var solutionName = Path.GetFileNameWithoutExtension(solutionFullName);
+                var pendingDirectories = new Stack<string>();
+                pendingDirectories.Push(solutionDir);
 
-            foreach (DTEProject project in solution.Projects)
-            {
-                if (ct.IsCancellationRequested)
+                while (pendingDirectories.Count > 0)
                 {
-                    break;
-                }
-
-                await CollectFilesFromProjectAsync(project, filesToScan, extensionsToScan, foldersToIgnore, ct);
-            }
-        }
-
-        private async Task CollectFilesFromProjectAsync(
-            DTEProject project,
-            List<(string, string)> filesToScan,
-            HashSet<string> extensionsToScan,
-            HashSet<string> foldersToIgnore,
-            CancellationToken ct)
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
-
-            if (project == null)
-            {
-                return;
-            }
-
-            try
-            {
-                var projectName = project.Name;
-
-                // Handle solution folders (Kind = ProjectKinds.vsProjectKindSolutionFolder)
-                if (project.Kind == ProjectKinds.vsProjectKindSolutionFolder)
-                {
-                    // Solution folder - recurse into sub-projects
-                    if (project.ProjectItems != null)
+                    if (ct.IsCancellationRequested)
                     {
-                        foreach (DTEProjectItem item in project.ProjectItems)
+                        break;
+                    }
+
+                    string currentDirectory = pendingDirectories.Pop();
+
+                    try
+                    {
+                        foreach (string directory in Directory.EnumerateDirectories(currentDirectory))
                         {
                             if (ct.IsCancellationRequested)
                             {
                                 break;
                             }
 
-                            if (item.SubProject != null)
+                            string folderName = Path.GetFileName(directory);
+                            if (!string.IsNullOrEmpty(folderName) && foldersToIgnore.Contains(folderName))
                             {
-                                await CollectFilesFromProjectAsync(item.SubProject, filesToScan, extensionsToScan, foldersToIgnore, ct);
+                                continue;
+                            }
+
+                            pendingDirectories.Push(directory);
+                        }
+
+                        foreach (string filePath in Directory.EnumerateFiles(currentDirectory))
+                        {
+                            if (ct.IsCancellationRequested)
+                            {
+                                break;
+                            }
+
+                            string extension = Path.GetExtension(filePath);
+                            if (!string.IsNullOrEmpty(extension) && extensionsToScan.Contains(extension))
+                            {
+                                filesToScan.Add((filePath, solutionName));
                             }
                         }
                     }
-                    return;
-                }
-
-                // Regular project - collect files from project items
-                if (project.ProjectItems != null)
-                {
-                    await CollectFilesFromProjectItemsAsync(project.ProjectItems, projectName, filesToScan, extensionsToScan, foldersToIgnore, ct);
-                }
-            }
-            catch (Exception)
-            {
-                // Skip projects that can't be accessed
-            }
-        }
-
-        private async Task CollectFilesFromProjectItemsAsync(
-            DTEProjectItems items,
-            string projectName,
-            List<(string, string)> filesToScan,
-            HashSet<string> extensionsToScan,
-            HashSet<string> foldersToIgnore,
-            CancellationToken ct)
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
-
-            if (items == null)
-            {
-                return;
-            }
-
-            foreach (DTEProjectItem item in items)
-            {
-                if (ct.IsCancellationRequested)
-                {
-                    break;
-                }
-
-                try
-                {
-                    // Check if this is a folder to ignore
-                    if (item.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder ||
-                        item.Kind == EnvDTE.Constants.vsProjectItemKindVirtualFolder)
+                    catch (UnauthorizedAccessException)
                     {
-                        if (foldersToIgnore.Contains(item.Name))
-                        {
-                            continue; // Skip ignored folders
-                        }
+                        // Skip directories that cannot be accessed
                     }
-
-                    // Check if it's a file
-                    if (item.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFile)
+                    catch (DirectoryNotFoundException)
                     {
-                        var filePath = item.FileNames[1];
-                        if (!string.IsNullOrEmpty(filePath))
-                        {
-                            var extension = Path.GetExtension(filePath);
-                            if (extensionsToScan.Contains(extension))
-                            {
-                                // Double-check the path doesn't contain ignored folders
-                                if (!ContainsIgnoredFolder(filePath, foldersToIgnore))
-                                {
-                                    filesToScan.Add((filePath, projectName));
-                                }
-                            }
-                        }
+                        // Skip directories removed while scanning
                     }
-
-                    // Recurse into sub-items (folders, etc.)
-                    if (item.ProjectItems != null && item.ProjectItems.Count > 0)
+                    catch (IOException)
                     {
-                        await CollectFilesFromProjectItemsAsync(item.ProjectItems, projectName, filesToScan, extensionsToScan, foldersToIgnore, ct);
+                        // Skip transient file system errors
                     }
                 }
-                catch (Exception)
-                {
-                    // Skip items that can't be accessed
-                }
-            }
-        }
-
-        private static bool ContainsIgnoredFolder(string filePath, HashSet<string> foldersToIgnore)
-        {
-            var pathParts = filePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            foreach (var part in pathParts)
-            {
-                if (foldersToIgnore.Contains(part))
-                {
-                    return true;
-                }
-            }
-            return false;
+            }, ct);
         }
 
         private static string ReadFileSync(string filePath)

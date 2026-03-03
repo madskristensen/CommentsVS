@@ -35,6 +35,8 @@ namespace CommentsVS.Tagging
     internal sealed class IssueReferenceTagger : ITagger<IUrlTag>, IDisposable
     {
         private readonly ITextBuffer _buffer;
+        private readonly CommentLineParseCache _lineParseCache;
+        private readonly BufferedTagChangeNotifier _changeNotifier;
         private GitRepositoryInfo _repoInfo;
         private bool _repoInfoInitialized;
         private readonly string _filePath;
@@ -51,6 +53,8 @@ namespace CommentsVS.Tagging
         public IssueReferenceTagger(ITextBuffer buffer)
         {
             _buffer = buffer;
+            _lineParseCache = CommentLineParseCache.GetOrCreate(buffer);
+            _changeNotifier = new BufferedTagChangeNotifier(args => TagsChanged?.Invoke(this, args));
             _buffer.Changed += OnBufferChanged;
 
             // Get file path and trigger async initialization
@@ -64,12 +68,7 @@ namespace CommentsVS.Tagging
 
         private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
         {
-            foreach (ITextChange change in e.Changes)
-            {
-                ITextSnapshotLine line = e.After.GetLineFromPosition(change.NewPosition);
-                TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(
-                    new SnapshotSpan(e.After, line.Start, line.Length)));
-            }
+            _changeNotifier.Queue(e);
         }
 
         public IEnumerable<ITagSpan<IUrlTag>> GetTags(NormalizedSnapshotSpanCollection spans)
@@ -107,35 +106,44 @@ namespace CommentsVS.Tagging
 
             foreach (SnapshotSpan span in spans)
             {
-                var text = span.GetText();
+                var startLineNumber = span.Start.GetContainingLine().LineNumber;
+                var endLineNumber = span.End.GetContainingLine().LineNumber;
 
-                // Quick check - skip if no # in the text
-                if (!text.Contains("#"))
+                for (var lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber++)
                 {
-                    continue;
-                }
+                    ITextSnapshotLine line = span.Snapshot.GetLineFromLineNumber(lineNumber);
+                    var text = line.GetText();
 
-                // Find all comment portions in the text (both full-line and inline comments)
-                foreach ((int Start, int Length) commentSpan in CommentSpanHelper.FindCommentSpans(text))
-                {
-                    // Use Regex.Match with startAt and check bounds instead of Substring allocation
-                    var commentEnd = commentSpan.Start + commentSpan.Length;
-                    Match match = _issueReferenceRegex.Match(text, commentSpan.Start, commentSpan.Length);
-
-                    while (match.Success && match.Index < commentEnd)
+                    ParsedCommentLineData lineData = _lineParseCache.GetLineData(span.Snapshot, lineNumber);
+                    if (!lineData.HasIssueCandidate || lineData.CommentSpans.Count == 0)
                     {
-                        if (int.TryParse(match.Groups["number"].Value, out var issueNumber))
-                        {
-                            var url = _repoInfo.GetIssueUrl(issueNumber);
-                            if (!string.IsNullOrEmpty(url))
-                            {
-                                // match.Index is already relative to the full text
-                                var tagSpan = new SnapshotSpan(span.Snapshot, span.Start + match.Index, match.Length);
-                                yield return new TagSpan<IUrlTag>(tagSpan, new UrlTag(new Uri(url)));
-                            }
-                        }
+                        continue;
+                    }
 
-                        match = match.NextMatch();
+                    foreach ((int Start, int Length) commentSpan in lineData.CommentSpans)
+                    {
+                        // Use Regex.Match with startAt and check bounds instead of Substring allocation
+                        var commentEnd = commentSpan.Start + commentSpan.Length;
+                        Match match = _issueReferenceRegex.Match(text, commentSpan.Start, commentSpan.Length);
+
+                        while (match.Success && match.Index < commentEnd)
+                        {
+                            if (int.TryParse(match.Groups["number"].Value, out var issueNumber))
+                            {
+                                var url = _repoInfo.GetIssueUrl(issueNumber);
+                                if (!string.IsNullOrEmpty(url))
+                                {
+                                    // match.Index is already relative to the full text
+                                    var tagSpan = new SnapshotSpan(span.Snapshot, line.Start + match.Index, match.Length);
+                                    if (tagSpan.IntersectsWith(span))
+                                    {
+                                        yield return new TagSpan<IUrlTag>(tagSpan, new UrlTag(new Uri(url)));
+                                    }
+                                }
+                            }
+
+                            match = match.NextMatch();
+                        }
                     }
                 }
             }
@@ -155,8 +163,7 @@ namespace CommentsVS.Tagging
             if (_repoInfo != null)
             {
                 ITextSnapshot snapshot = _buffer.CurrentSnapshot;
-                TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(
-                    new SnapshotSpan(snapshot, 0, snapshot.Length)));
+                _changeNotifier.QueueFullBuffer(snapshot);
             }
         }
 
@@ -169,6 +176,7 @@ namespace CommentsVS.Tagging
 
             _disposed = true;
             _buffer.Changed -= OnBufferChanged;
+            _changeNotifier.Dispose();
         }
     }
 }
