@@ -49,7 +49,7 @@ public sealed class IntraTextAdornmentTaggerBehaviorTests
 
         List<(int Start, int End)> deduped = DeduplicateRanges(ranges);
 
-        Assert.AreEqual(3, deduped.Count);
+        Assert.HasCount(3, deduped);
         Assert.AreEqual((10, 20), deduped[0]);
         Assert.AreEqual((30, 40), deduped[1]);
         Assert.AreEqual((50, 60), deduped[2]);
@@ -68,7 +68,7 @@ public sealed class IntraTextAdornmentTaggerBehaviorTests
 
         List<(int Start, int End)> kept = PruneOutsideVisibleRange(cached, visibleStart: 10, visibleEnd: 32);
 
-        Assert.AreEqual(2, kept.Count);
+        Assert.HasCount(2, kept);
         Assert.AreEqual((8, 12), kept[0]);
         Assert.AreEqual((20, 30), kept[1]);
     }

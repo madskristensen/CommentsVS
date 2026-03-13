@@ -29,7 +29,7 @@ public sealed class CommentTagRangeMatchingTests
 
         List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
 
-        Assert.AreEqual(1, tagSpans.Count);
+        Assert.HasCount(1, tagSpans);
         Assert.AreEqual(text.IndexOf("TODO", StringComparison.Ordinal), tagSpans[0].Start);
         Assert.AreEqual("TODO".Length, tagSpans[0].Length);
     }
@@ -41,7 +41,7 @@ public sealed class CommentTagRangeMatchingTests
 
         List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
 
-        Assert.AreEqual(2, tagSpans.Count);
+        Assert.HasCount(2, tagSpans);
         Assert.AreEqual(text.IndexOf("TODO", StringComparison.Ordinal), tagSpans[0].Start);
         Assert.AreEqual(text.IndexOf("HACK", StringComparison.Ordinal), tagSpans[1].Start);
     }
@@ -53,7 +53,7 @@ public sealed class CommentTagRangeMatchingTests
 
         List<(int Start, int Length)> metadataSpans = ExtractMetadataSpans(text);
 
-        Assert.AreEqual(1, metadataSpans.Count);
+        Assert.HasCount(1, metadataSpans);
         Assert.AreEqual(text.IndexOf("(@mads)", StringComparison.Ordinal), metadataSpans[0].Start);
         Assert.AreEqual("(@mads)".Length, metadataSpans[0].Length);
     }
@@ -65,7 +65,7 @@ public sealed class CommentTagRangeMatchingTests
 
         List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
 
-        Assert.AreEqual(0, tagSpans.Count);
+        Assert.IsEmpty(tagSpans);
     }
 
     [TestMethod]
@@ -75,7 +75,7 @@ public sealed class CommentTagRangeMatchingTests
 
         List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
 
-        Assert.AreEqual(1, tagSpans.Count);
+        Assert.HasCount(1, tagSpans);
         Assert.AreEqual(text.IndexOf("NOTE", StringComparison.Ordinal), tagSpans[0].Start);
         Assert.AreEqual("NOTE".Length, tagSpans[0].Length);
     }
@@ -87,7 +87,7 @@ public sealed class CommentTagRangeMatchingTests
 
         List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
 
-        Assert.AreEqual(1, tagSpans.Count);
+        Assert.HasCount(1, tagSpans);
         Assert.AreEqual(text.IndexOf("TODO", StringComparison.Ordinal), tagSpans[0].Start);
         Assert.AreEqual("TODO".Length, tagSpans[0].Length);
     }
@@ -99,7 +99,7 @@ public sealed class CommentTagRangeMatchingTests
 
         List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
 
-        Assert.AreEqual(1, tagSpans.Count);
+        Assert.HasCount(1, tagSpans);
         Assert.AreEqual(text.IndexOf("HACK", StringComparison.Ordinal), tagSpans[0].Start);
         Assert.AreEqual("HACK".Length, tagSpans[0].Length);
     }
@@ -111,7 +111,7 @@ public sealed class CommentTagRangeMatchingTests
 
         List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
 
-        Assert.AreEqual(1, tagSpans.Count);
+        Assert.HasCount(1, tagSpans);
         Assert.AreEqual(text.IndexOf("REVIEW", StringComparison.Ordinal), tagSpans[0].Start);
         Assert.AreEqual("REVIEW".Length, tagSpans[0].Length);
     }
@@ -123,7 +123,7 @@ public sealed class CommentTagRangeMatchingTests
 
         List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
 
-        Assert.AreEqual(1, tagSpans.Count);
+        Assert.HasCount(1, tagSpans);
         Assert.AreEqual(text.IndexOf("ToDo", StringComparison.Ordinal), tagSpans[0].Start);
         Assert.AreEqual("ToDo".Length, tagSpans[0].Length);
     }
@@ -135,7 +135,7 @@ public sealed class CommentTagRangeMatchingTests
 
         List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
 
-        Assert.AreEqual(1, tagSpans.Count);
+        Assert.HasCount(1, tagSpans);
         Assert.AreEqual(text.IndexOf("TODO", StringComparison.Ordinal), tagSpans[0].Start);
         Assert.AreEqual("TODO".Length, tagSpans[0].Length);
     }
