@@ -965,123 +965,105 @@ namespace CommentsVS.Adornments
         {
             var heading = GetSectionHeading(section);
 
-            // Check if section contains code blocks or list items (need special handling to preserve formatting)
-            var hasCodeBlock = section.Lines.Any(l => l.Segments.Any(s => s.Type == RenderedSegmentType.Code));
-            var hasListItems = section.ListContentStartIndex >= 0;
-
-            if (hasCodeBlock || hasListItems)
+            // Always render heading separately and body on following lines for consistent section layout.
+            if (!string.IsNullOrEmpty(heading))
             {
-                // For sections with code blocks or lists, render heading separately then preserve line structure
-                if (!string.IsNullOrEmpty(heading))
+                var headingBlock = new TextBlock
                 {
-                    var headingBlock = new TextBlock
-                    {
-                        FontFamily = fontFamily,
-                        FontSize = fontSize,
-                        Foreground = headingBrush,
-                        TextWrapping = TextWrapping.NoWrap,
-                        Margin = new Thickness(0, 0, 0, itemSpacing),
-                        Text = heading
-                    };
-                    _ = panel.Children.Add(headingBlock);
-                }
-
-                // Render each line preserving structure
-                foreach (RenderedLine line in section.Lines)
-                {
-                    if (line.IsBlank)
-                    {
-                        _ = panel.Children.Add(CreateSpacer(itemSpacing));
-                        continue;
-                    }
-
-                    var textBlock = new TextBlock
-                    {
-                        FontFamily = fontFamily,
-                        FontSize = fontSize,
-                        Foreground = textBrush,
-                        TextWrapping = TextWrapping.Wrap,
-                        MaxWidth = 800,
-                        Margin = new Thickness(0, 0, 0, 2)
-                    };
-
-                    // Check if this line is code
-                    var isCodeLine = line.Segments.Any(s => s.Type == RenderedSegmentType.Code);
-                    if (isCodeLine)
-                    {
-                        // Use monospace font for code
-                        textBlock.FontFamily = new FontFamily("Consolas");
-                        textBlock.TextWrapping = TextWrapping.NoWrap;
-                        textBlock.Margin = new Thickness(listIndent, 0, 0, 2);
-                    }
-
-                    // Check if this line is a list item (starts with bullet or number)
-                    var lineText = string.Join("", line.Segments.Select(s => s.Text));
-                    var trimmedText = lineText.TrimStart();
-                    var isListItem = trimmedText.StartsWith("•") ||
-                                      (trimmedText.Length > 0 && char.IsDigit(trimmedText[0]) && trimmedText.Contains(". "));
-                    if (isListItem)
-                    {
-                        textBlock.Margin = new Thickness(listIndent, 3, 0, itemSpacing * 0.5);
-                    }
-
-                    foreach (RenderedSegment segment in line.Segments)
-                    {
-                        Inline inline = CreateInlineForSegment(segment, textBrush, headingBrush);
-                        textBlock.Inlines.Add(inline);
-                    }
-
-                    _ = panel.Children.Add(textBlock);
-                }
+                    FontFamily = fontFamily,
+                    FontSize = fontSize,
+                    Foreground = headingBrush,
+                    TextWrapping = TextWrapping.NoWrap,
+                    Margin = new Thickness(0, 0, 0, itemSpacing),
+                    Text = heading
+                };
+                _ = panel.Children.Add(headingBlock);
             }
-            else
+
+            // Render each line preserving structure
+            var previousWasListItem = false;
+            foreach (RenderedLine line in section.Lines)
             {
-                // For simple sections without code or lists, use the flattened approach
-                var content = GetSectionContent(section);
-                var fullText = heading + " " + content;
-
-                // Word wrap at 100 chars
-                List<string> wrappedLines = WordWrap(fullText, 100);
-
-                for (var i = 0; i < wrappedLines.Count; i++)
+                if (line.IsBlank)
                 {
-                    var textBlock = new TextBlock
-                    {
-                        FontFamily = fontFamily,
-                        FontSize = fontSize,
-                        Foreground = textBrush,
-                        TextWrapping = TextWrapping.NoWrap,
-                        Margin = new Thickness(
-                            i > 0 ? listIndent : 0,
-                            0,
-                            0,
-                            i == wrappedLines.Count - 1 ? itemSpacing * 0.5 : 0)
-                    };
-
-                    var lineText = wrappedLines[i];
-
-                    if (i == 0 && !string.IsNullOrEmpty(heading))
-                    {
-                        // First line has heading (styled) and start of content
-                        textBlock.Inlines.Add(new Run(heading)
-                        {
-                            Foreground = headingBrush
-                        });
-                        var contentStart = heading.Length + 1; // +1 for space
-                        if (lineText.Length > contentStart)
-                        {
-                            textBlock.Inlines.Add(new Run(" " + lineText.Substring(contentStart)) { Foreground = textBrush });
-                        }
-                    }
-                    else
-                    {
-                        // Continuation lines or lines without heading
-                        textBlock.Text = lineText;
-                    }
-
-                    _ = panel.Children.Add(textBlock);
+                    _ = panel.Children.Add(CreateSpacer(itemSpacing));
+                    previousWasListItem = false;
+                    continue;
                 }
+
+                var textBlock = new TextBlock
+                {
+                    FontFamily = fontFamily,
+                    FontSize = fontSize,
+                    Foreground = textBrush,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 800,
+                    Margin = new Thickness(listIndent, 0, 0, 2)
+                };
+
+                // Check if this line is code
+                var isCodeLine = IsPreformattedCodeLine(line);
+                if (isCodeLine)
+                {
+                    // Use monospace font for code blocks
+                    textBlock.FontFamily = new FontFamily("Consolas");
+                    textBlock.TextWrapping = TextWrapping.NoWrap;
+                    textBlock.Margin = new Thickness(listIndent, 0, 0, 2);
+                }
+
+                // Check if this line is a list item (starts with bullet or number)
+                var lineText = string.Join("", line.Segments.Select(s => s.Text));
+                var trimmedText = lineText.TrimStart();
+                var isListItem = trimmedText.StartsWith("•") ||
+                                    (trimmedText.Length > 0 && char.IsDigit(trimmedText[0]) && trimmedText.Contains(". "));
+
+                // Add consistent vertical space around list blocks.
+                if (isListItem && !previousWasListItem)
+                {
+                    _ = panel.Children.Add(CreateSpacer(itemSpacing));
+                }
+
+                if (isListItem)
+                {
+                    // Indent lists further than normal body text for a Word-like layout.
+                    textBlock.Margin = new Thickness(listIndent * 2, itemSpacing * 0.5, 0, itemSpacing * 0.5);
+                }
+                else if (previousWasListItem)
+                {
+                    _ = panel.Children.Add(CreateSpacer(itemSpacing));
+                }
+
+                foreach (RenderedSegment segment in line.Segments)
+                {
+                    Inline inline = CreateInlineForSegment(segment, textBrush, headingBrush);
+                    textBlock.Inlines.Add(inline);
+                }
+
+                _ = panel.Children.Add(textBlock);
+                previousWasListItem = isListItem;
             }
+
+            // If section ends with a list block, add matching bottom spacing.
+            if (previousWasListItem)
+            {
+                _ = panel.Children.Add(CreateSpacer(itemSpacing));
+            }
+        }
+
+        private static bool IsPreformattedCodeLine(RenderedLine line)
+        {
+            if (line == null || line.Segments.Count == 0)
+            {
+                return false;
+            }
+
+            if (line.Segments.Any(s => s.Type != RenderedSegmentType.Code))
+            {
+                return false;
+            }
+
+            // RenderCodeBlock prefixes code lines with four spaces to preserve block formatting.
+            return line.Segments.Any(s => s.Text.StartsWith("    ", StringComparison.Ordinal));
         }
 
         private static string GetSectionHeading(RenderedCommentSection section)
