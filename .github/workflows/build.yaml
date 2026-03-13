@@ -2,6 +2,7 @@
 name: "Build"
 permissions:
   actions: write
+  checks: write
   contents: write
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -49,7 +50,7 @@ jobs:
 
     - name: Report test results
       uses: dorny/test-reporter@v1
-      if: always()
+      if: ${{ always() && (github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository) }}
       with:
         name: Test Results
         path: '**/test-results.trx'

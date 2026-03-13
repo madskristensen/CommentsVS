@@ -380,6 +380,33 @@ public sealed class XmlDocCommentRendererTests
             "Issue refs inside code blocks should not be converted");
     }
 
+    [TestMethod]
+    public void ProcessMarkdownInText_WithIssueLinkAndCode_CreatesDistinctSegmentTypes()
+    {
+        var repoInfo = new GitRepositoryInfo(GitHostingProvider.GitHub, "owner", "repo", "https://github.com");
+
+        List<RenderedSegment> segments = XmlDocCommentRenderer.ProcessMarkdownInText(
+            "Track #42 in [docs](https://example.com) with `#literal`",
+            repoInfo);
+
+        Assert.IsTrue(segments.Any(s => s.Type == RenderedSegmentType.IssueReference && s.Text == "#42"));
+        Assert.IsTrue(segments.Any(s => s.Type == RenderedSegmentType.Link && s.LinkTarget == "https://example.com"));
+        Assert.IsTrue(segments.Any(s => s.Type == RenderedSegmentType.Code && s.Text == "#literal"));
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_WithSummaryContainingIssueAndCode_RendersBothSegments()
+    {
+        var xml = "<summary>Fix #7 using <c>Apply()</c>.</summary>";
+        var repoInfo = new GitRepositoryInfo(GitHostingProvider.GitHub, "owner", "repo", "https://github.com");
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml, repoInfo);
+
+        List<RenderedSegment> summarySegments = [.. result.Summary!.Lines.SelectMany(l => l.Segments)];
+        Assert.IsTrue(summarySegments.Any(s => s.Type == RenderedSegmentType.IssueReference && s.Text == "#7"));
+        Assert.IsTrue(summarySegments.Any(s => s.Type == RenderedSegmentType.Code && s.Text == "Apply()"));
+    }
+
     #endregion
 
     #region Missing Summary Tests

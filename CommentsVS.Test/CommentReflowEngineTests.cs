@@ -101,6 +101,19 @@ public sealed class CommentReflowEngineTests
         Assert.IsTrue(result.Any(l => l.Contains("ThisIsAVeryLongWordThatExceedsMaxWidth")));
     }
 
+    [TestMethod]
+    public void WrapText_MixedXmlAndMarkdown_PreservesInlineTokens()
+    {
+        var text = "Use <see cref=\"MyType\"/> with **bold** notes and `code`";
+
+        List<string> result = TestWrapText(text, maxWidth: 35);
+
+        var joined = string.Join(" ", result);
+        Assert.Contains("<see cref=\"MyType\"/>", joined);
+        Assert.Contains("**bold**", joined);
+        Assert.Contains("`code`", joined);
+    }
+
     #endregion
 
     #region Whitespace Normalization Tests
@@ -224,6 +237,18 @@ public sealed class CommentReflowEngineTests
         Assert.HasCount(2, result);
         Assert.AreEqual("Paragraph.", result[0]);
         Assert.AreEqual("Next.", result[1]);
+    }
+
+    [TestMethod]
+    public void SplitIntoParagraphs_MixedLineEndings_PreserveBlankLines_KeepsParagraphBoundaries()
+    {
+        var input = "First line\r\n\r\nSecond line\n\nThird line";
+
+        List<string> result = TestSplitIntoParagraphs(TestNormalizeWhitespace(input)!, preserveBlankLines: true);
+
+        Assert.AreEqual("First line", result[0]);
+        Assert.AreEqual("Second line", result[1]);
+        Assert.AreEqual("Third line", result[2]);
     }
 
     #endregion

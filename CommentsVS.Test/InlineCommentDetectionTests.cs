@@ -249,6 +249,18 @@ public sealed class InlineCommentDetectionTests
     }
 
     [TestMethod]
+    public void FindCommentSpans_MultipleCommentTokens_UsesEarliestValidStart()
+    {
+        var text = "var x = 1; /* block comment */ // trailing";
+
+        var spans = TestHelpers.FindCommentSpans(text).ToList();
+
+        Assert.HasCount(1, spans);
+        Assert.AreEqual(text.IndexOf("/*", StringComparison.Ordinal), spans[0].Start);
+        Assert.AreEqual("/* block comment */".Length, spans[0].Length);
+    }
+
+    [TestMethod]
     public void FindCommentSpans_InlineHashComment_ReturnsCorrectSpan()
     {
         var text = "Get-Item . # powershell inline";
@@ -257,6 +269,18 @@ public sealed class InlineCommentDetectionTests
 
         Assert.HasCount(1, spans);
         Assert.IsGreaterThan(0, spans[0].Start);
+    }
+
+    [TestMethod]
+    public void FindCommentSpans_HashAfterParenthesis_DetectsComment()
+    {
+        var text = "Invoke(x) # follow-up";
+
+        var spans = TestHelpers.FindCommentSpans(text).ToList();
+
+        Assert.HasCount(1, spans);
+        Assert.AreEqual(text.IndexOf('#'), spans[0].Start);
+        Assert.AreEqual("# follow-up".Length, spans[0].Length);
     }
 
     [TestMethod]

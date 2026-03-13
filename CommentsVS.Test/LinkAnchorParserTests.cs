@@ -78,6 +78,20 @@ public sealed class LinkAnchorParserTests
     }
 
     [TestMethod]
+    public void Parse_FilePathWithSpacesAndRangeAndAnchor_ReturnsAllParts()
+    {
+        var text = "// LINK: docs/User Guide.md:12-18#getting-started";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual("docs/User Guide.md", results[0].FilePath);
+        Assert.AreEqual(12, results[0].LineNumber);
+        Assert.AreEqual(18, results[0].EndLineNumber);
+        Assert.AreEqual("getting-started", results[0].AnchorName);
+    }
+
+    [TestMethod]
     public void Parse_WithoutColon_ReturnsCorrectPath()
     {
         var text = "// LINK path/to/file.cs";
@@ -596,15 +610,15 @@ public sealed class LinkAnchorParserTests
     [TestMethod]
     public void Parse_MultipleLinksOnSameLine_ReturnsBoth()
     {
-        // Less common but possible: multiple LINK keywords on same line
-        // Parser may or may not handle this - test that at least one is found
-        var text = "// LINK: file1.cs\n// LINK: file2.cs";
+        var text = "// LINK: file1.cs LINK: file2.cs:25#next";
 
         IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
 
-        Assert.IsGreaterThanOrEqualTo(2, results.Count);
+        Assert.HasCount(2, results);
         Assert.AreEqual("file1.cs", results[0].FilePath);
         Assert.AreEqual("file2.cs", results[1].FilePath);
+        Assert.AreEqual(25, results[1].LineNumber);
+        Assert.AreEqual("next", results[1].AnchorName);
     }
 
     [TestMethod]
