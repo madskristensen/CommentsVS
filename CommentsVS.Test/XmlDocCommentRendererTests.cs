@@ -562,4 +562,81 @@ public sealed class XmlDocCommentRendererTests
     }
 
     #endregion
+
+    #region Parameter Section Tests
+
+    [TestMethod]
+    public void RenderXmlContent_WithParamTag_CreatesParameterSectionWithNameAndHeading()
+    {
+        var xml = """
+            <summary>Does work.</summary>
+            <param name="value">The value to process.</param>
+            """;
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        RenderedCommentSection paramSection = result.Sections.FirstOrDefault(s => s.Type == CommentSectionType.Param);
+        Assert.IsNotNull(paramSection, "Should have a param section");
+        Assert.AreEqual("value", paramSection.Name);
+        Assert.AreEqual("Parameter 'value':", paramSection.Heading);
+
+        var renderedText = string.Concat(paramSection.Lines.SelectMany(l => l.Segments).Select(s => s.Text));
+        Assert.Contains("The value to process.", renderedText);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_WithTypeParamTag_CreatesTypeParameterSectionWithNameAndHeading()
+    {
+        var xml = """
+            <summary>Does generic work.</summary>
+            <typeparam name="TItem">The item type.</typeparam>
+            """;
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        RenderedCommentSection typeParamSection = result.Sections.FirstOrDefault(s => s.Type == CommentSectionType.TypeParam);
+        Assert.IsNotNull(typeParamSection, "Should have a type param section");
+        Assert.AreEqual("TItem", typeParamSection.Name);
+        Assert.AreEqual("Type parameter 'TItem':", typeParamSection.Heading);
+
+        var renderedText = string.Concat(typeParamSection.Lines.SelectMany(l => l.Segments).Select(s => s.Text));
+        Assert.Contains("The item type.", renderedText);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_WithMultipleParamTags_PreservesDeclarationOrder()
+    {
+        var xml = """
+            <summary>Multiple parameters.</summary>
+            <param name="first">First value.</param>
+            <param name="second">Second value.</param>
+            """;
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        List<RenderedCommentSection> paramSections = [.. result.Sections.Where(s => s.Type == CommentSectionType.Param)];
+        Assert.HasCount(2, paramSections);
+        Assert.AreEqual("first", paramSections[0].Name);
+        Assert.AreEqual("second", paramSections[1].Name);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_WithParamAndNoSummary_KeepsParamAndAddsSummaryPlaceholder()
+    {
+        var xml = """
+            <param name="path">Path to file.</param>
+            """;
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        Assert.IsNotNull(result.Summary, "Should add a summary section when missing");
+        Assert.IsTrue(result.Summary.Lines.SelectMany(l => l.Segments)
+            .Any(s => s.Text == NoSummaryPlaceholder), "Summary should contain placeholder text");
+
+        RenderedCommentSection paramSection = result.Sections.FirstOrDefault(s => s.Type == CommentSectionType.Param);
+        Assert.IsNotNull(paramSection, "Should keep param section when adding summary placeholder");
+        Assert.AreEqual("path", paramSection.Name);
+    }
+
+    #endregion
 }

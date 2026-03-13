@@ -516,6 +516,8 @@ namespace CommentsVS.Adornments
             // Type parameters (if any)
             if (typeParamSections.Count > 0)
             {
+                _ = panel.Children.Add(CreateGroupHeadingTextBlock("Type Parameters:", fontSize, fontFamily, headingBrush, itemSpacing));
+
                 for (var i = 0; i < typeParamSections.Count; i++)
                 {
                     AddParameterLine(panel, typeParamSections[i], fontSize, fontFamily, textBrush,
@@ -531,6 +533,8 @@ namespace CommentsVS.Adornments
             // Parameters (if any)
             if (paramSections.Count > 0)
             {
+                _ = panel.Children.Add(CreateGroupHeadingTextBlock("Parameters:", fontSize, fontFamily, headingBrush, itemSpacing));
+
                 for (var i = 0; i < paramSections.Count; i++)
                 {
                     AddParameterLine(panel, paramSections[i], fontSize, fontFamily, textBrush,
@@ -883,6 +887,20 @@ namespace CommentsVS.Adornments
             return new Border { Height = height, Background = Brushes.Transparent };
         }
 
+        private static TextBlock CreateGroupHeadingTextBlock(string headingText, double fontSize,
+            FontFamily fontFamily, Brush headingBrush, double itemSpacing)
+        {
+            return new TextBlock
+            {
+                FontFamily = fontFamily,
+                FontSize = fontSize,
+                Foreground = headingBrush,
+                TextWrapping = TextWrapping.NoWrap,
+                Margin = new Thickness(0, 0, 0, itemSpacing),
+                Text = headingText
+            };
+        }
+
         private static void AddParameterLine(StackPanel panel, RenderedCommentSection section,
             double fontSize, FontFamily fontFamily, Brush textBrush,
             double listIndent, double itemSpacing, bool isLast, int maxNameLength)
@@ -1070,6 +1088,8 @@ namespace CommentsVS.Adornments
         {
             return section.Type switch
             {
+                CommentSectionType.TypeParam => "Type Parameters:",
+                CommentSectionType.Param => "Parameters:",
                 CommentSectionType.Returns => "Returns:",
                 CommentSectionType.Exception => $"Throws {section.Name}:",
                 CommentSectionType.Remarks => "Remarks:",
