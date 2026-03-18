@@ -20,6 +20,20 @@ public sealed class GitRepositoryInfoTests
     }
 
     [TestMethod]
+    public void GetIssueUrl_GitHubEnterprise_ReturnsCorrectUrl()
+    {
+        var repoInfo = new GitRepositoryInfo(
+            GitHostingProvider.GitHub,
+            "owner",
+            "repo",
+            "https://github.contoso.com/");
+
+        var result = repoInfo.GetIssueUrl(321);
+
+        Assert.AreEqual("https://github.contoso.com/owner/repo/issues/321", result);
+    }
+
+    [TestMethod]
     public void GetIssueUrl_GitLab_ReturnsCorrectUrl()
     {
         var repoInfo = new GitRepositoryInfo(
@@ -31,6 +45,20 @@ public sealed class GitRepositoryInfoTests
         var result = repoInfo.GetIssueUrl(456);
 
         Assert.AreEqual("https://gitlab.com/owner/repo/-/issues/456", result);
+    }
+
+    [TestMethod]
+    public void GetIssueUrl_GitLabNestedGroup_ReturnsCorrectUrl()
+    {
+        var repoInfo = new GitRepositoryInfo(
+            GitHostingProvider.GitLab,
+            "group/subgroup",
+            "repo",
+            "https://gitlab.contoso.com");
+
+        var result = repoInfo.GetIssueUrl(654);
+
+        Assert.AreEqual("https://gitlab.contoso.com/group/subgroup/repo/-/issues/654", result);
     }
 
     [TestMethod]

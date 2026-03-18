@@ -8,7 +8,7 @@ namespace CommentsVS.Services
         public GitHostingProvider Provider { get; } = provider;
         public string Owner { get; } = owner;
         public string Repository { get; } = repository;
-        public string BaseUrl { get; } = baseUrl;
+        public string BaseUrl { get; } = baseUrl?.TrimEnd('/');
 
         /// <summary>
         /// Gets the URL for an issue/work item number.

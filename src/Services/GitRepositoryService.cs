@@ -41,7 +41,7 @@ namespace CommentsVS.Services
         }
 
         /// <summary>
-        /// Defines a pattern for matching a Git remote URL to a hosting provider.
+        /// Defines a pattern for matching an Azure DevOps remote URL.
         /// </summary>
         private sealed class RemoteUrlPattern(Regex regex, GitHostingProvider provider, string baseUrl, bool usesOrgProject = false)
         {
@@ -50,6 +50,10 @@ namespace CommentsVS.Services
             public string BaseUrl { get; } = baseUrl;
             public bool UsesOrgProject { get; } = usesOrgProject;
         }
+
+        private static readonly Regex _scpRemoteUrlPattern = new(
+            @"^(?<user>[^@]+)@(?<host>[^:]+):(?<path>.+)$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly RemoteUrlPattern[] _remoteUrlPatterns =
         [
@@ -282,6 +286,21 @@ namespace CommentsVS.Services
 
         private static GitRepositoryInfo ParseRemoteUrl(string remoteUrl)
         {
+            if (string.IsNullOrWhiteSpace(remoteUrl))
+            {
+                return null;
+            }
+
+            if (TryParseAzureDevOpsRemoteUrl(remoteUrl, out GitRepositoryInfo repoInfo))
+            {
+                return repoInfo;
+            }
+
+            return TryParseStandardRemoteUrl(remoteUrl);
+        }
+
+        private static bool TryParseAzureDevOpsRemoteUrl(string remoteUrl, out GitRepositoryInfo repoInfo)
+        {
             foreach (RemoteUrlPattern pattern in _remoteUrlPatterns)
             {
                 Match match = pattern.Regex.Match(remoteUrl);
@@ -290,11 +309,145 @@ namespace CommentsVS.Services
                     var owner = pattern.UsesOrgProject ? match.Groups["org"].Value : match.Groups["owner"].Value;
                     var repo = pattern.UsesOrgProject ? match.Groups["project"].Value : match.Groups["repo"].Value;
 
-                    return new GitRepositoryInfo(pattern.Provider, owner, repo, pattern.BaseUrl);
+                    repoInfo = new GitRepositoryInfo(pattern.Provider, owner, repo, pattern.BaseUrl);
+                    return true;
                 }
             }
 
-            return null;
+            repoInfo = null;
+            return false;
+        }
+
+        private static GitRepositoryInfo TryParseStandardRemoteUrl(string remoteUrl)
+        {
+            if (!TryGetRemoteLocation(remoteUrl, out var host, out var baseUrl, out var pathSegments))
+            {
+                return null;
+            }
+
+            GitHostingProvider provider = GetProviderFromHost(host, pathSegments.Length);
+            if (provider == GitHostingProvider.Unknown)
+            {
+                return null;
+            }
+
+            if (!TryGetOwnerAndRepository(provider, pathSegments, out var owner, out var repository))
+            {
+                return null;
+            }
+
+            return new GitRepositoryInfo(provider, owner, repository, baseUrl);
+        }
+
+        private static bool TryGetRemoteLocation(string remoteUrl, out string host, out string baseUrl, out string[] pathSegments)
+        {
+            if (Uri.TryCreate(remoteUrl, UriKind.Absolute, out Uri remoteUri) && !string.IsNullOrEmpty(remoteUri.Host))
+            {
+                host = remoteUri.Host;
+                baseUrl = remoteUri.GetLeftPart(UriPartial.Authority);
+                pathSegments = GetPathSegments(remoteUri.AbsolutePath);
+                return pathSegments.Length >= 2;
+            }
+
+            Match sshMatch = _scpRemoteUrlPattern.Match(remoteUrl);
+            if (sshMatch.Success)
+            {
+                host = sshMatch.Groups["host"].Value;
+                baseUrl = $"https://{host}";
+                pathSegments = GetPathSegments(sshMatch.Groups["path"].Value);
+                return pathSegments.Length >= 2;
+            }
+
+            host = null;
+            baseUrl = null;
+            pathSegments = [];
+            return false;
+        }
+
+        private static string[] GetPathSegments(string repositoryPath)
+        {
+            if (string.IsNullOrWhiteSpace(repositoryPath))
+            {
+                return [];
+            }
+
+            return repositoryPath.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private static GitHostingProvider GetProviderFromHost(string host, int segmentCount)
+        {
+            if (ContainsHostKeyword(host, "gitlab"))
+            {
+                return GitHostingProvider.GitLab;
+            }
+
+            if (ContainsHostKeyword(host, "github"))
+            {
+                return GitHostingProvider.GitHub;
+            }
+
+            if (ContainsHostKeyword(host, "bitbucket"))
+            {
+                return GitHostingProvider.Bitbucket;
+            }
+
+            return segmentCount > 2
+                ? GitHostingProvider.GitLab
+                : GitHostingProvider.GitHub;
+        }
+
+        private static bool TryGetOwnerAndRepository(GitHostingProvider provider, string[] pathSegments, out string owner, out string repository)
+        {
+            owner = null;
+            repository = null;
+
+            if (pathSegments.Length < 2)
+            {
+                return false;
+            }
+
+            repository = TrimGitSuffix(pathSegments[pathSegments.Length - 1]);
+            if (string.IsNullOrWhiteSpace(repository))
+            {
+                return false;
+            }
+
+            switch (provider)
+            {
+                case GitHostingProvider.GitLab:
+                    owner = string.Join("/", pathSegments, 0, pathSegments.Length - 1);
+                    return !string.IsNullOrWhiteSpace(owner);
+
+                case GitHostingProvider.GitHub:
+                case GitHostingProvider.Bitbucket:
+                    if (pathSegments.Length != 2)
+                    {
+                        return false;
+                    }
+
+                    owner = pathSegments[0];
+                    return !string.IsNullOrWhiteSpace(owner);
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool ContainsHostKeyword(string host, string keyword)
+        {
+            return host?.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static string TrimGitSuffix(string repositoryName)
+        {
+            if (string.IsNullOrEmpty(repositoryName))
+            {
+                return repositoryName;
+            }
+
+            return repositoryName.EndsWith(".git", StringComparison.OrdinalIgnoreCase)
+                ? repositoryName.Substring(0, repositoryName.Length - 4)
+                : repositoryName;
         }
     }
 }
