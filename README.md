@@ -34,6 +34,34 @@ or get the [CI build][vsixgallery].
 
 **Supports:** C#, VB.NET, F#, C++, TypeScript, JavaScript, Razor, SQL, and PowerShell
 
+### Rendered Comments
+
+See your documentation, not the XML. The Full rendering mode strips away XML noise and displays your docs with proper formatting.
+
+![Rendered Comments](art/rendered-comments.png)
+
+### Color-Coded Tags & Better Comments
+
+TODO, HACK, BUG, NOTE, and more are highlighted with distinct colors. Prefix-based highlighting (`!`, `?`, `*`, `//`) provides additional visual differentiation.
+
+![Comment Tags](art/comment-tags.png)
+
+![Prefix Based Highlighting](art/prefix-based-highligting.png)
+
+### Code Anchors
+
+Track all your TODOs, HACKs, and notes across your entire solution in one tool window.
+
+![Code Anchors](art/code-anchors.png)
+
+### Issue Links & Link Anchors
+
+`#123` references become clickable links to GitHub, GitLab, Bitbucket, or Azure DevOps. `LINK:` syntax lets you navigate to files, lines, and named anchors.
+
+![Issue Links](art/issue-links.png)
+
+![Link Anchors IntelliSense](art/link-anchors-intellisense.png)
+
 ## Why Comment Studio?
 
 XML documentation comments are essential for IntelliSense and API documentation, but they come with frustrations:
