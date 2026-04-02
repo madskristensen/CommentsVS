@@ -3,6 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using CommentsVS.Options;
+using Microsoft.VisualStudio.ComponentModelHost;
+using Microsoft.VisualStudio.Text;
 
 namespace CommentsVS.ToolWindows
 {
@@ -23,6 +25,7 @@ namespace CommentsVS.ToolWindows
         private SolutionEventCoordinator _solutionEventCoordinator;
         private DocumentEventCoordinator _documentEventCoordinator;
         private AnchorScopeFilter _scopeFilter;
+        private ITextBufferAnchorTracker _bufferTracker;
 
         /// <summary>
         /// Gets the current instance of the tool window (set after CreateAsync is called).
@@ -110,6 +113,7 @@ namespace CommentsVS.ToolWindows
             _solutionEventCoordinator.CacheUpdated += OnCacheUpdated;
             _solutionEventCoordinator.SolutionClosed += OnSolutionClosedEvent;
             _documentEventCoordinator.DocumentScanned += OnDocumentScanned;
+            _documentEventCoordinator.ActiveDocumentChanged += OnActiveDocumentChanged;
 
             // Get options before switching threads
             General options = await General.GetLiveInstanceAsync();
@@ -123,6 +127,9 @@ namespace CommentsVS.ToolWindows
             // Subscribe helper classes to VS events
             _solutionEventCoordinator.Subscribe();
             _documentEventCoordinator.Subscribe();
+
+            // Subscribe to real-time buffer changes via MEF service
+            SubscribeToBufferTracker();
 
             // Check if a solution is already open (window opened after solution loaded)
             Solution currentSolution = await VS.Solutions.GetCurrentSolutionAsync();
@@ -144,6 +151,87 @@ namespace CommentsVS.ToolWindows
             return _control;
         }
 
+        /// <summary>
+        /// Subscribes to the text buffer anchor tracker for real-time updates.
+        /// </summary>
+        private void SubscribeToBufferTracker()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            try
+            {
+                if (Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SComponentModel)) is IComponentModel componentModel)
+                {
+                    _bufferTracker = componentModel.GetService<ITextBufferAnchorTracker>();
+                    if (_bufferTracker != null)
+                    {
+                        _bufferTracker.BufferAnchorsUpdated += OnBufferAnchorsUpdated;
+
+                        // Track already-open documents (handles VS startup with pre-opened documents)
+                        TrackAlreadyOpenDocumentsAsync(componentModel).FireAndForget();
+                    }
+                }
+            }
+            catch
+            {
+                // MEF service may not be available; continue without real-time updates
+            }
+        }
+
+        /// <summary>
+        /// Tracks documents that were already open before the tracker was instantiated.
+        /// </summary>
+        private async Task TrackAlreadyOpenDocumentsAsync(IComponentModel componentModel)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            try
+            {
+                var textDocumentFactoryService = componentModel.GetService<ITextDocumentFactoryService>();
+                if (textDocumentFactoryService == null || _bufferTracker == null)
+                {
+                    return;
+                }
+
+                // Use DTE to get all open documents and find their buffers
+                EnvDTE.DTE dte = await VS.GetServiceAsync<EnvDTE.DTE, EnvDTE.DTE>();
+                if (dte?.Documents == null)
+                {
+                    return;
+                }
+
+                foreach (EnvDTE.Document doc in dte.Documents)
+                {
+                    var filePath = doc?.FullName;
+                    if (string.IsNullOrEmpty(filePath))
+                    {
+                        continue;
+                    }
+
+                    // Try to get the text buffer for this document via the active document view
+                    DocumentView docView = await VS.Documents.GetDocumentViewAsync(filePath);
+                    if (docView?.TextBuffer != null)
+                    {
+                        _bufferTracker.TrackBuffer(docView.TextBuffer, filePath);
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors tracking already-open documents
+            }
+        }
+
+        private void OnBufferAnchorsUpdated(object sender, BufferAnchorsUpdatedEventArgs e)
+        {
+            // The cache is already updated by the tracker; we just need to refresh the UI
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                RefreshAnchorsFromCache();
+            }).FireAndForget();
+        }
+
         private void OnCacheUpdated(object sender, System.EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -161,6 +249,18 @@ namespace CommentsVS.ToolWindows
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             RefreshAnchorsFromCache();
+        }
+
+        private void OnActiveDocumentChanged(object sender, System.EventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            // Refresh when scope is set to CurrentDocument or CurrentProject
+            // since these scopes depend on which document is currently active
+            if (_currentScope == AnchorScope.CurrentDocument || _currentScope == AnchorScope.CurrentProject)
+            {
+                RefreshAnchorsFromCache();
+            }
         }
 
         /// <summary>

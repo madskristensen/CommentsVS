@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CommentsVS.Services;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace CommentsVS.ToolWindows
 {
@@ -18,11 +19,17 @@ namespace CommentsVS.ToolWindows
         private readonly SolutionAnchorCache _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         private readonly SolutionAnchorScanner _scanner = scanner ?? throw new ArgumentNullException(nameof(scanner));
         private bool _disposed;
+        private string _lastActiveDocumentPath;
 
         /// <summary>
         /// Raised when a document has been scanned and the UI should refresh.
         /// </summary>
         public event EventHandler DocumentScanned;
+
+        /// <summary>
+        /// Raised when the active document changes in the editor.
+        /// </summary>
+        public event EventHandler ActiveDocumentChanged;
 
         /// <summary>
         /// Subscribes to document events. Must be called from the UI thread.
@@ -32,6 +39,7 @@ namespace CommentsVS.ToolWindows
             VS.Events.DocumentEvents.Saved += OnDocumentSaved;
             VS.Events.DocumentEvents.Opened += OnDocumentOpened;
             VS.Events.DocumentEvents.Closed += OnDocumentClosed;
+            VS.Events.WindowEvents.ActiveFrameChanged += OnActiveFrameChanged;
         }
 
         private void OnDocumentSaved(string filePath)
@@ -126,6 +134,52 @@ namespace CommentsVS.ToolWindows
             }
         }
 
+        private void OnActiveFrameChanged(ActiveFrameChangeEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            // Check if the new frame is a document frame by trying to get its document path
+            string newDocumentPath = GetDocumentPathFromFrame(e.NewFrame);
+            if (string.IsNullOrEmpty(newDocumentPath))
+            {
+                return;
+            }
+
+            // Only fire the event if the active document actually changed
+            if (!string.Equals(_lastActiveDocumentPath, newDocumentPath, StringComparison.OrdinalIgnoreCase))
+            {
+                _lastActiveDocumentPath = newDocumentPath;
+                ActiveDocumentChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private static string GetDocumentPathFromFrame(WindowFrame frame)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (frame == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                // Get the document moniker (file path) from the frame
+                // __VSFPROPID.VSFPROPID_pszMkDocument contains the document moniker for document windows
+                ((IVsWindowFrame)frame).GetProperty((int)__VSFPROPID.VSFPROPID_pszMkDocument, out object docPath);
+                return docPath as string;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public void Dispose()
         {
             if (_disposed)
@@ -137,6 +191,7 @@ namespace CommentsVS.ToolWindows
             VS.Events.DocumentEvents.Saved -= OnDocumentSaved;
             VS.Events.DocumentEvents.Opened -= OnDocumentOpened;
             VS.Events.DocumentEvents.Closed -= OnDocumentClosed;
+            VS.Events.WindowEvents.ActiveFrameChanged -= OnActiveFrameChanged;
         }
     }
 }

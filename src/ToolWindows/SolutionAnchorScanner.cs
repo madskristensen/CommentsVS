@@ -206,6 +206,23 @@ namespace CommentsVS.ToolWindows
         }
 
         /// <summary>
+        /// Scans a text buffer for anchors. Use this for live document updates.
+        /// </summary>
+        /// <param name="buffer">The text buffer to scan.</param>
+        /// <param name="filePath">The file path associated with the buffer.</param>
+        /// <param name="projectName">The project name (optional).</param>
+        /// <returns>A list of anchors found in the buffer.</returns>
+        public IReadOnlyList<AnchorItem> ScanBuffer(Microsoft.VisualStudio.Text.ITextBuffer buffer, string filePath, string projectName = null)
+        {
+            if (buffer == null || string.IsNullOrEmpty(filePath))
+            {
+                return [];
+            }
+
+            return _anchorService.ScanBuffer(buffer, filePath, projectName);
+        }
+
+        /// <summary>
         /// Cancels any ongoing scan operation.
         /// </summary>
         public void CancelScan()

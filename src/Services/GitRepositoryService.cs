@@ -325,7 +325,7 @@ namespace CommentsVS.Services
                 return null;
             }
 
-            GitHostingProvider provider = GetProviderFromHost(host, pathSegments.Length);
+            GitHostingProvider provider = GetProviderFromHost(host, pathSegments);
             if (provider == GitHostingProvider.Unknown)
             {
                 return null;
@@ -374,7 +374,7 @@ namespace CommentsVS.Services
             return repositoryPath.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
         }
 
-        private static GitHostingProvider GetProviderFromHost(string host, int segmentCount)
+        private static GitHostingProvider GetProviderFromHost(string host, string[] pathSegments)
         {
             if (ContainsHostKeyword(host, "gitlab"))
             {
@@ -391,9 +391,31 @@ namespace CommentsVS.Services
                 return GitHostingProvider.Bitbucket;
             }
 
-            return segmentCount > 2
+            // Check for Azure DevOps by host keywords or URL pattern
+            if (ContainsHostKeyword(host, "azure") ||
+                ContainsHostKeyword(host, "visualstudio") ||
+                ContainsGitSegment(pathSegments))
+            {
+                return GitHostingProvider.AzureDevOps;
+            }
+
+            return pathSegments.Length > 2
                 ? GitHostingProvider.GitLab
                 : GitHostingProvider.GitHub;
+        }
+
+        private static bool ContainsGitSegment(string[] pathSegments)
+        {
+            // Azure DevOps URLs contain a "_git" segment (e.g., /{project}/_git/{repo})
+            foreach (string segment in pathSegments)
+            {
+                if (string.Equals(segment, "_git", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool TryGetOwnerAndRepository(GitHostingProvider provider, string[] pathSegments, out string owner, out string repository)
@@ -414,6 +436,21 @@ namespace CommentsVS.Services
 
             switch (provider)
             {
+                case GitHostingProvider.AzureDevOps:
+                    // Azure DevOps: /{org}/{project}/_git/{repo} or /{collection}/{project}/_git/{repo}
+                    // Find the _git segment and extract org as owner, project as repository
+                    int gitIndex = Array.FindIndex(pathSegments, s => string.Equals(s, "_git", StringComparison.OrdinalIgnoreCase));
+                    if (gitIndex < 2 || gitIndex >= pathSegments.Length - 1)
+                    {
+                        return false;
+                    }
+
+                    // Owner is the organization/collection (first segment before project)
+                    // Repository is the project (segment immediately before _git)
+                    owner = string.Join("/", pathSegments, 0, gitIndex - 1);
+                    repository = pathSegments[gitIndex - 1];
+                    return !string.IsNullOrWhiteSpace(owner) && !string.IsNullOrWhiteSpace(repository);
+
                 case GitHostingProvider.GitLab:
                     owner = string.Join("/", pathSegments, 0, pathSegments.Length - 1);
                     return !string.IsNullOrWhiteSpace(owner);

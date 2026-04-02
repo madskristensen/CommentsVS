@@ -101,6 +101,7 @@
     <Compile Include="Services\CommentReflowEngine.cs" />
     <Compile Include="Services\CommentRemovalService.cs" />
     <Compile Include="Services\CommentSpanHelper.cs" />
+    <Compile Include="Services\CommentTagColorService.cs" />
     <Compile Include="Services\Constants.cs" />
     <Compile Include="Services\ContentTypes.cs" />
     <Compile Include="Services\EditorConfigSettings.cs" />
@@ -144,6 +145,7 @@
     <Compile Include="ToolWindows\SolutionAnchorCache.cs" />
     <Compile Include="ToolWindows\SolutionAnchorScanner.cs" />
     <Compile Include="ToolWindows\SolutionEventCoordinator.cs" />
+    <Compile Include="ToolWindows\TextBufferAnchorTracker.cs" />
     <Compile Include="VSCommandTable.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

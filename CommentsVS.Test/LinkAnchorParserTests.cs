@@ -281,15 +281,14 @@ public sealed class LinkAnchorParserTests
     }
 
     [TestMethod]
-    public void Parse_LinkKeywordWithNoTarget_ParsesColonAsFallbackPath()
+    public void Parse_LinkKeywordWithNoTarget_ReturnsNoLinks()
     {
+        // LINK: with no valid path should not match
         var text = "// LINK:";
 
         IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
 
-        Assert.HasCount(1, results);
-        Assert.AreEqual(":", results[0].FilePath);
-        Assert.IsFalse(results[0].HasLineNumber);
+        Assert.IsEmpty(results);
     }
 
     [TestMethod]
@@ -303,15 +302,14 @@ public sealed class LinkAnchorParserTests
     }
 
     [TestMethod]
-    public void Parse_ColonBeforeLineWithoutPath_ParsesFallbackPathAndLine()
+    public void Parse_ColonBeforeLineWithoutPath_ReturnsNoLinks()
     {
+        // LINK: :42 without a valid file path should not match
         var text = "// LINK: :42";
 
         IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
 
-        Assert.HasCount(1, results);
-        Assert.AreEqual("", results[0].FilePath);
-        Assert.AreEqual(42, results[0].LineNumber);
+        Assert.IsEmpty(results);
     }
 
     [TestMethod]
@@ -770,6 +768,87 @@ public sealed class LinkAnchorParserTests
 
         Assert.HasCount(1, results);
         Assert.IsFalse(results[0].HasAnchor);
+    }
+
+    #endregion
+
+    #region Plain Text Rejection (Issue #56)
+
+    [TestMethod]
+    public void Parse_PlainTextAfterLink_ReturnsNoLinks()
+    {
+        // Issue #56: "Link this is not a file" should not be treated as a link
+        var text = "// Link this is not a file";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(0, results);
+    }
+
+    [TestMethod]
+    public void Parse_PlainTextWithColon_ReturnsNoLinks()
+    {
+        var text = "// LINK: this is just plain text without file extension";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(0, results);
+    }
+
+    [TestMethod]
+    public void Parse_PlainTextSingleWord_ReturnsNoLinks()
+    {
+        var text = "// LINK: readme";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(0, results);
+    }
+
+    [TestMethod]
+    public void Parse_PlainTextWithDotFollowedByWhitespace_ReturnsNoLinks()
+    {
+        // Issue #56: "Link this is. not a url" should not match because dot is followed by whitespace
+        var text = "// Link this is. not a url";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(0, results);
+    }
+
+    [TestMethod]
+    public void Parse_PlainTextWithDotAndWhitespaceInExtension_ReturnsNoLinks()
+    {
+        // "Link perhaps not. or is it" should not match - extension contains whitespace
+        var text = "// Link perhaps not. or is it";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(0, results);
+    }
+
+    [TestMethod]
+    public void Parse_ValidFileExtension_ReturnsLink()
+    {
+        // File with extension should still work
+        var text = "// LINK: README.md";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual("README.md", results[0].FilePath);
+    }
+
+    [TestMethod]
+    public void Parse_ValidPathSeparator_ReturnsLink()
+    {
+        // Path with separator should still work
+        var text = "// LINK: docs/readme";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual("docs/readme", results[0].FilePath);
     }
 
     #endregion

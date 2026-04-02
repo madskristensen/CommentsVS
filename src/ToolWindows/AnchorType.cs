@@ -48,23 +48,20 @@ namespace CommentsVS.ToolWindows
         }
 
         /// <summary>
-        /// Gets the color for the anchor type, matching the editor classification colors.
+        /// Gets the color for the anchor type from VS Fonts and Colors settings.
+        /// Falls back to default colors if settings are not available.
         /// </summary>
         public static Color GetColor(this AnchorType anchorType)
         {
-            return anchorType switch
+            // Try to get color from VS Fonts and Colors settings via the service
+            CommentTagColorService colorService = CommentTagColorService.Instance;
+            if (colorService != null)
             {
-                AnchorType.Todo => Colors.Orange,
-                AnchorType.Hack => Colors.Crimson,
-                AnchorType.Note => Colors.LimeGreen,
-                AnchorType.Bug => Colors.Red,
-                AnchorType.Fixme => Colors.OrangeRed,
-                AnchorType.Undone => Colors.MediumPurple,
-                AnchorType.Review => Colors.DodgerBlue,
-                AnchorType.Anchor => Colors.Teal,
-                AnchorType.Custom => Colors.Goldenrod,
-                _ => Colors.Gray
-            };
+                return colorService.GetColor(anchorType);
+            }
+
+            // Fallback to default colors if service is not available
+            return CommentTagColorService.GetDefaultColor(anchorType);
         }
 
         /// <summary>

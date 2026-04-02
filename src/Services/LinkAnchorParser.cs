@@ -101,11 +101,13 @@ namespace CommentsVS.Services
         /// Pattern breakdown:
         /// - (?&lt;prefix&gt;...) - LINK keyword (case-insensitive) followed by optional colon and whitespace
         /// - (?:#(?&lt;localanchor&gt;[A-Za-z0-9_-]+)) - Local anchor only (#anchor-name)
-        /// - OR: (?&lt;path&gt;...) - File path (can contain spaces, stops at :digit, #anchor, LINK keyword, or end of line)
+        /// - OR: (?&lt;path&gt;...) - File path that must look like an actual file:
+        ///   - Must contain a path separator (/ or \) OR a file extension (. followed by alphanumeric)
         ///   - (?::(?&lt;line&gt;\d+)(?:-(?&lt;endline&gt;\d+))?)? - Optional :line or :line-endline
         ///   - (?:#(?&lt;fileanchor&gt;[A-Za-z0-9_-]+))? - Optional #anchor
         /// File paths can contain spaces (e.g., "images/Add group calendar.png")
         /// Trailing whitespace is trimmed from paths in code.
+        /// Plain text like "Link this is not a file" is NOT matched.
         /// </remarks>
         private const string _linkCorePattern =
             @"(?<prefix>\bLINK\b\s*:?\s*)(?:(?<localanchor>#[A-Za-z0-9_-]+)|(?<path>(?:[./\\@~])?(?:[^\r\n#:]|:(?!\d))+?)(?::(?<line>\d+)(?:-(?<endline>\d+))?)?(?:#(?<fileanchor>[A-Za-z0-9_-]+))?(?=\s*(?:\bLINK\b|$|\r|\n)))";
@@ -216,6 +218,15 @@ namespace CommentsVS.Services
                     {
                         // Trim trailing whitespace that may be captured when path contains spaces
                         filePath = pathGroup.Value.TrimEnd();
+
+                        // Skip paths that don't look like actual file paths (e.g., plain text like "this is not a file")
+                        // A valid file path should contain either:
+                        // - A path separator (/ or \)
+                        // - A file extension (. followed by alphanumeric characters)
+                        if (!LooksLikeFilePath(filePath))
+                        {
+                            continue;
+                        }
                     }
 
                     Group lineGroup = match.Groups["line"];
@@ -297,6 +308,63 @@ namespace CommentsVS.Services
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Checks if the given text looks like a file path (contains path separators or a file extension).
+        /// </summary>
+        /// <param name="path">The text to check.</param>
+        /// <returns>True if the text looks like a file path; otherwise, false.</returns>
+        /// <remarks>
+        /// This prevents plain text like "this is not a file" from being treated as a file path.
+        /// A valid file path should contain:
+        /// - A path separator (/ or \), OR
+        /// - A file extension (. followed by at least one alphanumeric character), OR
+        /// - A dot-prefix pattern like .gitignore, .editorconfig (starts with . followed by letters)
+        /// </remarks>
+        private static bool LooksLikeFilePath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return false;
+            }
+
+            // Contains a path separator - definitely a path
+            if (path.IndexOf("/", StringComparison.Ordinal) >= 0 || path.IndexOf("\\", StringComparison.Ordinal) >= 0)
+            {
+                return true;
+            }
+
+            // Dot-prefixed hidden files like .gitignore, .editorconfig
+            // Must start with a dot followed immediately by at least one letter (no whitespace)
+            if (path.Length > 1 && path[0] == '.' && char.IsLetter(path[1]))
+            {
+                return true;
+            }
+
+            // Check for file extension pattern: .ext (e.g., "file.cs", "README.md")
+            // Must have a dot followed IMMEDIATELY by alphanumeric characters (no whitespace)
+            // This prevents "this is. not a file" from matching
+            var lastDotIndex = path.LastIndexOf('.');
+            if (lastDotIndex > 0 && lastDotIndex < path.Length - 1)
+            {
+                // The character immediately after the dot must be alphanumeric (not whitespace)
+                if (char.IsLetterOrDigit(path[lastDotIndex + 1]))
+                {
+                    // Also ensure the extension doesn't contain spaces (e.g., reject ".cs is not")
+                    for (var i = lastDotIndex + 1; i < path.Length; i++)
+                    {
+                        if (char.IsWhiteSpace(path[i]))
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

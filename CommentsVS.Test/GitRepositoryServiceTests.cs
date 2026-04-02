@@ -241,6 +241,38 @@ public sealed class GitRepositoryServiceTests
         Assert.AreEqual("myproject", result.Repository);
     }
 
+    [TestMethod]
+    public void ParseRemoteUrl_SelfHostedAzureDevOps_ReturnsCorrectInfo()
+    {
+        // Self-hosted Azure DevOps URL with _git pattern on a custom server
+        // Format: /{collection}/{project}/_git/{repo} - we extract collection as owner, project as repository
+        var url = "https://tfs.example.com/DefaultCollection/MyProject/_git/MyRepo";
+
+        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(GitHostingProvider.AzureDevOps, result.Provider);
+        Assert.AreEqual("DefaultCollection", result.Owner);
+        Assert.AreEqual("MyProject", result.Repository);
+        Assert.AreEqual("https://tfs.example.com", result.BaseUrl);
+    }
+
+    [TestMethod]
+    public void ParseRemoteUrl_SelfHostedAzureDevOps_IssueUrl()
+    {
+        // Ensure work item URL is generated correctly for self-hosted Azure DevOps
+        var url = "https://tfs.company.local/org/project/_git/repo";
+
+        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(GitHostingProvider.AzureDevOps, result.Provider);
+
+        // Work item URL should use org/project (which maps to Owner/Repository)
+        string issueUrl = result.GetIssueUrl(123);
+        Assert.AreEqual("https://tfs.company.local/org/project/_workitems/edit/123", issueUrl);
+    }
+
     #endregion
 
     #region Edge Cases
@@ -441,7 +473,7 @@ public sealed class GitRepositoryServiceTests
             return null;
         }
 
-        GitHostingProvider provider = GetProviderFromHost(host, pathSegments.Length);
+        GitHostingProvider provider = GetProviderFromHost(host, pathSegments);
         if (provider == GitHostingProvider.Unknown)
         {
             return null;
@@ -491,7 +523,7 @@ public sealed class GitRepositoryServiceTests
         return repositoryPath.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
     }
 
-    private static GitHostingProvider GetProviderFromHost(string host, int segmentCount)
+    private static GitHostingProvider GetProviderFromHost(string host, string[] pathSegments)
     {
         if (ContainsHostKeyword(host, "gitlab"))
         {
@@ -508,9 +540,31 @@ public sealed class GitRepositoryServiceTests
             return GitHostingProvider.Bitbucket;
         }
 
-        return segmentCount > 2
+        // Check for Azure DevOps by host keywords or URL pattern
+        if (ContainsHostKeyword(host, "azure") ||
+            ContainsHostKeyword(host, "visualstudio") ||
+            ContainsGitSegment(pathSegments))
+        {
+            return GitHostingProvider.AzureDevOps;
+        }
+
+        return pathSegments.Length > 2
             ? GitHostingProvider.GitLab
             : GitHostingProvider.GitHub;
+    }
+
+    private static bool ContainsGitSegment(string[] pathSegments)
+    {
+        // Azure DevOps URLs contain a "_git" segment (e.g., /{project}/_git/{repo})
+        foreach (string segment in pathSegments)
+        {
+            if (string.Equals(segment, "_git", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool TryGetOwnerAndRepository(GitHostingProvider provider, string[] pathSegments, out string owner, out string repository)
@@ -531,6 +585,21 @@ public sealed class GitRepositoryServiceTests
 
         switch (provider)
         {
+            case GitHostingProvider.AzureDevOps:
+                // Azure DevOps: /{org}/{project}/_git/{repo} or /{collection}/{project}/_git/{repo}
+                // Find the _git segment and extract org as owner, project as repository
+                int gitIndex = Array.FindIndex(pathSegments, s => string.Equals(s, "_git", StringComparison.OrdinalIgnoreCase));
+                if (gitIndex < 2 || gitIndex >= pathSegments.Length - 1)
+                {
+                    return false;
+                }
+
+                // Owner is the organization/collection (first segment before project)
+                // Repository is the project (segment immediately before _git)
+                owner = string.Join("/", pathSegments, 0, gitIndex - 1);
+                repository = pathSegments[gitIndex - 1];
+                return !string.IsNullOrWhiteSpace(owner) && !string.IsNullOrWhiteSpace(repository);
+
             case GitHostingProvider.GitLab:
                 owner = string.Join("/", pathSegments, 0, pathSegments.Length - 1);
                 return !string.IsNullOrWhiteSpace(owner);
