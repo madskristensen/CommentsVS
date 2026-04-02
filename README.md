@@ -88,12 +88,12 @@ The "When caret enters comment" option provides a Rider-like editing experienceâ
 
 **Customizing colors:**
 
-| Entry                      | Description                                 |
-| -------------------------- | ------------------------------------------- |
-| Rendered Comment - Text    | Main comment text color                     |
-| Rendered Comment - Heading | Section headings (Returns, Remarks, params) |
-| Rendered Comment - Code    | Inline code formatting                      |
-| Rendered Comment - Link    | Links, param refs, and type refs            |
+| Entry                      | Description                                                  |
+| -------------------------- | ------------------------------------------------------------ |
+| Rendered Comment - Text    | Main comment text color                                      |
+| Rendered Comment - Heading | Section headings (Returns, Remarks, params)                  |
+| Rendered Comment - Code    | Inline code formatting (supports font, background, bold, italic) |
+| Rendered Comment - Link    | Links, param refs, and type refs                             |
 
 **Left border indicator:** A subtle vertical line on the left edge helps distinguish rendered comments from codeâ€”similar to Markdown blockquotes. Control when it appears via **Tools > Options > Comments > Left Border**:
 
@@ -520,6 +520,47 @@ This extension implements functionality requested by users on the Visual Studio 
 - [Enable links in comments that are relative](https://developercommunity.visualstudio.com/t/Enalble-links-in-comments-that-are-relat/859567) - Link anchors with relative path support
 - [Support for showing rendered documentation comments](https://developercommunity.visualstudio.com/t/Support-for-showing-rendered-documentati/10247122) - Rendered XML doc comments (Compact and Full modes)
 - [Support TODO comments in Visual Studio](https://developercommunity.visualstudio.com/t/Support-TODO-comments-in-Visual-Studio-D/1150894) - Code Anchors tool window with solution-wide scanning
+
+## Fonts & Colors Reference
+
+All colors and fonts can be customized via **Tools > Options > Environment > Fonts and Colors**. Search for entries by name:
+
+### Rendered Comments
+
+| Entry                      | Description                                                        |
+| -------------------------- | ------------------------------------------------------------------ |
+| Rendered Comment - Text    | Main body text in rendered comments                                |
+| Rendered Comment - Heading | Section headings (Returns, Remarks, Parameters, etc.)              |
+| Rendered Comment - Code    | Inline `<c>` and `<code>` blocks (supports font, background, bold, italic) |
+| Rendered Comment - Link    | Clickable links, `<see>`, `<paramref>`, and `<typeparamref>` refs  |
+
+### Comment Tags (Anchors)
+
+| Entry                   | Default Color  | Description                              |
+| ----------------------- | -------------- | ---------------------------------------- |
+| Comment Tag - TODO      | Orange         | Tasks to be completed                    |
+| Comment Tag - HACK      | Crimson        | Temporary workarounds                    |
+| Comment Tag - NOTE      | Lime Green     | Important notes                          |
+| Comment Tag - BUG       | Red            | Known bugs                               |
+| Comment Tag - FIXME     | Orange Red     | Code that needs fixing                   |
+| Comment Tag - UNDONE    | Medium Purple  | Incomplete work                          |
+| Comment Tag - REVIEW    | Dodger Blue    | Code needing review                      |
+| Comment Tag - ANCHOR    | Teal           | Named navigation anchors                 |
+| Comment Tag - Custom    | Goldenrod      | User-defined custom tags                 |
+| Comment Tag - Metadata  | Teal           | Metadata after tags (@owner, #issue, date) |
+
+### Prefix-Based Comments (Better Comments Style)
+
+| Entry                         | Default Color | Default Style | Description           |
+| ----------------------------- | ------------- | ------------- | --------------------- |
+| Comment - Alert (!)           | Red           | Normal        | Alerts and warnings   |
+| Comment - Query (?)           | Dodger Blue   | Normal        | Questions and queries |
+| Comment - Important (*)       | Lime Green    | Normal        | Important highlights  |
+| Comment - Strikethrough (//)  | Gray          | Normal*       | Deprecated/old code   |
+| Comment - Disabled (-)        | Dark Gray     | Normal        | Disabled/removed      |
+| Comment - Quote (>)           | Medium Purple | Italic        | Quotes and references |
+
+*\*Enable strikethrough manually by checking the Strikethrough checkbox in Fonts and Colors.*
 
 ## How can I help?
 

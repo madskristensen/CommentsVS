@@ -67,11 +67,15 @@ namespace CommentsVS.Adornments
         private readonly string _filePath;
         private readonly IEditorFormatMap _formatMap;
 
-        // Cached brushes from format map
+        // Cached brushes and fonts from format map
         private Brush _textBrush;
         private Brush _headingBrush;
         private Brush _codeBrush;
+        private Brush _codeBackgroundBrush;
         private Brush _linkBrush;
+        private FontFamily _codeFontFamily;
+        private bool _codeIsBold;
+        private bool _codeIsItalic;
 
         public RenderedCommentIntraTextTagger(IWpfTextView view, IEditorFormatMap formatMap) : base(view)
         {
@@ -132,8 +136,12 @@ namespace CommentsVS.Adornments
                 ?? new SolidColorBrush(Color.FromRgb(87, 166, 74));
             _codeBrush = GetBrushFromFormatMap(CommentTagClassificationTypes.RenderedCode)
                 ?? new SolidColorBrush(Color.FromRgb(156, 120, 100));
+            _codeBackgroundBrush = GetBackgroundBrushFromFormatMap(CommentTagClassificationTypes.RenderedCode);
             _linkBrush = GetBrushFromFormatMap(CommentTagClassificationTypes.RenderedLink)
                 ?? new SolidColorBrush(Color.FromRgb(86, 156, 214));
+            _codeFontFamily = GetFontFamilyFromFormatMap(CommentTagClassificationTypes.RenderedCode)
+                ?? new FontFamily("Consolas");
+            (_codeIsBold, _codeIsItalic) = GetFontStyleFromFormatMap(CommentTagClassificationTypes.RenderedCode);
         }
 
         private Brush GetBrushFromFormatMap(string classificationTypeName)
@@ -142,6 +150,39 @@ namespace CommentsVS.Adornments
             return properties != null && properties.Contains(EditorFormatDefinition.ForegroundBrushId)
                 ? properties[EditorFormatDefinition.ForegroundBrushId] as Brush
                 : null;
+        }
+
+        private FontFamily GetFontFamilyFromFormatMap(string classificationTypeName)
+        {
+            ResourceDictionary properties = _formatMap.GetProperties(classificationTypeName);
+            return properties?[ClassificationFormatDefinition.TypefaceId] is Typeface typeface
+                ? typeface.FontFamily
+                : null;
+        }
+
+        private Brush GetBackgroundBrushFromFormatMap(string classificationTypeName)
+        {
+            ResourceDictionary properties = _formatMap.GetProperties(classificationTypeName);
+            return properties != null && properties.Contains(EditorFormatDefinition.BackgroundBrushId)
+                ? properties[EditorFormatDefinition.BackgroundBrushId] as Brush
+                : null;
+        }
+
+        private (bool isBold, bool isItalic) GetFontStyleFromFormatMap(string classificationTypeName)
+        {
+            ResourceDictionary properties = _formatMap.GetProperties(classificationTypeName);
+            if (properties == null)
+            {
+                return (false, false);
+            }
+
+            // VS stores bold/italic as separate boolean properties, not in the Typeface
+            bool isBold = properties.Contains(ClassificationFormatDefinition.IsBoldId)
+                && properties[ClassificationFormatDefinition.IsBoldId] is bool bold && bold;
+            bool isItalic = properties.Contains(ClassificationFormatDefinition.IsItalicId)
+                && properties[ClassificationFormatDefinition.IsItalicId] is bool italic && italic;
+
+            return (isBold, isItalic);
         }
 
         private void OnVisibilityChanged(object sender, EventArgs e)
@@ -830,8 +871,20 @@ namespace CommentsVS.Adornments
                             break;
 
                         case RenderedSegmentType.Code:
-                            run.FontFamily = new FontFamily("Consolas");
+                            run.FontFamily = _codeFontFamily;
                             run.Foreground = _codeBrush;
+                            if (_codeBackgroundBrush != null)
+                            {
+                                run.Background = _codeBackgroundBrush;
+                            }
+                            if (_codeIsBold)
+                            {
+                                run.FontWeight = FontWeights.Bold;
+                            }
+                            if (_codeIsItalic)
+                            {
+                                run.FontStyle = FontStyles.Italic;
+                            }
                             break;
 
                         case RenderedSegmentType.Strikethrough:
@@ -1005,10 +1058,22 @@ namespace CommentsVS.Adornments
                 var isCodeLine = IsPreformattedCodeLine(line);
                 if (isCodeLine)
                 {
-                    // Use monospace font for code blocks
-                    textBlock.FontFamily = new FontFamily("Consolas");
+                    // Use code font and styling from user settings for code blocks
+                    textBlock.FontFamily = _codeFontFamily;
                     textBlock.TextWrapping = TextWrapping.NoWrap;
                     textBlock.Margin = new Thickness(listIndent, 0, 0, 2);
+                    if (_codeBackgroundBrush != null)
+                    {
+                        textBlock.Background = _codeBackgroundBrush;
+                    }
+                    if (_codeIsBold)
+                    {
+                        textBlock.FontWeight = FontWeights.Bold;
+                    }
+                    if (_codeIsItalic)
+                    {
+                        textBlock.FontStyle = FontStyles.Italic;
+                    }
                 }
 
                 // Check if this line is a list item (starts with bullet or number)
