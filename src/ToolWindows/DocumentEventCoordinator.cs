@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using CommentsVS.Services;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -67,6 +68,12 @@ namespace CommentsVS.ToolWindows
         private async Task ScanAndUpdateCacheAsync(string filePath)
         {
             if (_cache == null || _scanner == null || _disposed)
+            {
+                return;
+            }
+
+            // Skip temporary VS buffers (e.g. "Temp.txt") that have no real directory
+            if (string.IsNullOrEmpty(filePath) || string.IsNullOrEmpty(Path.GetDirectoryName(filePath)))
             {
                 return;
             }

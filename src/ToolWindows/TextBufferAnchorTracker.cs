@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Text;
@@ -64,6 +65,11 @@ namespace CommentsVS.ToolWindows
 
         private void StartTrackingBuffer(ITextBuffer buffer, string filePath)
         {
+            if (IsTemporaryFilePath(filePath))
+            {
+                return;
+            }
+
             lock (_lock)
             {
                 if (_trackedBuffers.ContainsKey(buffer))
@@ -144,6 +150,27 @@ namespace CommentsVS.ToolWindows
             {
                 // Silently ignore errors during background scanning
             }
+        }
+
+        /// <summary>
+        /// Returns true if the file path refers to a temporary VS buffer (e.g. "Temp.txt")
+        /// that should not appear in the Code Anchors window.
+        /// </summary>
+        private static bool IsTemporaryFilePath(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+            {
+                return true;
+            }
+
+            // Temporary buffers created by VS often have no directory component (e.g. "Temp.txt")
+            var directory = Path.GetDirectoryName(filePath);
+            if (string.IsNullOrEmpty(directory))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         public void Dispose()

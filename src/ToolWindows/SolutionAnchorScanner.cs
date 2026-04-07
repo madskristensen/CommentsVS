@@ -243,6 +243,8 @@ namespace CommentsVS.ToolWindows
             return dte?.Solution;
         }
 
+        private static readonly string[] _projectFilePatterns = ["*.csproj", "*.vbproj", "*.fsproj", "*.esproj", "*.vcxproj", "*.shproj"];
+
         private static Task CollectFilesFromFileSystemAsync(
             string solutionDir,
             string solutionFullName,
@@ -254,6 +256,11 @@ namespace CommentsVS.ToolWindows
             return Task.Run(() =>
             {
                 var solutionName = Path.GetFileNameWithoutExtension(solutionFullName);
+
+                // Map from directory path to project name for all discovered projects
+                var projectsByDirectory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var allFiles = new List<(string FilePath, string Directory)>();
+
                 var pendingDirectories = new Stack<string>();
                 pendingDirectories.Push(solutionDir);
 
@@ -268,6 +275,21 @@ namespace CommentsVS.ToolWindows
 
                     try
                     {
+                        // Discover project files in this directory
+                        foreach (var pattern in _projectFilePatterns)
+                        {
+                            foreach (var projectFile in Directory.EnumerateFiles(currentDirectory, pattern))
+                            {
+                                projectsByDirectory[currentDirectory] = Path.GetFileNameWithoutExtension(projectFile);
+                                break;
+                            }
+
+                            if (projectsByDirectory.ContainsKey(currentDirectory))
+                            {
+                                break;
+                            }
+                        }
+
                         foreach (var directory in Directory.EnumerateDirectories(currentDirectory))
                         {
                             if (ct.IsCancellationRequested)
@@ -294,7 +316,7 @@ namespace CommentsVS.ToolWindows
                             var extension = Path.GetExtension(filePath);
                             if (!string.IsNullOrEmpty(extension) && extensionsToScan.Contains(extension))
                             {
-                                filesToScan.Add((filePath, solutionName));
+                                allFiles.Add((filePath, currentDirectory));
                             }
                         }
                     }
@@ -311,7 +333,39 @@ namespace CommentsVS.ToolWindows
                         // Skip transient file system errors
                     }
                 }
+
+                // Assign each file to its nearest containing project
+                foreach ((var filePath, var fileDirectory) in allFiles)
+                {
+                    if (ct.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    var projectName = FindContainingProjectName(fileDirectory, solutionDir, projectsByDirectory) ?? solutionName;
+                    filesToScan.Add((filePath, projectName));
+                }
             }, ct);
+        }
+
+        /// <summary>
+        /// Walks up from <paramref name="directory"/> to <paramref name="solutionDir"/> looking
+        /// for the nearest directory that contains a project file.
+        /// </summary>
+        private static string FindContainingProjectName(string directory, string solutionDir, Dictionary<string, string> projectsByDirectory)
+        {
+            var dir = directory;
+            while (!string.IsNullOrEmpty(dir) && dir.Length >= solutionDir.Length)
+            {
+                if (projectsByDirectory.TryGetValue(dir, out var projectName))
+                {
+                    return projectName;
+                }
+
+                dir = Path.GetDirectoryName(dir);
+            }
+
+            return null;
         }
 
         private static string ReadFileSync(string filePath)
