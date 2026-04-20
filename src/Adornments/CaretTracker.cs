@@ -93,7 +93,14 @@ namespace CommentsVS.Adornments
                 return;
             }
 
+            // When the user is extending a selection (e.g. Shift+Arrow), don't collapse
+            // comments as the caret leaves them. This prevents disrupting selection
+            // operations like Shift+Down+Delete. The collapse is deferred until the
+            // next non-selecting caret move by preserving _lastCaretLine.
+            var isSelecting = !_view.Selection.IsEmpty;
+
             var shouldRefresh = false;
+            var shouldDeferCollapse = false;
 
             // Single pass through blocks to handle all scenarios
             foreach (XmlDocCommentBlock block in blocks)
@@ -116,19 +123,37 @@ namespace CommentsVS.Adornments
                 {
                     if (_visibilityManager.IsCommentHidden(block.StartLine))
                     {
-                        _visibilityManager.ShowComment(block.StartLine);
-                        shouldRefresh = true;
+                        if (isSelecting)
+                        {
+                            shouldDeferCollapse = true;
+                        }
+                        else
+                        {
+                            _visibilityManager.ShowComment(block.StartLine);
+                            shouldRefresh = true;
+                        }
                     }
                 }
 
                 // Scenario 3: Leaving an edited comment - clear edit tracking
                 if (hasEditTracking && wasInComment && !nowInComment)
                 {
-                    if (_visibilityManager.ClearEditTracking(block.StartLine, block.EndLine))
+                    if (isSelecting)
+                    {
+                        shouldDeferCollapse = true;
+                    }
+                    else if (_visibilityManager.ClearEditTracking(block.StartLine, block.EndLine))
                     {
                         shouldRefresh = true;
                     }
                 }
+            }
+
+            // Preserve _lastCaretLine so the collapse triggers on the next
+            // non-selecting caret move (the "was-in-comment" check will still fire).
+            if (shouldDeferCollapse)
+            {
+                _lastCaretLine = lastLine;
             }
 
             if (shouldRefresh)
