@@ -187,7 +187,7 @@ namespace CommentsVS.ToolWindows
 
             try
             {
-                var textDocumentFactoryService = componentModel.GetService<ITextDocumentFactoryService>();
+                ITextDocumentFactoryService textDocumentFactoryService = componentModel.GetService<ITextDocumentFactoryService>();
                 if (textDocumentFactoryService == null || _bufferTracker == null)
                 {
                     return;

@@ -372,7 +372,9 @@ namespace CommentsVS.ToolWindows
         {
             try
             {
-                return File.ReadAllText(filePath);
+                using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var reader = new StreamReader(stream);
+                return reader.ReadToEnd();
             }
             catch
             {
@@ -384,10 +386,9 @@ namespace CommentsVS.ToolWindows
         {
             try
             {
-                using (var reader = new StreamReader(filePath))
-                {
-                    return await reader.ReadToEndAsync();
-                }
+                using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var reader = new StreamReader(stream);
+                return await reader.ReadToEndAsync();
             }
             catch
             {

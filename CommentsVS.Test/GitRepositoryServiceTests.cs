@@ -269,7 +269,7 @@ public sealed class GitRepositoryServiceTests
         Assert.AreEqual(GitHostingProvider.AzureDevOps, result.Provider);
 
         // Work item URL should use org/project (which maps to Owner/Repository)
-        string issueUrl = result.GetIssueUrl(123);
+        var issueUrl = result.GetIssueUrl(123);
         Assert.AreEqual("https://tfs.company.local/org/project/_workitems/edit/123", issueUrl);
     }
 
@@ -556,7 +556,7 @@ public sealed class GitRepositoryServiceTests
     private static bool ContainsGitSegment(string[] pathSegments)
     {
         // Azure DevOps URLs contain a "_git" segment (e.g., /{project}/_git/{repo})
-        foreach (string segment in pathSegments)
+        foreach (var segment in pathSegments)
         {
             if (string.Equals(segment, "_git", StringComparison.OrdinalIgnoreCase))
             {
@@ -588,7 +588,7 @@ public sealed class GitRepositoryServiceTests
             case GitHostingProvider.AzureDevOps:
                 // Azure DevOps: /{org}/{project}/_git/{repo} or /{collection}/{project}/_git/{repo}
                 // Find the _git segment and extract org as owner, project as repository
-                int gitIndex = Array.FindIndex(pathSegments, s => string.Equals(s, "_git", StringComparison.OrdinalIgnoreCase));
+                var gitIndex = Array.FindIndex(pathSegments, s => string.Equals(s, "_git", StringComparison.OrdinalIgnoreCase));
                 if (gitIndex < 2 || gitIndex >= pathSegments.Length - 1)
                 {
                     return false;

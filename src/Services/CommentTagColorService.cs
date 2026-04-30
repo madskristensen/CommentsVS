@@ -1,4 +1,5 @@
 using System.ComponentModel.Composition;
+using System.Windows;
 using System.Windows.Media;
 using CommentsVS.Classification;
 using CommentsVS.ToolWindows;
@@ -54,7 +55,7 @@ namespace CommentsVS.Services
         /// <returns>The configured color, or null if not set or not available.</returns>
         private Color? GetConfiguredColor(AnchorType anchorType)
         {
-            string classificationTypeName = GetClassificationTypeName(anchorType);
+            var classificationTypeName = GetClassificationTypeName(anchorType);
             if (string.IsNullOrEmpty(classificationTypeName))
             {
                 return null;
@@ -71,7 +72,7 @@ namespace CommentsVS.Services
                 }
 
                 // Get the format properties for this classification type
-                var properties = _formatMap.GetProperties(classificationTypeName);
+                ResourceDictionary properties = _formatMap.GetProperties(classificationTypeName);
                 if (properties == null)
                 {
                     return null;
@@ -80,7 +81,7 @@ namespace CommentsVS.Services
                 // Try to get the foreground color
                 if (properties.Contains(EditorFormatDefinition.ForegroundColorId))
                 {
-                    object colorObj = properties[EditorFormatDefinition.ForegroundColorId];
+                    var colorObj = properties[EditorFormatDefinition.ForegroundColorId];
                     if (colorObj is Color color)
                     {
                         return color;
@@ -90,7 +91,7 @@ namespace CommentsVS.Services
                 // Try the foreground brush as fallback
                 if (properties.Contains(EditorFormatDefinition.ForegroundBrushId))
                 {
-                    object brushObj = properties[EditorFormatDefinition.ForegroundBrushId];
+                    var brushObj = properties[EditorFormatDefinition.ForegroundBrushId];
                     if (brushObj is SolidColorBrush brush)
                     {
                         return brush.Color;

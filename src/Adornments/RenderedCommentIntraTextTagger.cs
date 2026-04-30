@@ -177,9 +177,9 @@ namespace CommentsVS.Adornments
             }
 
             // VS stores bold/italic as separate boolean properties, not in the Typeface
-            bool isBold = properties.Contains(ClassificationFormatDefinition.IsBoldId)
+            var isBold = properties.Contains(ClassificationFormatDefinition.IsBoldId)
                 && properties[ClassificationFormatDefinition.IsBoldId] is bool bold && bold;
-            bool isItalic = properties.Contains(ClassificationFormatDefinition.IsItalicId)
+            var isItalic = properties.Contains(ClassificationFormatDefinition.IsItalicId)
                 && properties[ClassificationFormatDefinition.IsItalicId] is bool italic && italic;
 
             return (isBold, isItalic);

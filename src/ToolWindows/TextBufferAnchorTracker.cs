@@ -90,11 +90,11 @@ namespace CommentsVS.ToolWindows
                 return;
             }
 
-            var buffer = e.TextDocument.TextBuffer;
+            ITextBuffer buffer = e.TextDocument.TextBuffer;
 
             lock (_lock)
             {
-                if (_trackedBuffers.TryGetValue(buffer, out var trackingInfo))
+                if (_trackedBuffers.TryGetValue(buffer, out BufferTrackingInfo trackingInfo))
                 {
                     buffer.Changed -= OnBufferChanged;
                     trackingInfo.Dispose();
@@ -137,7 +137,7 @@ namespace CommentsVS.ToolWindows
                 IReadOnlyList<AnchorItem> anchors = _anchorService.ScanBuffer(buffer, filePath, projectName: null);
 
                 // Update the cache if tool window exists
-                var toolWindow = CodeAnchorsToolWindow.Instance;
+                CodeAnchorsToolWindow toolWindow = CodeAnchorsToolWindow.Instance;
                 if (toolWindow?.Cache != null)
                 {
                     toolWindow.Cache.AddOrUpdateFile(filePath, anchors);
@@ -187,7 +187,7 @@ namespace CommentsVS.ToolWindows
 
             lock (_lock)
             {
-                foreach (var kvp in _trackedBuffers)
+                foreach (KeyValuePair<ITextBuffer, BufferTrackingInfo> kvp in _trackedBuffers)
                 {
                     kvp.Key.Changed -= OnBufferChanged;
                     kvp.Value.Dispose();
@@ -225,7 +225,7 @@ namespace CommentsVS.ToolWindows
                 lock (_lock)
                 {
                     _cts = new CancellationTokenSource();
-                    var token = _cts.Token;
+                    CancellationToken token = _cts.Token;
 
                     // Schedule the update after debounce delay
                     Task.Delay(DebounceDelayMs, token).ContinueWith(t =>

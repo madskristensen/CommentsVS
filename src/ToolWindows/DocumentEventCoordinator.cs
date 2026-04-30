@@ -151,7 +151,7 @@ namespace CommentsVS.ToolWindows
             }
 
             // Check if the new frame is a document frame by trying to get its document path
-            string newDocumentPath = GetDocumentPathFromFrame(e.NewFrame);
+            var newDocumentPath = GetDocumentPathFromFrame(e.NewFrame);
             if (string.IsNullOrEmpty(newDocumentPath))
             {
                 return;
@@ -178,7 +178,7 @@ namespace CommentsVS.ToolWindows
             {
                 // Get the document moniker (file path) from the frame
                 // __VSFPROPID.VSFPROPID_pszMkDocument contains the document moniker for document windows
-                ((IVsWindowFrame)frame).GetProperty((int)__VSFPROPID.VSFPROPID_pszMkDocument, out object docPath);
+                ((IVsWindowFrame)frame).GetProperty((int)__VSFPROPID.VSFPROPID_pszMkDocument, out var docPath);
                 return docPath as string;
             }
             catch
