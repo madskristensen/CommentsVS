@@ -84,7 +84,8 @@ namespace CommentsVS.Services
     /// <item><c>LINK: path/to/file.cs</c> - Basic file link</item>
     /// <item><c>LINK: ./relative/path/file.cs</c> - Relative path</item>
     /// <item><c>LINK: ../sibling/folder/file.cs</c> - Parent-relative path</item>
-    /// <item><c>LINK path/to/file.cs</c> - Without colon</item>
+    /// <item><c>LINK path/to/file.cs</c> - Uppercase keyword without delimiter</item>
+    /// <item><c>Link: path/to/file.cs</c> - Mixed/lowercase keyword with required delimiter</item>
     /// <item><c>LINK: Services/UserService.cs:45</c> - File at line 45</item>
     /// <item><c>LINK: Database/Schema.sql:100-150</c> - File with line range</item>
     /// <item><c>LINK: Services/UserService.cs#validate-input</c> - File with anchor</item>
@@ -99,7 +100,7 @@ namespace CommentsVS.Services
         /// </summary>
         /// <remarks>
         /// Pattern breakdown:
-        /// - (?&lt;prefix&gt;...) - LINK keyword (case-insensitive) followed by optional colon and whitespace
+        /// - (?&lt;prefix&gt;...) - LINK keyword followed by optional :/! for uppercase LINK, required :/! for lowercase/mixed case
         /// - (?:#(?&lt;localanchor&gt;[A-Za-z0-9_-]+)) - Local anchor only (#anchor-name)
         /// - OR: (?&lt;path&gt;...) - File path that must look like an actual file:
         ///   - Must contain a path separator (/ or \) OR a file extension (. followed by alphanumeric)
@@ -109,13 +110,17 @@ namespace CommentsVS.Services
         /// Trailing whitespace is trimmed from paths in code.
         /// Plain text like "Link this is not a file" is NOT matched.
         /// </remarks>
+        private const string _linkPrefixPattern = @"(?:\bLINK\b\s*[:!]?\s*|\b(?i:LINK)\b\s*[:!]\s*)";
+
+        private const string _linkBoundaryPattern = @"(?:\bLINK\b\s*[:!]?|\b(?i:LINK)\b\s*[:!])";
+
         private const string _linkCorePattern =
-            @"(?<prefix>\bLINK\b\s*:?\s*)(?:(?<localanchor>#[A-Za-z0-9_-]+)|(?<path>(?:[./\\@~])?(?:[^\r\n#:]|:(?!\d))+?)(?::(?<line>\d+)(?:-(?<endline>\d+))?)?(?:#(?<fileanchor>[A-Za-z0-9_-]+))?(?=\s*(?:\bLINK\b|$|\r|\n)))";
+            @"(?<prefix>" + _linkPrefixPattern + @")(?:(?<localanchor>#[A-Za-z0-9_-]+)|(?<path>(?:[./\\@~])?(?:[^\r\n#:]|:(?!\d))+?)(?::(?<line>\d+)(?:-(?<endline>\d+))?)?(?:#(?<fileanchor>[A-Za-z0-9_-]+))?(?=\s*(?:" + _linkBoundaryPattern + @"|$|\r|\n)))";
 
         /// <summary>
         /// Default compiled regex (no tag prefixes).
         /// </summary>
-        private static readonly Regex _defaultLinkRegex = new(_linkCorePattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex _defaultLinkRegex = new(_linkCorePattern, RegexOptions.Compiled);
 
         /// <summary>
         /// Cached regex for the current tag prefix setting.
@@ -153,7 +158,7 @@ namespace CommentsVS.Services
 
             // Prepend optional prefix before the LINK keyword
             var pattern = @"(?:" + prefixPattern + @")?\s*" + _linkCorePattern;
-            _cachedPrefixRegex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            _cachedPrefixRegex = new Regex(pattern, RegexOptions.Compiled);
             _cachedPrefixPattern = prefixPattern;
             return _cachedPrefixRegex;
         }

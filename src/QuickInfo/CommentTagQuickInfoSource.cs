@@ -86,9 +86,9 @@ namespace CommentsVS.QuickInfo
             var keywordsPattern = EditorConfigSettings.GetAnchorKeywordsPattern(filePath);
             var prefixFragment = EditorConfigSettings.GetTagPrefixPattern(filePath);
             var pfx = prefixFragment != null ? "(?:" + prefixFragment + ")?\\s*" : "";
+            var tagKeywordsPattern = keywordsPattern + "|LINK";
             var tagRegex = new Regex(
-                pfx + @"\b(?<tag>" + keywordsPattern + @"|LINK)\b:?",
-                RegexOptions.IgnoreCase);
+                pfx + @"(?:(?<tag>\b(?:" + tagKeywordsPattern + @")\b)[:!]?|(?<tag>\b(?i:" + tagKeywordsPattern + @")\b)[:!])");
 
             foreach (Match match in tagRegex.Matches(commentText))
             {
@@ -305,7 +305,7 @@ namespace CommentsVS.QuickInfo
             // Adjust match position to be relative to full line
             var adjustedIndex = commentStartInLine + tagMatch.Index;
             System.Text.RegularExpressions.Match match = CommentPatterns.MetadataParseRegex.Match(lineText, adjustedIndex);
-            if (!match.Success || match.Index != tagMatch.Index)
+            if (!match.Success || match.Index != adjustedIndex)
             {
                 return null;
             }

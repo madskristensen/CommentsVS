@@ -15,6 +15,10 @@ namespace CommentsVS.Services
         /// </summary>
         public const string BuiltInAnchorKeywordsPattern = "TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR";
 
+        private const string BuiltInCommentTagKeywordsPattern = BuiltInAnchorKeywordsPattern + "|LINK";
+
+        private const string BuiltInCommentTagPattern = @"(?:(?<tag>\b(?:" + BuiltInCommentTagKeywordsPattern + @")\b)[:!]?|(?<tag>\b(?i:" + BuiltInCommentTagKeywordsPattern + @")\b)[:!])";
+
         private static readonly object _syncLock = new();
         private static volatile string _cachedCustomTags;
         private static volatile string _cachedAnchorKeywordsPattern;
@@ -33,12 +37,12 @@ namespace CommentsVS.Services
         }
 
         /// <summary>
-        /// Regex to match comment tags (anchors) with optional trailing colon.
+        /// Regex to match comment tags (anchors) with optional trailing delimiter for uppercase tags.
         /// Captures the tag keyword in the "tag" group.
         /// </summary>
         public static readonly Regex CommentTagRegex = new(
-            @"\b(?<tag>" + BuiltInAnchorKeywordsPattern + @"|LINK)\b:?",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            BuiltInCommentTagPattern,
+            RegexOptions.Compiled);
 
         /// <summary>
         /// Regex to match comment line prefixes (C-style, VB-style).
@@ -179,7 +183,7 @@ namespace CommentsVS.Services
                     var trimmed = tag.Trim();
                     if (!string.IsNullOrEmpty(trimmed))
                     {
-                        tags.Add(trimmed);
+                        tags.Add(trimmed.ToUpperInvariant());
                     }
                 }
             }
@@ -197,27 +201,30 @@ namespace CommentsVS.Services
         private static void RebuildRegexPatterns()
         {
             var pattern = _cachedAnchorKeywordsPattern;
+            var classificationTagPattern = @"(?:(?<tag>\b(?:" + pattern + @")\b)[:!]?|(?<tag>\b(?i:" + pattern + @")\b)[:!])";
+            var serviceTagPattern = @"(?:(?<tag>\b(?:" + pattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!]?|(?<tag>\b(?i:" + pattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!])";
+            var metadataTagPattern = @"(?:(?<tag>\b(?:" + pattern + @")\b)|(?<tag>\b(?i:" + pattern + @")\b(?=\s*(?:\([^)]*\)|\[[^\]]*\])\s*[:!])))";
 
             // Anchor must be the first word after comment prefix (and optional whitespace/asterisks)
             // This prevents matching "bug" in "straightforward bug fix"
             _cachedAnchorClassificationRegex = new Regex(
-                @"(?<=//\s*)(?<tag>\b(?:" + pattern + @")\b:?)|" +
-                @"(?<=/\*[\s\*]*)(?<tag>\b(?:" + pattern + @")\b:?)|" +
-                @"(?<='\s*)(?<tag>\b(?:" + pattern + @")\b:?)|" +
-                @"(?<=^\s*\*\s*)(?<tag>\b(?:" + pattern + @")\b:?)",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline);
+                @"(?<=//\s*)" + classificationTagPattern + @"|" +
+                @"(?<=/\*[\s\*]*)" + classificationTagPattern + @"|" +
+                @"(?<='\s*)" + classificationTagPattern + @"|" +
+                @"(?<=^\s*\*\s*)" + classificationTagPattern,
+                RegexOptions.Compiled | RegexOptions.Multiline);
 
             _cachedAnchorWithMetadataRegex = new Regex(
-                @"\b(?:" + pattern + @")\b(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                metadataTagPattern + @"(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
+                RegexOptions.Compiled);
 
             _cachedAnchorServiceRegex = new Regex(
-                @"(?<prefix>//|/\*|'|<!--)\s*(?<tag>\b(?:" + pattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*:?\s*(?<message>.*?)(?:\*/|-->|$)",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                @"(?<prefix>//|/\*|'|<!--)\s*" + serviceTagPattern + @"\s*(?<message>.*?)(?:\*/|-->|$)",
+                RegexOptions.Compiled);
 
             _cachedMetadataParseRegex = new Regex(
-                @"(?<tag>" + pattern + @")(?:\s*(?:\((?<metaParen>[^)]*)\)|\[(?<metaBracket>[^\]]*)\]))?\s*: ?",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                @"(?:(?<tag>\b(?:" + pattern + @")\b)(?:\s*(?:\((?<metaParen>[^)]*)\)|\[(?<metaBracket>[^\]]*)\]))?\s*[:!]?|(?<tag>\b(?i:" + pattern + @")\b)(?:\s*(?:\((?<metaParen>[^)]*)\)|\[(?<metaBracket>[^\]]*)\]))?\s*[:!]) ?",
+                RegexOptions.Compiled);
         }
     }
 }

@@ -124,11 +124,12 @@ namespace CommentsVS.Tagging
                             continue;
                         }
 
-                        var tag = tagGroup.Value.TrimEnd(':').ToUpperInvariant();
+                        var tag = tagGroup.Value.TrimEnd(':', '!').ToUpperInvariant();
                         var formatName = GetOverviewMarkFormatName(tag);
 
                         if (formatName == null)
                         {
+                            match = match.NextMatch();
                             continue;
                         }
 

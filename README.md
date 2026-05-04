@@ -28,7 +28,7 @@ or get the [CI build][vsixgallery].
 - **[Better Comments Style](docs/comment-tags.md#prefix-based-comment-highlighting)** — Prefix-based highlighting (`!`, `?`, `*`, `//`, `-`, `>`) for visual differentiation
 - **[Solution-Wide Code Anchors](docs/code-anchors.md)** — Browse all TODOs, HACKs, and notes across your entire solution
 - **[Clickable Issues](docs/issue-links.md)** — `#123` links directly to GitHub/GitLab/Azure DevOps issues
-- **[Link Anchors](docs/link-anchors.md)** — Navigate to other files, lines, or named anchors with `LINK:` syntax
+- **[Link Anchors](docs/link-anchors.md)** — Navigate to other files, lines, or named anchors with `LINK:` or uppercase `LINK` syntax
 - **[Comment Remover](docs/comment-remover.md)** — Bulk remove comments with smart preservation options
 - **Theme-aware** — Works with light and dark Visual Studio themes
 
@@ -42,7 +42,7 @@ See your documentation, not the XML. The Full rendering mode strips away XML noi
 
 ### Color-Coded Tags & Better Comments
 
-TODO, HACK, BUG, NOTE, and more are highlighted with distinct colors. Prefix-based highlighting (`!`, `?`, `*`, `//`) provides additional visual differentiation.
+TODO, HACK, BUG, NOTE, and more are highlighted with distinct colors. Uppercase tags can be written bare (`TODO fix this`); lowercase or mixed-case tags require `:` or `!` (`todo:` or `Todo!`). Prefix-based highlighting (`!`, `?`, `*`, `//`) provides additional visual differentiation.
 
 ![Comment Tags](art/comment-tags.png)
 
@@ -56,7 +56,7 @@ Track all your TODOs, HACKs, and notes across your entire solution in one tool w
 
 ### Issue Links & Link Anchors
 
-`#123` references become clickable links to GitHub, GitLab, Bitbucket, or Azure DevOps. `LINK:` syntax lets you navigate to files, lines, and named anchors.
+`#123` references become clickable links to GitHub, GitLab, Bitbucket, or Azure DevOps. `LINK:` syntax lets you navigate to files, lines, and named anchors; uppercase `LINK` may also be used without a delimiter.
 
 ![Issue Links](art/issue-links.png)
 

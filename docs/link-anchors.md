@@ -6,12 +6,16 @@ Create clickable links in comments that navigate to other files, specific lines,
 
 ```csharp
 // LINK: path/to/file.cs                    // Opens file
+// LINK path/to/file.cs                     // Uppercase LINK can omit the delimiter
+// link: path/to/file.cs                    // Lowercase/mixed-case LINK requires : or !
 // LINK: ./relative/path/file.cs            // Relative path from current file
 // LINK: ../sibling/folder/file.cs          // Parent-relative path
 // LINK: /solution/root/file.cs             // Solution-relative path (starts with /)
 // LINK: @/project/root/file.cs             // Project-relative path (starts with @/)
 // LINK: images/Add group calendar.png      // File paths can contain spaces
 ```
+
+Uppercase `LINK` can be written with or without `:`/`!`. Lowercase or mixed-case forms such as `link` or `Link` require `:` or `!` to avoid matching ordinary prose.
 
 ## Line Number Links
 

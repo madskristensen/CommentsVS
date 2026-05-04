@@ -134,15 +134,14 @@ namespace CommentsVS.Services
                 var customTagList = customTags.Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries);
                 if (customTagList.Length > 0)
                 {
-                    keywords += "|" + string.Join("|", customTagList.Select(Regex.Escape));
+                    keywords += "|" + string.Join("|", customTagList.Select(tag => Regex.Escape(tag.ToUpperInvariant())));
                 }
             }
 
-            // Match anchor keywords that appear immediately after a comment prefix
-            // Supports: // TODO, /* TODO, * TODO, ' TODO (VB), <!-- TODO
+            // Match anchor keywords that appear immediately after a comment prefix.
+            // Uppercase keywords may be bare; lowercase/mixed-case keywords require : or !.
             var anchorRegex = new Regex(
-                $@"(//|/\*|\*|'|<!--)\s*({keywords})\b:?",
-                RegexOptions.IgnoreCase);
+                $@"(//|/\*|\*|'|<!--)\s*(?:\b(?:{keywords})\b[:!]?|\b(?i:{keywords})\b[:!])");
 
             return anchorRegex.IsMatch(text);
         }

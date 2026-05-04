@@ -12,12 +12,12 @@ public sealed class CommentTagRangeMatchingTests
     private const string AnchorKeywordsPattern = "TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR";
 
     private static readonly Regex AnchorRegex = new(
-        @"\b(?<tag>" + AnchorKeywordsPattern + @")\b:?",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        @"(?:(?<tag>\b(?:" + AnchorKeywordsPattern + @")\b)[:!]?|(?<tag>\b(?i:" + AnchorKeywordsPattern + @")\b)[:!])",
+        RegexOptions.Compiled);
 
     private static readonly Regex MetadataRegex = new(
-        @"\b(?:" + AnchorKeywordsPattern + @")\b(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        @"(?:\b(?:" + AnchorKeywordsPattern + @")\b|\b(?i:" + AnchorKeywordsPattern + @")\b(?=\s*(?:\([^)]*\)|\[[^\]]*\])\s*[:!]))(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
+        RegexOptions.Compiled);
 
     private static readonly string[] AnchorKeywords =
         ["TODO", "HACK", "NOTE", "BUG", "FIXME", "UNDONE", "REVIEW", "ANCHOR"];
@@ -32,6 +32,28 @@ public sealed class CommentTagRangeMatchingTests
         Assert.HasCount(1, tagSpans);
         Assert.AreEqual(text.IndexOf("TODO", StringComparison.Ordinal), tagSpans[0].Start);
         Assert.AreEqual("TODO".Length, tagSpans[0].Length);
+    }
+
+    [TestMethod]
+    public void RangeMatching_LowercaseTagWithoutDelimiter_NotDetected()
+    {
+        const string text = "var x = 1; // review this tomorrow";
+
+        List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
+
+        Assert.IsEmpty(tagSpans);
+    }
+
+    [TestMethod]
+    public void RangeMatching_MixedCaseTagWithBang_Detected()
+    {
+        const string text = "var x = 1; // Review! this tomorrow";
+
+        List<(int Start, int Length)> tagSpans = ExtractTagSpans(text);
+
+        Assert.HasCount(1, tagSpans);
+        Assert.AreEqual(text.IndexOf("Review", StringComparison.Ordinal), tagSpans[0].Start);
+        Assert.AreEqual("Review".Length, tagSpans[0].Length);
     }
 
     [TestMethod]

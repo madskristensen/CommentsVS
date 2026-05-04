@@ -103,6 +103,17 @@ public sealed class LinkAnchorParserTests
     }
 
     [TestMethod]
+    public void Parse_WithBang_ReturnsCorrectPath()
+    {
+        var text = "// LINK! path/to/file.cs";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual("path/to/file.cs", results[0].FilePath);
+    }
+
+    [TestMethod]
     public void Parse_SolutionRelativePath_ReturnsCorrectPath()
     {
         var text = "// LINK: /solution/root/file.cs";
@@ -218,6 +229,37 @@ public sealed class LinkAnchorParserTests
     public void Parse_LowercaseLink_ParsesCorrectly()
     {
         var text = "// link: path/to/file.cs";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual("path/to/file.cs", results[0].FilePath);
+    }
+
+    [TestMethod]
+    public void Parse_LowercaseLinkWithoutDelimiter_ReturnsEmptyList()
+    {
+        var text = "// link path/to/file.cs";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.IsEmpty(results);
+    }
+
+    [TestMethod]
+    public void Parse_MixedCaseLinkWithoutDelimiter_ReturnsEmptyList()
+    {
+        var text = "// Link path/to/file.cs";
+
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+
+        Assert.IsEmpty(results);
+    }
+
+    [TestMethod]
+    public void Parse_LowercaseLinkWithBang_ParsesCorrectly()
+    {
+        var text = "// link! path/to/file.cs";
 
         IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
 

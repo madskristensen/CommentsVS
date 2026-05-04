@@ -6,6 +6,13 @@ Comment Studio highlights comment tags like TODO, HACK, NOTE, and more with dist
 
 Comment tags are automatically highlighted with distinct colors. Hover over any tag to see a tooltip explaining its semantic meaning.
 
+Tags may be written in either of these forms:
+
+- **All uppercase:** delimiter is optional, so `TODO fix this`, `TODO: fix this`, and `TODO! fix this` all match.
+- **Lowercase or mixed case:** `:` or `!` is required, so `todo: fix this` and `Todo! fix this` match, but `todo fix this` does not.
+
+This keeps common uppercase comments working while avoiding false positives in natural-language comments such as `// review this tomorrow`.
+
 | Tag | Default Color | Description |
 |-----|---------------|-------------|
 | TODO | Orange | Tasks to be completed |
@@ -29,6 +36,8 @@ PERF, SECURITY, DEBT, REFACTOR, WIP, DEPRECATED
 ```
 
 Custom tags are highlighted in **Goldenrod** and appear in the [Code Anchors](code-anchors.md) tool window alongside built-in tags. All custom tags share a single color, which can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - Custom".
+
+The same delimiter rule applies to custom tags: uppercase custom tags may be bare, while lowercase or mixed-case custom tags require `:` or `!`.
 
 Hover over any custom tag to see a QuickInfo tooltip identifying it as a custom anchor with a link to the Code Anchors window.
 

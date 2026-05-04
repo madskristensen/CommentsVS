@@ -44,6 +44,8 @@ Use `ANCHOR(name)` to create named navigation points in your code:
 // ANCHOR(database-init): Database initialization logic starts here
 ```
 
+Uppercase anchor tags may be written without `:` or `!`, but lowercase or mixed-case tags require one of those delimiters. For example, `// REVIEW this` is recognized, `// review this` is treated as ordinary text, and `// review: this` is recognized.
+
 These are especially useful for marking important sections you frequently need to return to. They can also be used as targets for [Link Anchors](link-anchors.md).
 
 ## Exporting Anchors

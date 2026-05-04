@@ -186,13 +186,14 @@ namespace CommentsVS.Services
             var cacheKey = GetRegexCacheKey(filePath);
             var p = GetAnchorKeywordsPattern(filePath);
             var pfx = GetPrefixFragment(filePath);
+            var tagPattern = @"(?:(?<tag>\b(?:" + p + @")\b)[:!]?|(?<tag>\b(?i:" + p + @")\b)[:!])";
 
             return _classificationRegexCache.GetOrAdd(cacheKey, _ => new Regex(
-                @"(?<=//\s*)" + pfx + @"(?<tag>\b(?:" + p + @")\b:?)|" +
-                @"(?<=/\*[\s\*]*)" + pfx + @"(?<tag>\b(?:" + p + @")\b:?)|" +
-                @"(?<='\s*)" + pfx + @"(?<tag>\b(?:" + p + @")\b:?)|" +
-                @"(?<=^\s*\*\s*)" + pfx + @"(?<tag>\b(?:" + p + @")\b:?)",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline));
+                @"(?<=//\s*)" + pfx + tagPattern + @"|" +
+                @"(?<=/\*[\s\*]*)" + pfx + tagPattern + @"|" +
+                @"(?<='\s*)" + pfx + tagPattern + @"|" +
+                @"(?<=^\s*\*\s*)" + pfx + tagPattern,
+                RegexOptions.Compiled | RegexOptions.Multiline));
         }
 
         /// <summary>
@@ -205,10 +206,11 @@ namespace CommentsVS.Services
         {
             var cacheKey = GetRegexCacheKey(filePath);
             var p = GetAnchorKeywordsPattern(filePath);
+            var metadataTagPattern = @"(?:\b(?:" + p + @")\b|\b(?i:" + p + @")\b(?=\s*(?:\([^)]*\)|\[[^\]]*\])\s*[:!]))";
 
             return _metadataRegexCache.GetOrAdd(cacheKey, _ => new Regex(
-                @"\b(?:" + p + @")\b(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled));
+                metadataTagPattern + @"(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
+                RegexOptions.Compiled));
         }
 
         /// <summary>
@@ -222,10 +224,11 @@ namespace CommentsVS.Services
             var cacheKey = GetRegexCacheKey(filePath);
             var p = GetAnchorKeywordsPattern(filePath);
             var pfx = GetPrefixFragment(filePath);
+            var serviceTagPattern = @"(?:(?<tag>\b(?:" + p + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!]?|(?<tag>\b(?i:" + p + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!])";
 
             return _serviceRegexCache.GetOrAdd(cacheKey, _ => new Regex(
-                @"(?<prefix>//|/\*|'|<!--)\s*" + pfx + @"(?<tag>\b(?:" + p + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*:?\s*(?<message>.*?)(?:\*/|-->|$)",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled));
+                @"(?<prefix>//|/\*|'|<!--)\s*" + pfx + serviceTagPattern + @"\s*(?<message>.*?)(?:\*/|-->|$)",
+                RegexOptions.Compiled));
         }
 
         /// <summary>

@@ -12,7 +12,7 @@ Welcome to the Comment Studio documentation. Use the links below to learn about 
 | [Comment Tags](comment-tags.md) | Color-coded anchor tags (TODO, HACK, NOTE, BUG, …), custom tags, tag prefixes, tag metadata, prefix-based highlighting |
 | [Code Anchors](code-anchors.md) | Solution-wide Code Anchors tool window, exporting, ANCHOR tags |
 | [Issue Links](issue-links.md) | Clickable `#123` issue references for GitHub, GitLab, Bitbucket, and Azure DevOps |
-| [Link Anchors](link-anchors.md) | `LINK:` syntax for navigating to files, lines, and named anchors |
+| [Link Anchors](link-anchors.md) | `LINK:`/uppercase `LINK` syntax for navigating to files, lines, and named anchors |
 | [Comment Remover](comment-remover.md) | Bulk comment removal commands with smart preservation options |
 | [Settings](settings.md) | All extension options and `.editorconfig` support |
 | [Fonts & Colors](fonts-and-colors.md) | Complete reference for customizable Fonts & Colors entries |

@@ -40,6 +40,8 @@ Rendered comment colors can be customized via **Tools > Options > Environment > 
 
 Tag colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Comment Tag - [TAG]" entries. Custom tags share a single color under "Comment Tag - Custom". Prefix colors can be customized under "Comment - [Type]" entries.
 
+Anchor tag detection is case-aware: uppercase tags may be written without a delimiter (`TODO fix this`), while lowercase or mixed-case tags require `:` or `!` (`todo: fix this`, `Todo! fix this`).
+
 ## Code Anchors
 
 | Setting | Default | Description |

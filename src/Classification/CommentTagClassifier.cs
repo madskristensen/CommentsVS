@@ -123,7 +123,7 @@ namespace CommentsVS.Classification
                         continue;
                     }
 
-                    var tag = tagGroup.Value.TrimEnd(':').ToUpperInvariant();
+                    var tag = tagGroup.Value.TrimEnd(':', '!').ToUpperInvariant();
                     IClassificationType classificationType = GetClassificationType(tag);
 
                     if (classificationType != null)

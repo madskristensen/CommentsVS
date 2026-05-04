@@ -21,15 +21,15 @@ public sealed class AnchorServiceTests
     /// Mirror of CommentPatterns.AnchorServiceRegex
     /// </summary>
     private static readonly Regex _anchorServiceRegex = new(
-        @"(?<prefix>//|/\*|'|<!--)\s*(?<tag>\b(?:" + _anchorKeywordsPattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*:?\s*(?<message>.*?)(?:\*/|-->|$)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        @"(?<prefix>//|/\*|'|<!--)\s*(?:(?<tag>\b(?:" + _anchorKeywordsPattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!]?|(?<tag>\b(?i:" + _anchorKeywordsPattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!])\s*(?<message>.*?)(?:\*/|-->|$)",
+        RegexOptions.Compiled);
 
     /// <summary>
     /// Mirror of CommentPatterns.CommentTagRegex
     /// </summary>
     private static readonly Regex _commentTagRegex = new(
-        @"\b(?<tag>" + _anchorKeywordsPattern + @"|LINK)\b:?",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        @"(?:(?<tag>\b(?:" + _anchorKeywordsPattern + @"|LINK)\b)[:!]?|(?<tag>\b(?i:" + _anchorKeywordsPattern + @"|LINK)\b)[:!])",
+        RegexOptions.Compiled);
 
     /// <summary>
     /// Mirror of Constants.AnchorKeywords
@@ -175,6 +175,40 @@ public sealed class AnchorServiceTests
 
         Assert.IsTrue(match.Success);
         Assert.AreEqual("todo", match.Groups["tag"].Value);
+    }
+
+    [TestMethod]
+    public void AnchorServiceRegex_LowercaseWithoutDelimiter_DoesNotMatch()
+    {
+        var text = "// review this tomorrow";
+
+        Match match = _anchorServiceRegex.Match(text);
+
+        Assert.IsFalse(match.Success);
+    }
+
+    [TestMethod]
+    public void AnchorServiceRegex_UppercaseWithoutDelimiter_Matches()
+    {
+        var text = "// REVIEW this tomorrow";
+
+        Match match = _anchorServiceRegex.Match(text);
+
+        Assert.IsTrue(match.Success);
+        Assert.AreEqual("REVIEW", match.Groups["tag"].Value);
+        Assert.AreEqual("this tomorrow", match.Groups["message"].Value.Trim());
+    }
+
+    [TestMethod]
+    public void AnchorServiceRegex_MixedCaseWithBang_Matches()
+    {
+        var text = "// Review! this tomorrow";
+
+        Match match = _anchorServiceRegex.Match(text);
+
+        Assert.IsTrue(match.Success);
+        Assert.AreEqual("Review", match.Groups["tag"].Value);
+        Assert.AreEqual("this tomorrow", match.Groups["message"].Value.Trim());
     }
 
     [TestMethod]
@@ -352,6 +386,27 @@ public sealed class AnchorServiceTests
 
         Assert.IsTrue(match.Success);
         Assert.AreEqual("TODO", match.Groups["tag"].Value);
+    }
+
+    [TestMethod]
+    public void CommentTagRegex_LowercaseWithoutDelimiter_DoesNotMatch()
+    {
+        var text = "// review message";
+
+        Match match = _commentTagRegex.Match(text);
+
+        Assert.IsFalse(match.Success);
+    }
+
+    [TestMethod]
+    public void CommentTagRegex_MixedCaseWithBang_Matches()
+    {
+        var text = "// Review! message";
+
+        Match match = _commentTagRegex.Match(text);
+
+        Assert.IsTrue(match.Success);
+        Assert.AreEqual("Review", match.Groups["tag"].Value);
     }
 
     [TestMethod]
