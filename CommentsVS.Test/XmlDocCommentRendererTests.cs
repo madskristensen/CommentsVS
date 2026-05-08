@@ -688,4 +688,62 @@ public sealed class XmlDocCommentRendererTests
     }
 
     #endregion
+
+    #region Ampersand Handling Tests (Issue #65)
+
+    [TestMethod]
+    public void RenderXmlContent_SummaryWithUnescapedAmpersand_RendersAsStructuredSummary()
+    {
+        var xml = "<summary>Foo & bar</summary><remarks>R&amp;D notes</remarks>";
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        Assert.IsNotNull(result.Summary);
+        List<RenderedSegment> summarySegments = [.. result.Summary!.Lines.SelectMany(l => l.Segments)];
+        var summaryText = string.Concat(summarySegments.Select(s => s.Text));
+        Assert.AreEqual("Foo & bar", summaryText.Trim());
+
+        // Ensure the renderer didn't collapse everything into a fallback plain-text run-on
+        // by verifying a remarks section was also produced.
+        RenderedCommentSection remarks = result.Sections.FirstOrDefault(s => s.Type == CommentSectionType.Remarks);
+        Assert.IsNotNull(remarks, "Remarks section should be rendered when an ampersand appears in the XML.");
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_BareUnescapedAmpersand_DoesNotCollapseToPlainText()
+    {
+        var xml = "<summary>Tom & Jerry</summary>";
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        Assert.IsNotNull(result.Summary);
+        List<RenderedSegment> summarySegments = [.. result.Summary!.Lines.SelectMany(l => l.Segments)];
+        var summaryText = string.Concat(summarySegments.Select(s => s.Text)).Trim();
+        Assert.AreEqual("Tom & Jerry", summaryText);
+    }
+
+    [TestMethod]
+    public void GetStrippedSummaryFromXml_WithUnescapedAmpersand_ReturnsCleanText()
+    {
+        var xml = "<summary>R&D department</summary>";
+
+        var result = XmlDocCommentRenderer.GetStrippedSummaryFromXml(xml);
+
+        Assert.AreEqual("R&D department", result);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_PreservesValidEntityReferences()
+    {
+        var xml = "<summary>1 &lt; 2 &amp;&amp; 3 &gt; 2</summary>";
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        Assert.IsNotNull(result.Summary);
+        List<RenderedSegment> summarySegments = [.. result.Summary!.Lines.SelectMany(l => l.Segments)];
+        var summaryText = string.Concat(summarySegments.Select(s => s.Text)).Trim();
+        Assert.AreEqual("1 < 2 && 3 > 2", summaryText);
+    }
+
+    #endregion
 }

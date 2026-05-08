@@ -167,6 +167,32 @@ namespace CommentsVS.Services
             private static readonly Regex _stripXmlTagsRegex = new(@"<[^>]+>", RegexOptions.Compiled);
 
             /// <summary>
+            /// Matches an ampersand that is NOT the start of a valid XML entity reference
+            /// (named like &amp;, &lt;, decimal like &#123;, or hex like &#x1A;).
+            /// Used to repair authored XML doc comments that contain stray ampersands so the
+            /// renderer doesn't collapse the entire comment into a plain-text fallback.
+            /// </summary>
+            private static readonly Regex _strayAmpersandRegex = new(
+                @"&(?!(?:[A-Za-z][A-Za-z0-9]*|#[0-9]+|#x[0-9A-Fa-f]+);)",
+                RegexOptions.Compiled);
+
+            /// <summary>
+            /// Escapes ampersands that are not part of a valid XML entity reference.
+            /// XML doc comments authored by users frequently contain unescaped '&amp;' characters
+            /// (e.g. "R&amp;D"); without this repair XDocument.Parse would throw and the renderer
+            /// would fall back to a plain-text dump of the entire comment.
+            /// </summary>
+            private static string EscapeStrayAmpersands(string xmlContent)
+            {
+                if (string.IsNullOrEmpty(xmlContent) || xmlContent.IndexOf('&') < 0)
+                {
+                    return xmlContent;
+                }
+
+                return _strayAmpersandRegex.Replace(xmlContent, "&amp;");
+            }
+
+            /// <summary>
             /// Thread-local storage for GitRepositoryInfo during rendering.
             /// This allows ProcessMarkdownInText to access repo info without threading it through all methods.
             /// </summary>
@@ -221,8 +247,10 @@ namespace CommentsVS.Services
                     return result;
                 }
 
-                // Wrap in root element for parsing
-                var wrappedXml = $"<root>{xmlContent}</root>";
+                // Wrap in root element for parsing. Repair stray ampersands so a single
+                // unescaped '&' (e.g. "R&D") doesn't cause the whole comment to collapse
+                // into a plain-text fallback (issue #65).
+                var wrappedXml = $"<root>{EscapeStrayAmpersands(xmlContent)}</root>";
 
                 try
                 {
@@ -266,8 +294,10 @@ namespace CommentsVS.Services
                     return result;
                 }
 
-                // Wrap in root element for parsing
-                var wrappedXml = $"<root>{xmlContent}</root>";
+                // Wrap in root element for parsing. Repair stray ampersands so a single
+                // unescaped '&' (e.g. "R&D") doesn't cause the whole comment to collapse
+                // into a plain-text fallback (issue #65).
+                var wrappedXml = $"<root>{EscapeStrayAmpersands(xmlContent)}</root>";
 
                 try
                 {
@@ -1192,7 +1222,9 @@ namespace CommentsVS.Services
                     return NoSummaryPlaceholder;
                 }
 
-                var wrappedXml = $"<root>{xmlContent}</root>";
+                // Repair stray ampersands so a single unescaped '&' doesn't force the
+                // fallback path (issue #65).
+                var wrappedXml = $"<root>{EscapeStrayAmpersands(xmlContent)}</root>";
 
                 try
                 {
