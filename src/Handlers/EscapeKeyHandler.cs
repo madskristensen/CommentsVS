@@ -25,6 +25,7 @@ namespace CommentsVS.Handlers
     [ContentType(SupportedContentTypes.Razor)]
     [ContentType(SupportedContentTypes.Sql)]
     [ContentType(SupportedContentTypes.PowerShell)]
+    [ContentType(SupportedContentTypes.PowerShellProTools)]
     [Name(nameof(RenderedCommentNavigationHandler))]
 
 

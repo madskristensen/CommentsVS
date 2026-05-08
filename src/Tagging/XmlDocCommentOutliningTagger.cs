@@ -24,6 +24,7 @@ namespace CommentsVS.Tagging
     [ContentType(SupportedContentTypes.Razor)]
     [ContentType(SupportedContentTypes.Sql)]
     [ContentType(SupportedContentTypes.PowerShell)]
+    [ContentType(SupportedContentTypes.PowerShellProTools)]
     internal sealed class XmlDocCommentOutliningTaggerProvider : ITaggerProvider
     {
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag

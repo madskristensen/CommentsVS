@@ -91,7 +91,8 @@ namespace CommentsVS.Classification
             }
 
             // PowerShell uses # for comments
-            if (contentType.IsOfType(SupportedContentTypes.PowerShell))
+            if (contentType.IsOfType(SupportedContentTypes.PowerShell) ||
+                contentType.IsOfType(SupportedContentTypes.PowerShellProTools))
             {
                 return (_hashStyleRegex, "#");
             }

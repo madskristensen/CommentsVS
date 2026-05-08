@@ -149,6 +149,15 @@ public sealed class LanguageCommentStyleTests
     }
 
     [TestMethod]
+    public void GetForContentType_WithPowerShellProTools_ReturnsPowerShellStyle()
+    {
+        var result = LanguageCommentStyle.GetForContentType(SupportedContentTypes.PowerShellProTools);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual("#", result.SingleLineDocPrefix);
+    }
+
+    [TestMethod]
     public void GetForContentType_WithNull_ReturnsNull()
     {
         var result = LanguageCommentStyle.GetForContentType((string?)null);

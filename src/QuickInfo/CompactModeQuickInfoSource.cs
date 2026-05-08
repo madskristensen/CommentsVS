@@ -25,6 +25,7 @@ namespace CommentsVS.QuickInfo
     [ContentType(SupportedContentTypes.Razor)]
     [ContentType(SupportedContentTypes.Sql)]
     [ContentType(SupportedContentTypes.PowerShell)]
+    [ContentType(SupportedContentTypes.PowerShellProTools)]
     [Order(Before = "Default Quick Info Presenter")]
 
     internal sealed class CompactModeQuickInfoSourceProvider : IAsyncQuickInfoSourceProvider

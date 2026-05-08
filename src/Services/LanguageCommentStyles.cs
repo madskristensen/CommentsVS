@@ -194,7 +194,8 @@ namespace CommentsVS.Services
                 return Sql;
             }
 
-            if (contentType.IndexOf(SupportedContentTypes.PowerShell, StringComparison.OrdinalIgnoreCase) >= 0)
+            if (contentType.IndexOf(SupportedContentTypes.PowerShell, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                contentType.IndexOf(SupportedContentTypes.PowerShellProTools, StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return PowerShell;
             }
@@ -260,7 +261,8 @@ namespace CommentsVS.Services
                 return Sql;
             }
 
-            if (contentType.IsOfType(SupportedContentTypes.PowerShell))
+            if (contentType.IsOfType(SupportedContentTypes.PowerShell) ||
+                contentType.IsOfType(SupportedContentTypes.PowerShellProTools))
             {
                 return PowerShell;
             }

@@ -385,7 +385,7 @@ namespace CommentsVS.Services
             {
                 if (node is XText textNode)
                 {
-                    var text = CleanText(textNode.Value);
+                    var text = CleanText(StripSeparatorLines(textNode.Value));
                     if (!string.IsNullOrWhiteSpace(text))
                     {
                         // Loose text outside any element - add to summary or create one
@@ -1173,6 +1173,33 @@ namespace CommentsVS.Services
                 return false;
             }
 
+            /// <summary>
+            /// Matches a line whose visible content is a run of separator characters
+            /// (e.g. "----------" or "==========") used as decorative dividers in
+            /// comments. Runs of fewer than 4 characters are preserved so legitimate
+            /// uses like markdown thematic breaks ("---") inside doc comments aren't
+            /// stripped without need. (Issue #62)
+            /// </summary>
+            private static readonly Regex _separatorLineRegex = new(
+                @"^[ \t]*[-=*_]{4,}[ \t]*$",
+                RegexOptions.Compiled | RegexOptions.Multiline);
+
+            /// <summary>
+            /// Removes lines from <paramref name="text"/> whose visible content is
+            /// purely a run of separator characters (e.g. "------"). Used when
+            /// rendering plain-text comments that don't follow XML doc syntax
+            /// (e.g. PowerShell '#' headers).
+            /// </summary>
+            private static string StripSeparatorLines(string text)
+            {
+                if (string.IsNullOrEmpty(text) || text.IndexOfAny(['-', '=', '*', '_']) < 0)
+                {
+                    return text;
+                }
+
+                return _separatorLineRegex.Replace(text, string.Empty);
+            }
+
             private static string CleanText(string text)
             {
                 if (string.IsNullOrEmpty(text))
@@ -1266,6 +1293,20 @@ namespace CommentsVS.Services
                     XElement summaryNode = doc.Root.Element("summary");
                     if (summaryNode == null)
                     {
+                        // No <summary> element. For non-XML doc-comment styles
+                        // (e.g. PowerShell '#' comments) the entire content is
+                        // plain prose with no XML elements at all; treat it as
+                        // the summary so we don't surface "(No summary
+                        // provided)". (Issue #62)
+                        if (!doc.Root.Elements().Any())
+                        {
+                            var rootText = CleanText(StripSeparatorLines(ExtractPlainText(doc.Root)));
+                            if (!string.IsNullOrWhiteSpace(rootText))
+                            {
+                                return rootText;
+                            }
+                        }
+
                         return NoSummaryPlaceholder;
                     }
 

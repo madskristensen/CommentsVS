@@ -436,6 +436,59 @@ public sealed class XmlDocCommentRendererTests
     }
 
     [TestMethod]
+    public void GetStrippedSummaryFromXml_PlainTextOnly_ReturnsText()
+    {
+        // Reproduces issue #62: PowerShell '#' comments produce a block whose
+        // XmlContent has no <summary> element (it's just plain text). The
+        // renderer should treat that text as the summary instead of returning
+        // the "(No summary provided)" placeholder.
+        var xml = "---------------------------------------------------------------------------\nHelpers\n---------------------------------------------------------------------------";
+
+        var result = XmlDocCommentRenderer.GetStrippedSummaryFromXml(xml);
+
+        Assert.AreNotEqual(NoSummaryPlaceholder, result, "Plain-text comments should not be rendered as the no-summary placeholder.");
+        Assert.IsTrue(result.Contains("Helpers"), $"Expected the rendered summary to contain the comment text. Got: '{result}'.");
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_PlainTextOnly_DoesNotAddPlaceholder()
+    {
+        var xml = "---------------------------------------------------------------------------\nHelpers\n---------------------------------------------------------------------------";
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        Assert.IsNotNull(result.Summary, "Summary section should be present.");
+        Assert.IsFalse(result.Summary.Lines.SelectMany(l => l.Segments).Any(s => s.Text == NoSummaryPlaceholder),
+            "Plain-text comments should not produce the no-summary placeholder.");
+        Assert.IsTrue(result.Summary.Lines.SelectMany(l => l.Segments).Any(s => s.Text != null && s.Text.Contains("Helpers")),
+            "Summary should contain the original comment text.");
+    }
+
+    [TestMethod]
+    public void GetStrippedSummaryFromXml_PlainTextWithSeparatorLines_StripsSeparators()
+    {
+        // Issue #62: separator runs like "----" used as decorative dividers in
+        // PowerShell '#' comments should not be rendered.
+        var xml = "---------------------------------------------------------------------------\nHelpers\n---------------------------------------------------------------------------";
+
+        var result = XmlDocCommentRenderer.GetStrippedSummaryFromXml(xml);
+
+        Assert.AreEqual("Helpers", result.Trim(), "Separator-only lines should be stripped from the rendered summary.");
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_PlainTextWithSeparatorLines_StripsSeparators()
+    {
+        var xml = "---------------------------------------------------------------------------\nHelpers\n---------------------------------------------------------------------------";
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        var allText = string.Concat(result.Summary.Lines.SelectMany(l => l.Segments).Select(s => s.Text));
+        Assert.IsFalse(allText.Contains("----"), $"Rendered summary should not contain separator runs. Got: '{allText}'.");
+        Assert.IsTrue(allText.Contains("Helpers"), $"Rendered summary should still contain content. Got: '{allText}'.");
+    }
+
+    [TestMethod]
     public void GetStrippedSummaryFromXml_WithEmptySummary_ReturnsPlaceholder()
     {
         var xml = "<summary>   </summary><returns>value</returns>";

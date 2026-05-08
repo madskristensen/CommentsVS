@@ -52,8 +52,14 @@ namespace CommentsVS.Services
         public const string Sql = "SQL";
 
         /// <summary>
-        /// PowerShell content type.
+        /// PowerShell content type registered by the built-in Visual Studio
+        /// PowerShell editor support.
         /// </summary>
-        public const string PowerShell = "PowerShell";
+        public const string PowerShell = "code++.powershell";
+
+        /// <summary>
+        /// PowerShell content type registered by PowerShell Pro Tools.
+        /// </summary>
+        public const string PowerShellProTools = "PowerShell";
     }
 }

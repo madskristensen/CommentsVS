@@ -25,6 +25,7 @@ namespace CommentsVS.Adornments
     [ContentType(SupportedContentTypes.Razor)]
     [ContentType(SupportedContentTypes.Sql)]
     [ContentType(SupportedContentTypes.PowerShell)]
+    [ContentType(SupportedContentTypes.PowerShellProTools)]
     [TextViewRole(PredefinedTextViewRoles.Debuggable)]
     internal sealed class RenderedCommentAdornmentManagerProvider : IWpfTextViewCreationListener
     {
