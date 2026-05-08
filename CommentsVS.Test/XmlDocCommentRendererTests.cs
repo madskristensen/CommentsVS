@@ -588,6 +588,44 @@ public sealed class XmlDocCommentRendererTests
         Assert.AreEqual("MyMethod", codeSegment.Text);
     }
 
+    [TestMethod]
+    public void RenderXmlContent_SummaryWithParaTags_SeparatesParagraphsWithBlankLines()
+    {
+        var xml = """
+            <summary>
+            This is the first line of a summary.
+            <para>This is the first paragraph.</para>
+            <para>This is the second paragraph.</para>
+            </summary>
+            """;
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        RenderedCommentSection summary = result.Sections.FirstOrDefault(s => s.Type == CommentSectionType.Summary);
+        Assert.IsNotNull(summary);
+
+        List<string> contentLines = [.. summary.Lines
+            .Where(l => !l.IsBlank)
+            .Select(l => string.Concat(l.Segments.Select(s => s.Text)).Trim())];
+
+        Assert.HasCount(3, contentLines);
+        Assert.AreEqual("This is the first line of a summary.", contentLines[0]);
+        Assert.AreEqual("This is the first paragraph.", contentLines[1]);
+        Assert.AreEqual("This is the second paragraph.", contentLines[2]);
+
+        // Each paragraph should be on a distinct line, with at least one blank line between adjacent
+        // content lines so the QuickInfo tooltip renders them as visually separate paragraphs.
+        var contentIndices = summary.Lines
+            .Select((line, idx) => (line, idx))
+            .Where(t => !t.line.IsBlank)
+            .Select(t => t.idx)
+            .ToList();
+
+        Assert.HasCount(3, contentIndices);
+        Assert.IsGreaterThan(contentIndices[0], contentIndices[1] - 1, "Expected blank line between leading text and first <para>");
+        Assert.IsGreaterThan(contentIndices[1], contentIndices[2] - 1, "Expected blank line between first and second <para>");
+    }
+
     #endregion
 
     #region Parameter Section Tests

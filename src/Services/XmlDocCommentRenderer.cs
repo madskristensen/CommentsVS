@@ -584,9 +584,12 @@ namespace CommentsVS.Services
                         break;
 
                     case "para":
-                        section.Lines.Add(new RenderedLine()); // Add blank line before
+                        // Ensure a blank-line separator before the paragraph (skip if the section is empty
+                        // or already ends with a blank line) and start the paragraph on its own fresh line.
+                        EnsureTrailingBlankLine(section);
+                        section.Lines.Add(new RenderedLine());
                         RenderChildNodes(element, section);
-                        section.Lines.Add(new RenderedLine()); // Add blank line after
+                        EnsureTrailingBlankLine(section);
                         break;
 
                     case "list":
@@ -817,6 +820,22 @@ namespace CommentsVS.Services
                     return line;
                 }
                 return section.Lines[section.Lines.Count - 1];
+            }
+
+            // Adds a blank line to the section unless one already terminates it (or the section is empty).
+            private static void EnsureTrailingBlankLine(RenderedCommentSection section)
+            {
+                if (section.Lines.Count == 0)
+                {
+                    return;
+                }
+
+                if (section.Lines[section.Lines.Count - 1].IsBlank)
+                {
+                    return;
+                }
+
+                section.Lines.Add(new RenderedLine());
             }
 
             // Legacy method for backward compatibility

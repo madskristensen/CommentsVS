@@ -41,6 +41,9 @@ namespace CommentsVS.Services
         // Regex to parse XML elements
         private static readonly Regex _elementRegex = new(@"<(\w+)([^>]*)>(.*?)</\1>|<(\w+)([^/>]*)/?>", RegexOptions.Singleline | RegexOptions.Compiled);
 
+        // Regex matching a complete <para>...</para> block (treated as its own paragraph during reflow).
+        private static readonly Regex _paraBlockRegex = new(@"<para\b[^>]*>.*?</para\s*>", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public CommentReflowEngine(int maxLineLength, bool useCompactStyle, bool preserveBlankLines)
         {
             _maxLineLength = maxLineLength > 0 ? maxLineLength : 120;
@@ -246,23 +249,66 @@ namespace CommentsVS.Services
 
             foreach (var part in parts)
             {
-                var partLines = part.Split('\n');
-                var nonBlankLines = partLines
-                    .Select(l => l.Trim())
-                    .Where(l => !string.IsNullOrEmpty(l))
-                    .ToList();
+                if (string.IsNullOrWhiteSpace(part))
+                {
+                    if (_preserveBlankLines && paragraphs.Count > 0)
+                    {
+                        paragraphs.Add("");
+                    }
+                    continue;
+                }
 
-                if (nonBlankLines.Count > 0)
-                {
-                    paragraphs.Add(string.Join(" ", nonBlankLines));
-                }
-                else if (_preserveBlankLines && paragraphs.Count > 0)
-                {
-                    paragraphs.Add("");
-                }
+                AddParagraphsSplitByParaTags(part, paragraphs);
             }
 
             return paragraphs;
+        }
+
+        // Splits a segment around complete <para>...</para> blocks so each <para> is preserved as its own paragraph.
+        private static void AddParagraphsSplitByParaTags(string segment, List<string> paragraphs)
+        {
+            MatchCollection matches = _paraBlockRegex.Matches(segment);
+
+            if (matches.Count == 0)
+            {
+                AddJoinedParagraph(segment, paragraphs);
+                return;
+            }
+
+            var lastIndex = 0;
+            foreach (Match match in matches)
+            {
+                if (match.Index > lastIndex)
+                {
+                    AddJoinedParagraph(segment.Substring(lastIndex, match.Index - lastIndex), paragraphs);
+                }
+
+                AddJoinedParagraph(match.Value, paragraphs);
+                lastIndex = match.Index + match.Length;
+            }
+
+            if (lastIndex < segment.Length)
+            {
+                AddJoinedParagraph(segment.Substring(lastIndex), paragraphs);
+            }
+        }
+
+        private static void AddJoinedParagraph(string text, List<string> paragraphs)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            var nonBlankLines = text.Split('\n')
+                .Select(l => l.Trim())
+                .Where(l => !string.IsNullOrEmpty(l))
+                .ToList();
+
+            if (nonBlankLines.Count > 0)
+            {
+                paragraphs.Add(string.Join(" ", nonBlankLines));
+            }
         }
 
         /// <summary>
@@ -280,11 +326,12 @@ namespace CommentsVS.Services
             List<string> tokens = TokenizeWithXmlTags(text);
             var currentLine = new StringBuilder();
             var currentLength = 0;
+            string previousToken = null;
 
             foreach (var token in tokens)
             {
                 var tokenLength = token.Length;
-                var needsLeadingSpace = RequiresLeadingSpace(token);
+                var needsLeadingSpace = RequiresLeadingSpace(token, previousToken);
                 var separatorLength = needsLeadingSpace ? 1 : 0;
 
                 if (currentLength == 0)
@@ -309,6 +356,8 @@ namespace CommentsVS.Services
                     currentLine.Append(token);
                     currentLength = tokenLength;
                 }
+
+                previousToken = token;
             }
 
             if (currentLine.Length > 0)
@@ -319,9 +368,15 @@ namespace CommentsVS.Services
             return lines;
         }
 
-        private static bool RequiresLeadingSpace(string token)
+        private static bool RequiresLeadingSpace(string token, string previousToken)
         {
             if (string.IsNullOrEmpty(token))
+            {
+                return false;
+            }
+
+            // No space directly after an opening XML tag, e.g. "<para>Text" instead of "<para> Text".
+            if (IsOpeningXmlTag(previousToken))
             {
                 return false;
             }
@@ -336,6 +391,16 @@ namespace CommentsVS.Services
             }
 
             return true;
+        }
+
+        private static bool IsOpeningXmlTag(string token)
+        {
+            return token != null
+                && token.Length >= 2
+                && token[0] == '<'
+                && token[token.Length - 1] == '>'
+                && token[1] != '/'
+                && !(token.Length >= 2 && token[token.Length - 2] == '/');
         }
 
         private static List<string> TokenizeWithXmlTags(string text)

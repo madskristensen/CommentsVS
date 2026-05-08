@@ -229,6 +229,39 @@ public sealed class CommentReflowEngineTests
     }
 
     [TestMethod]
+    public void SplitIntoParagraphs_ParaBlocks_EachParaIsSeparateParagraph()
+    {
+        var input = "This is the first line of a summary. <para>This is the first paragraph.</para> <para>This is a second paragraph.</para>";
+        List<string> result = TestSplitIntoParagraphs(input, preserveBlankLines: false);
+
+        Assert.HasCount(3, result);
+        Assert.AreEqual("This is the first line of a summary.", result[0]);
+        Assert.AreEqual("<para>This is the first paragraph.</para>", result[1]);
+        Assert.AreEqual("<para>This is a second paragraph.</para>", result[2]);
+    }
+
+    [TestMethod]
+    public void SplitIntoParagraphs_ParaBlocksOnSeparateLines_PreservedAsParagraphs()
+    {
+        var input = "This is the first line of a summary.\n<para>First paragraph.</para>\n<para>Second paragraph.</para>";
+        List<string> result = TestSplitIntoParagraphs(input, preserveBlankLines: false);
+
+        Assert.HasCount(3, result);
+        Assert.AreEqual("This is the first line of a summary.", result[0]);
+        Assert.AreEqual("<para>First paragraph.</para>", result[1]);
+        Assert.AreEqual("<para>Second paragraph.</para>", result[2]);
+    }
+
+    [TestMethod]
+    public void WrapText_OpeningXmlTag_NoLeadingSpaceBeforeContent()
+    {
+        List<string> result = TestWrapText("<para>Hello world</para>", maxWidth: 80);
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual("<para>Hello world</para>", result[0]);
+    }
+
+    [TestMethod]
     public void SplitIntoParagraphs_WhitespaceOnlyLines_IgnoresWhitespace()
     {
         var input = "Paragraph.\n   \n   \nNext.";
@@ -410,11 +443,12 @@ public sealed class CommentReflowEngineTests
         List<string> tokens = TestTokenizeWithXmlTags(text);
         var currentLine = new System.Text.StringBuilder();
         var currentLength = 0;
+        string? previousToken = null;
 
         foreach (var token in tokens)
         {
             var tokenLength = token.Length;
-            var needsLeadingSpace = RequiresLeadingSpace(token);
+            var needsLeadingSpace = RequiresLeadingSpace(token, previousToken);
             var separatorLength = needsLeadingSpace ? 1 : 0;
 
             if (currentLength == 0)
@@ -439,6 +473,8 @@ public sealed class CommentReflowEngineTests
                 currentLine.Append(token);
                 currentLength = tokenLength;
             }
+
+            previousToken = token;
         }
 
         if (currentLine.Length > 0)
@@ -449,9 +485,14 @@ public sealed class CommentReflowEngineTests
         return lines;
     }
 
-    private static bool RequiresLeadingSpace(string token)
+    private static bool RequiresLeadingSpace(string token, string? previousToken)
     {
         if (string.IsNullOrEmpty(token))
+        {
+            return false;
+        }
+
+        if (IsOpeningXmlTag(previousToken))
         {
             return false;
         }
@@ -466,6 +507,16 @@ public sealed class CommentReflowEngineTests
         }
 
         return true;
+    }
+
+    private static bool IsOpeningXmlTag(string? token)
+    {
+        return token != null
+            && token.Length >= 2
+            && token[0] == '<'
+            && token[token.Length - 1] == '>'
+            && token[1] != '/'
+            && !(token.Length >= 2 && token[token.Length - 2] == '/');
     }
 
     /// <summary>
@@ -500,26 +551,63 @@ public sealed class CommentReflowEngineTests
         }
 
         var parts = Regex.Split(content, @"\n\s*\n");
+        var paraBlockRegex = new Regex(@"<para\b[^>]*>.*?</para\s*>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
         foreach (var part in parts)
         {
-            var partLines = part.Split('\n');
-            var nonBlankLines = partLines
+            if (string.IsNullOrWhiteSpace(part))
+            {
+                if (preserveBlankLines && paragraphs.Count > 0)
+                {
+                    paragraphs.Add("");
+                }
+                continue;
+            }
+
+            MatchCollection matches = paraBlockRegex.Matches(part);
+            if (matches.Count == 0)
+            {
+                AppendJoined(part, paragraphs);
+                continue;
+            }
+
+            var lastIndex = 0;
+            foreach (Match match in matches)
+            {
+                if (match.Index > lastIndex)
+                {
+                    AppendJoined(part.Substring(lastIndex, match.Index - lastIndex), paragraphs);
+                }
+
+                AppendJoined(match.Value, paragraphs);
+                lastIndex = match.Index + match.Length;
+            }
+
+            if (lastIndex < part.Length)
+            {
+                AppendJoined(part.Substring(lastIndex), paragraphs);
+            }
+        }
+
+        return paragraphs;
+
+        static void AppendJoined(string text, List<string> dest)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            var nonBlankLines = text.Split('\n')
                 .Select(l => l.Trim())
                 .Where(l => !string.IsNullOrEmpty(l))
                 .ToList();
 
             if (nonBlankLines.Count > 0)
             {
-                paragraphs.Add(string.Join(" ", nonBlankLines));
-            }
-            else if (preserveBlankLines && paragraphs.Count > 0)
-            {
-                paragraphs.Add("");
+                dest.Add(string.Join(" ", nonBlankLines));
             }
         }
-
-        return paragraphs;
     }
 
     /// <summary>
