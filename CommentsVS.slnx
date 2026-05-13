@@ -9,5 +9,6 @@
   <Project Path="src/CommentsVS.csproj" Id="3c1f03f1-b80f-400d-84db-a4044664a49d">
     <Platform Solution="*|arm64" Project="arm64" />
     <Platform Solution="*|x86" Project="x86" />
+    <Deploy Solution="Debug|Any CPU" />
   </Project>
 </Solution>
