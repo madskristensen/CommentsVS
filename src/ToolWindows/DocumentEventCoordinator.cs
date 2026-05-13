@@ -22,6 +22,11 @@ namespace CommentsVS.ToolWindows
         private bool _disposed;
         private string _lastActiveDocumentPath;
 
+        private static readonly HashSet<string> _projectFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".csproj", ".vbproj", ".fsproj", ".esproj", ".vcxproj", ".shproj"
+        };
+
         /// <summary>
         /// Raised when a document has been scanned and the UI should refresh.
         /// </summary>
@@ -49,6 +54,13 @@ namespace CommentsVS.ToolWindows
             if (System.IO.Path.GetFileName(filePath).Equals(".editorconfig", StringComparison.OrdinalIgnoreCase))
             {
                 EditorConfigSettings.ClearCaches();
+            }
+
+            // When a project file is saved, scan only for newly added linked external files
+            if (_projectFileExtensions.Contains(Path.GetExtension(filePath)))
+            {
+                ScanNewLinkedFilesAsync(filePath).FireAndForget();
+                return;
             }
 
             // Rescan the saved file and update the cache
@@ -87,6 +99,27 @@ namespace CommentsVS.ToolWindows
             if (!_disposed)
             {
                 DocumentScanned?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        /// <summary>
+        /// Scans for newly linked files in a saved project file and notifies the UI if any are found.
+        /// </summary>
+        private async Task ScanNewLinkedFilesAsync(string projectFilePath)
+        {
+            if (_scanner == null || _disposed)
+            {
+                return;
+            }
+
+            var anyNew = await _scanner.ScanNewLinkedFilesForProjectAsync(projectFilePath);
+            if (anyNew)
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (!_disposed)
+                {
+                    DocumentScanned?.Invoke(this, EventArgs.Empty);
+                }
             }
         }
 

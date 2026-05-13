@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using CommentsVS.Options;
+using CommentsVS.Services;
 using EnvDTE80;
 using DTESolution = EnvDTE.Solution;
 
@@ -18,6 +19,7 @@ namespace CommentsVS.ToolWindows
     {
         private readonly AnchorService _anchorService = anchorService ?? throw new ArgumentNullException(nameof(anchorService));
         private readonly SolutionAnchorCache _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        private readonly LinkedProjectFileCache _linkedFileCache = new();
         private CancellationTokenSource _scanCts;
         private readonly object _scanLock = new();
         private bool _isScanning;
@@ -97,7 +99,7 @@ namespace CommentsVS.ToolWindows
 
                     // Collect all files to scan
                     var filesToScan = new List<(string FilePath, string ProjectName)>();
-                    await CollectFilesFromFileSystemAsync(solutionDir, solution.FullName, filesToScan, extensionsToScan, foldersToIgnore, ct).ConfigureAwait(false);
+                    await CollectFilesFromFileSystemAsync(solutionDir, solution.FullName, filesToScan, extensionsToScan, foldersToIgnore, _linkedFileCache, ct).ConfigureAwait(false);
 
                     if (ct.IsCancellationRequested)
                     {
@@ -223,6 +225,49 @@ namespace CommentsVS.ToolWindows
         }
 
         /// <summary>
+        /// Scans for newly linked files added to a project file and adds them to the anchor cache.
+        /// Use this when a project file is saved to pick up new external linked files without a full re-scan.
+        /// </summary>
+        /// <param name="projectFilePath">Full path to the saved project file.</param>
+        /// <returns>True if any new files with anchors were found and added to the cache.</returns>
+        public async Task<bool> ScanNewLinkedFilesForProjectAsync(string projectFilePath)
+        {
+            if (string.IsNullOrEmpty(projectFilePath) || !File.Exists(projectFilePath))
+            {
+                return false;
+            }
+
+            var projectDir = Path.GetDirectoryName(projectFilePath);
+            var projectName = Path.GetFileNameWithoutExtension(projectFilePath);
+
+            General options = await General.GetLiveInstanceAsync();
+            var extensionsToScan = options.GetFileExtensionsSet();
+
+            // LinkedProjectFileCache re-parses automatically because the file's write-time changed
+            var linkedFiles = _linkedFileCache.GetLinkedFiles(projectFilePath, projectDir, extensionsToScan);
+
+            var anyNew = false;
+            foreach (var filePath in linkedFiles)
+            {
+                // Only scan files not already in the anchor cache
+                if (_cache.ContainsFile(filePath))
+                {
+                    continue;
+                }
+
+                var anchors = await ScanFileAsync(filePath, projectName);
+                _cache.AddOrUpdateFile(filePath, anchors);
+
+                if (anchors.Count > 0)
+                {
+                    anyNew = true;
+                }
+            }
+
+            return anyNew;
+        }
+
+        /// <summary>
         /// Cancels any ongoing scan operation.
         /// </summary>
         public void CancelScan()
@@ -251,6 +296,7 @@ namespace CommentsVS.ToolWindows
             List<(string, string)> filesToScan,
             HashSet<string> extensionsToScan,
             HashSet<string> foldersToIgnore,
+            LinkedProjectFileCache linkedFileCache,
             CancellationToken ct)
         {
             return Task.Run(() =>
@@ -260,6 +306,8 @@ namespace CommentsVS.ToolWindows
                 // Map from directory path to project name for all discovered projects
                 var projectsByDirectory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 var allFiles = new List<(string FilePath, string Directory)>();
+                // Track files already added to avoid duplicates from multiple projects linking the same file
+                var addedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 var pendingDirectories = new Stack<string>();
                 pendingDirectories.Push(solutionDir);
@@ -280,7 +328,18 @@ namespace CommentsVS.ToolWindows
                         {
                             foreach (var projectFile in Directory.EnumerateFiles(currentDirectory, pattern))
                             {
-                                projectsByDirectory[currentDirectory] = Path.GetFileNameWithoutExtension(projectFile);
+                                var projectName = Path.GetFileNameWithoutExtension(projectFile);
+                                projectsByDirectory[currentDirectory] = projectName;
+
+                                // Add any linked files that live outside this project's directory
+                                foreach (var linkedFile in linkedFileCache.GetLinkedFiles(projectFile, currentDirectory, extensionsToScan))
+                                {
+                                    if (addedFiles.Add(linkedFile))
+                                    {
+                                        filesToScan.Add((linkedFile, projectName));
+                                    }
+                                }
+
                                 break;
                             }
 
@@ -340,6 +399,11 @@ namespace CommentsVS.ToolWindows
                     if (ct.IsCancellationRequested)
                     {
                         break;
+                    }
+
+                    if (addedFiles.Contains(filePath))
+                    {
+                        continue;
                     }
 
                     var projectName = FindContainingProjectName(fileDirectory, solutionDir, projectsByDirectory) ?? solutionName;

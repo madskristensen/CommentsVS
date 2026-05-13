@@ -265,8 +265,8 @@ namespace CommentsVS.Options
         [Category(_anchorsCategory)]
         [DisplayName("File extensions to scan")]
         [Description("Comma-separated list of file extensions to scan for code anchors. Example: .cs,.vb,.js,.ts")]
-        [DefaultValue(".cs,.vb,.fs,.cpp,.c,.h,.hpp,.cc,.cxx,.js,.ts,.jsx,.tsx,.css,.scss,.less,.html,.htm,.xml,.xaml,.json,.yaml,.yml,.ps1,.psm1,.sql,.md,.razor,.cshtml,.vbhtml,.py,.rb,.go,.rs,.java,.kt,.swift,.php")]
-        public string FileExtensionsToScan { get; set; } = ".cs,.vb,.fs,.cpp,.c,.h,.hpp,.cc,.cxx,.js,.ts,.jsx,.tsx,.css,.scss,.less,.html,.htm,.xml,.xaml,.json,.yaml,.yml,.ps1,.psm1,.sql,.md,.razor,.cshtml,.vbhtml,.py,.rb,.go,.rs,.java,.kt,.swift,.php";
+        [DefaultValue(".cs,.vb,.fs,.cpp,.c,.h,.hpp,.cc,.cxx,.js,.ts,.jsx,.tsx,.css,.scss,.less,.html,.htm,.xml,.xaml,.json,.yaml,.yml,.ps1,.psm1,.sql,.md,.razor,.cshtml,.vbhtml,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.txt,.toml,.ini,.cfg,.sh,.bat,.cmd")]
+        public string FileExtensionsToScan { get; set; } = ".cs,.vb,.fs,.cpp,.c,.h,.hpp,.cc,.cxx,.js,.ts,.jsx,.tsx,.css,.scss,.less,.html,.htm,.xml,.xaml,.json,.yaml,.yml,.ps1,.psm1,.sql,.md,.razor,.cshtml,.vbhtml,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.txt,.toml,.ini,.cfg,.sh,.bat,.cmd";
 
         [Category(_anchorsCategory)]
         [DisplayName("Folders to ignore")]
