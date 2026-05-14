@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.Design;
 using System.Runtime.InteropServices;
+using CommentsVS.Options;
 using CommentsVS.ToolWindows;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
@@ -24,7 +25,25 @@ namespace CommentsVS.Commands
             "Open Documents"
         ];
 
-        private string _currentScopeText = "Entire Solution";
+        private static string ToDisplayString(AnchorScope scope) => scope switch
+        {
+            AnchorScope.EntireSolution  => ScopeOptions[0],
+            AnchorScope.CurrentProject  => ScopeOptions[1],
+            AnchorScope.CurrentDocument => ScopeOptions[2],
+            AnchorScope.OpenDocuments   => ScopeOptions[3],
+            _                           => ScopeOptions[0]
+        };
+
+        private static AnchorScope FromDisplayString(string text) => text switch
+        {
+            "Entire Solution"  => AnchorScope.EntireSolution,
+            "Current Project"  => AnchorScope.CurrentProject,
+            "Current Document" => AnchorScope.CurrentDocument,
+            "Open Documents"   => AnchorScope.OpenDocuments,
+            _                  => AnchorScope.EntireSolution
+        };
+
+        private AnchorScope _currentScope;
 
         private ScopeFilterComboCommand(Package package, OleMenuCommandService commandService)
         {
@@ -47,6 +66,7 @@ namespace CommentsVS.Commands
         public static void Initialize(Package package, OleMenuCommandService commandService)
         {
             _instance = new ScopeFilterComboCommand(package, commandService);
+            _instance._currentScope = General.Instance.CodeAnchorScope;
         }
 
         private void OnComboCommand(object sender, EventArgs e)
@@ -61,16 +81,18 @@ namespace CommentsVS.Commands
                 if (vOut != IntPtr.Zero)
                 {
                     // Return current selection
-                    Marshal.GetNativeVariantForObject(_currentScopeText, vOut);
+                    Marshal.GetNativeVariantForObject(ToDisplayString(_currentScope), vOut);
                 }
                 else if (input != null)
                 {
                     // User selected something
-                    var selectedScope = input.ToString();
-                    if (Array.IndexOf(ScopeOptions, selectedScope) >= 0)
+                    var selectedText = input.ToString();
+                    if (Array.IndexOf(ScopeOptions, selectedText) >= 0)
                     {
-                        _currentScopeText = selectedScope;
-                        ApplyScopeFilter(selectedScope);
+                        _currentScope = FromDisplayString(selectedText);
+                        General.Instance.CodeAnchorScope = _currentScope;
+                        General.Instance.Save();
+                        CodeAnchorsToolWindow.Instance?.SetScope(_currentScope);
                     }
                 }
             }
@@ -90,21 +112,5 @@ namespace CommentsVS.Commands
                 }
             }
         }
-
-                        private void ApplyScopeFilter(string scopeText)
-                        {
-                            ThreadHelper.ThrowIfNotOnUIThread();
-
-                            AnchorScope scope = scopeText switch
-                            {
-                                "Entire Solution" => AnchorScope.EntireSolution,
-                                "Current Project" => AnchorScope.CurrentProject,
-                                "Current Document" => AnchorScope.CurrentDocument,
-                                "Open Documents" => AnchorScope.OpenDocuments,
-                                _ => AnchorScope.EntireSolution
-                            };
-
-                            CodeAnchorsToolWindow.Instance?.SetScope(scope);
-                        }
-                    }
-                }
+    }
+}

@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using CommentsVS.Services;
+using CommentsVS.ToolWindows;
 
 namespace CommentsVS.Options
 {
@@ -414,5 +415,11 @@ namespace CommentsVS.Options
         /// </summary>
         [Browsable(false)]
         public int RatingRequests { get; set; }
+
+        /// <summary>
+        /// The last selected scope in the Code Anchors tool window scope dropdown.
+        /// </summary>
+        [Browsable(false)]
+        public AnchorScope CodeAnchorScope { get; set; } = AnchorScope.EntireSolution;
     }
 }
