@@ -240,8 +240,11 @@ namespace CommentsVS.ToolWindows
             var projectDir = Path.GetDirectoryName(projectFilePath);
             var projectName = Path.GetFileNameWithoutExtension(projectFilePath);
 
+            General options = await General.GetLiveInstanceAsync();
+            var extensionsToScan = options.GetFileExtensionsSet();
+
             // LinkedProjectFileCache re-parses automatically because the file's write-time changed
-            var linkedFiles = _linkedFileCache.GetLinkedFiles(projectFilePath, projectDir);
+            var linkedFiles = _linkedFileCache.GetLinkedFiles(projectFilePath, projectDir, extensionsToScan);
 
             var anyNew = false;
             foreach (var filePath in linkedFiles)
@@ -329,7 +332,7 @@ namespace CommentsVS.ToolWindows
                                 projectsByDirectory[currentDirectory] = projectName;
 
                                 // Add any linked files that live outside this project's directory
-                                foreach (var linkedFile in linkedFileCache.GetLinkedFiles(projectFile, currentDirectory))
+                                foreach (var linkedFile in linkedFileCache.GetLinkedFiles(projectFile, currentDirectory, extensionsToScan))
                                 {
                                     if (addedFiles.Add(linkedFile))
                                     {
