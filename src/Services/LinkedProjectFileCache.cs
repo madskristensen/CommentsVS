@@ -20,12 +20,13 @@ namespace CommentsVS.Services
         }
 
         /// <summary>
-        /// Returns the set of source files referenced by <paramref name="projectFilePath"/>
-        /// that are physically located outside <paramref name="projectDir"/>.
+        /// Returns all files referenced by <paramref name="projectFilePath"/> that are physically
+        /// located outside <paramref name="projectDir"/>. No extension filtering is applied — linked
+        /// files were explicitly added by the user and should always be scanned.
         /// Results are cached and invalidated whenever the project file's write-time changes.
         /// Safe to call from any thread.
         /// </summary>
-        public IReadOnlyList<string> GetLinkedFiles(string projectFilePath, string projectDir, HashSet<string> extensionsToScan)
+        public IReadOnlyList<string> GetLinkedFiles(string projectFilePath, string projectDir)
         {
             try
             {
@@ -34,12 +35,10 @@ namespace CommentsVS.Services
                 lock (_lock)
                 {
                     if (_cache.TryGetValue(projectFilePath, out var entry) && entry.LastWriteUtc == lastWrite)
-                    {
                         return entry.Files;
-                    }
                 }
 
-                var files = Parse(projectFilePath, projectDir, extensionsToScan);
+                var files = Parse(projectFilePath, projectDir);
 
                 lock (_lock)
                 {
@@ -65,7 +64,7 @@ namespace CommentsVS.Services
             }
         }
 
-        private static IReadOnlyList<string> Parse(string projectFilePath, string projectDir, HashSet<string> extensionsToScan)
+        private static IReadOnlyList<string> Parse(string projectFilePath, string projectDir)
         {
             var result = new List<string>();
 
@@ -83,52 +82,26 @@ namespace CommentsVS.Services
                     foreach (var item in itemGroup.Elements())
                     {
                         var include = (string)item.Attribute("Include");
-                        if (string.IsNullOrEmpty(include))
-                        {
-                            continue;
-                        }
-
-                        // Skip glob patterns — expanding them adds complexity and linked files are nearly always explicit paths
-                        if (include.IndexOfAny(['*', '?']) >= 0)
-                        {
-                            continue;
-                        }
+                        if (string.IsNullOrEmpty(include)) continue;
+                        if (include.IndexOfAny(['*', '?']) >= 0) continue;
 
                         include = include.Replace('/', Path.DirectorySeparatorChar);
 
                         string fullPath;
-                        try
-                        {
-                            fullPath = Path.GetFullPath(Path.Combine(projectDir, include));
-                        }
-                        catch
-                        {
-                            continue;
-                        }
+                        try { fullPath = Path.GetFullPath(Path.Combine(projectDir, include)); }
+                        catch { continue; }
 
-                        // Only interested in files outside the project directory
                         if (fullPath.StartsWith(projectDirNormalized, StringComparison.OrdinalIgnoreCase))
-                        {
                             continue;
-                        }
 
-                        var ext = Path.GetExtension(fullPath);
-                        if (string.IsNullOrEmpty(ext) || !extensionsToScan.Contains(ext))
-                        {
+                        if (!File.Exists(fullPath))
                             continue;
-                        }
 
-                        if (File.Exists(fullPath))
-                        {
-                            result.Add(fullPath);
-                        }
+                        result.Add(fullPath);
                     }
                 }
             }
-            catch
-            {
-                // Return whatever was collected before the failure
-            }
+            catch { }
 
             return result;
         }
