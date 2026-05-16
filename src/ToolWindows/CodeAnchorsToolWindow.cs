@@ -117,6 +117,7 @@ namespace CommentsVS.ToolWindows
 
             // Get options before switching threads
             General options = await General.GetLiveInstanceAsync();
+            _currentScope = options?.CodeAnchorScope ?? AnchorScope.EntireSolution;
 
             // Switch to main thread for WPF control creation and VS event subscriptions
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);

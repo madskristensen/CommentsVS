@@ -5,7 +5,6 @@
 # Comment Studio for Visual Studio
 
 [![Build](https://github.com/madskristensen/CommentsVS/actions/workflows/build.yaml/badge.svg)](https://github.com/madskristensen/CommentsVS/actions/workflows/build.yaml)
-[![Install from VSIX Gallery](https://www.vsixgallery.com/badge/CommentsVS.38981599-e7f2-4db8-bf34-85b325aec2b6.svg)][vsixgallery]
 ![GitHub Sponsors](https://img.shields.io/github/sponsors/madskristensen)
 
 Download this extension from the [Visual Studio Marketplace][marketplace]
