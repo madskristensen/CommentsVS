@@ -10,7 +10,7 @@
 Download this extension from the [Visual Studio Marketplace][marketplace]
 or get the [CI build][vsixgallery].
 
-> 📖 **[Full documentation](docs/README.md)** — detailed guides for every feature.
+> 📖 **[Full documentation](https://github.com/madskristensen/CommentsVS/blob/master/docs/README.md)** — detailed guides for every feature.
 
 --------------------------------------
 
@@ -20,16 +20,16 @@ or get the [CI build][vsixgallery].
 
 ## ✨ Key Features at a Glance
 
-- **[Rendered Comments](docs/rendering.md)** — View XML docs as clean, formatted text (no XML noise)
-- **[Markdown Support](docs/rendering.md#markdown-formatting-in-comments)** — Use `**bold**`, `*italic*`, `` `code` ``, and `[links](url)` in comments
-- **[Auto-Reflow](docs/reflow.md)** — Automatically wrap comments to your preferred line length
-- **[Collapse/Expand](docs/outlining.md)** — Hide comment blocks to focus on code, expand when needed
-- **[Color-coded Anchor Tags](docs/comment-tags.md)** — TODO, HACK, BUG, FIXME, NOTE highlighted in distinct colors, plus custom tags
-- **[Better Comments Style](docs/comment-tags.md#prefix-based-comment-highlighting)** — Prefix-based highlighting (`!`, `?`, `*`, `//`, `-`, `>`) for visual differentiation
-- **[Solution-Wide Code Anchors](docs/code-anchors.md)** — Browse all TODOs, HACKs, and notes across your entire solution
-- **[Clickable Issues](docs/issue-links.md)** — `#123` links directly to GitHub/GitLab/Azure DevOps issues
-- **[Link Anchors](docs/link-anchors.md)** — Navigate to other files, lines, or named anchors with `LINK:` or uppercase `LINK` syntax
-- **[Comment Remover](docs/comment-remover.md)** — Bulk remove comments with smart preservation options
+- **[Rendered Comments](https://github.com/madskristensen/CommentsVS/blob/master/docs/rendering.md)** — View XML docs as clean, formatted text (no XML noise)
+- **[Markdown Support](https://github.com/madskristensen/CommentsVS/blob/master/docs/rendering.md#markdown-formatting-in-comments)** — Use `**bold**`, `*italic*`, `` `code` ``, and `[links](url)` in comments
+- **[Auto-Reflow](https://github.com/madskristensen/CommentsVS/blob/master/docs/reflow.md)** — Automatically wrap comments to your preferred line length
+- **[Collapse/Expand](https://github.com/madskristensen/CommentsVS/blob/master/docs/outlining.md)** — Hide comment blocks to focus on code, expand when needed
+- **[Color-coded Anchor Tags](https://github.com/madskristensen/CommentsVS/blob/master/docs/comment-tags.md)** — TODO, HACK, BUG, FIXME, NOTE highlighted in distinct colors, plus custom tags
+- **[Better Comments Style](https://github.com/madskristensen/CommentsVS/blob/master/docs/comment-tags.md#prefix-based-comment-highlighting)** — Prefix-based highlighting (`!`, `?`, `*`, `//`, `-`, `>`) for visual differentiation
+- **[Solution-Wide Code Anchors](https://github.com/madskristensen/CommentsVS/blob/master/docs/code-anchors.md)** — Browse all TODOs, HACKs, and notes across your entire solution
+- **[Clickable Issues](https://github.com/madskristensen/CommentsVS/blob/master/docs/issue-links.md)** — `#123` links directly to GitHub/GitLab/Azure DevOps issues
+- **[Link Anchors](https://github.com/madskristensen/CommentsVS/blob/master/docs/link-anchors.md)** — Navigate to other files, lines, or named anchors with `LINK:` or uppercase `LINK` syntax
+- **[Comment Remover](https://github.com/madskristensen/CommentsVS/blob/master/docs/comment-remover.md)** — Bulk remove comments with smart preservation options
 - **Theme-aware** — Works with light and dark Visual Studio themes
 
 **Supports:** C#, VB.NET, F#, C++, TypeScript, JavaScript, Razor, SQL, and PowerShell
@@ -85,16 +85,16 @@ Comment Studio solves all of these problems, letting you focus on writing great 
 
 | Topic | Description |
 |-------|-------------|
-| [Comment Rendering](docs/rendering.md) | Rendering modes, rendered XML docs, Markdown formatting |
-| [Comment Reflow](docs/reflow.md) | Auto-reflow, Format Document integration, Smart Paste |
-| [Comment Outlining](docs/outlining.md) | Collapse and expand XML doc comments |
-| [Comment Tags](docs/comment-tags.md) | Color-coded tags, custom tags, prefix-based highlighting |
-| [Code Anchors](docs/code-anchors.md) | Solution-wide Code Anchors tool window |
-| [Issue Links](docs/issue-links.md) | Clickable `#123` issue references |
-| [Link Anchors](docs/link-anchors.md) | `LINK:` navigation syntax |
-| [Comment Remover](docs/comment-remover.md) | Bulk comment removal commands |
-| [Settings](docs/settings.md) | All options and `.editorconfig` support |
-| [Fonts & Colors](docs/fonts-and-colors.md) | Customizable Fonts & Colors reference |
+| [Comment Rendering](https://github.com/madskristensen/CommentsVS/blob/master/docs/rendering.md) | Rendering modes, rendered XML docs, Markdown formatting |
+| [Comment Reflow](https://github.com/madskristensen/CommentsVS/blob/master/docs/reflow.md) | Auto-reflow, Format Document integration, Smart Paste |
+| [Comment Outlining](https://github.com/madskristensen/CommentsVS/blob/master/docs/outlining.md) | Collapse and expand XML doc comments |
+| [Comment Tags](https://github.com/madskristensen/CommentsVS/blob/master/docs/comment-tags.md) | Color-coded tags, custom tags, prefix-based highlighting |
+| [Code Anchors](https://github.com/madskristensen/CommentsVS/blob/master/docs/code-anchors.md) | Solution-wide Code Anchors tool window |
+| [Issue Links](https://github.com/madskristensen/CommentsVS/blob/master/docs/issue-links.md) | Clickable `#123` issue references |
+| [Link Anchors](https://github.com/madskristensen/CommentsVS/blob/master/docs/link-anchors.md) | `LINK:` navigation syntax |
+| [Comment Remover](https://github.com/madskristensen/CommentsVS/blob/master/docs/comment-remover.md) | Bulk comment removal commands |
+| [Settings](https://github.com/madskristensen/CommentsVS/blob/master/docs/settings.md) | All options and `.editorconfig` support |
+| [Fonts & Colors](https://github.com/madskristensen/CommentsVS/blob/master/docs/fonts-and-colors.md) | Customizable Fonts & Colors reference |
 
 ## Feature Requests Addressed
 
