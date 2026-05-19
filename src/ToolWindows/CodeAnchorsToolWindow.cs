@@ -1,9 +1,13 @@
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using CommentsVS.Options;
+using CommentsVS.Services;
 using Microsoft.VisualStudio.ComponentModelHost;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 
 namespace CommentsVS.ToolWindows
@@ -201,10 +205,17 @@ namespace CommentsVS.ToolWindows
                     return;
                 }
 
+                var openFolderRoot = await GetOpenFolderRootAsync();
+
                 foreach (EnvDTE.Document doc in dte.Documents)
                 {
                     var filePath = doc?.FullName;
                     if (string.IsNullOrEmpty(filePath))
+                    {
+                        continue;
+                    }
+
+                    if (!string.IsNullOrEmpty(openFolderRoot) && !WorkspacePathFilter.IsFileWithinRoot(filePath, openFolderRoot))
                     {
                         continue;
                     }
@@ -310,6 +321,7 @@ namespace CommentsVS.ToolWindows
                     return;
                 }
 
+                var openFolderRoot = await GetOpenFolderRootAsync();
                 var documentCount = 0;
                 var anchorCount = 0;
 
@@ -319,6 +331,11 @@ namespace CommentsVS.ToolWindows
                 {
                     var filePath = doc?.FullName;
                     if (string.IsNullOrEmpty(filePath))
+                    {
+                        continue;
+                    }
+
+                    if (!string.IsNullOrEmpty(openFolderRoot) && !WorkspacePathFilter.IsFileWithinRoot(filePath, openFolderRoot))
                     {
                         continue;
                     }
@@ -560,9 +577,36 @@ namespace CommentsVS.ToolWindows
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
                 IReadOnlyList<AnchorItem> allAnchors = _cache.GetAllAnchors();
+                var openFolderRoot = await GetOpenFolderRootAsync();
+                if (!string.IsNullOrEmpty(openFolderRoot))
+                {
+                    allAnchors = [.. allAnchors.Where(a => WorkspacePathFilter.IsFileWithinRoot(a.FilePath, openFolderRoot))];
+                }
+
                 IReadOnlyList<AnchorItem> filteredAnchors = await _scopeFilter.ApplyFilterAsync(allAnchors, _currentScope);
                 _control.UpdateAnchors(filteredAnchors);
             });
+        }
+
+        private static async Task<string> GetOpenFolderRootAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            if (await VS.Solutions.IsOpenAsync())
+            {
+                return null;
+            }
+
+            if (Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SVsSolution)) is IVsSolution solution)
+            {
+                solution.GetSolutionInfo(out var solutionDirectory, out _, out _);
+                if (!string.IsNullOrWhiteSpace(solutionDirectory) && Directory.Exists(solutionDirectory))
+                {
+                    return solutionDirectory;
+                }
+            }
+
+            return null;
         }
     }
 }
