@@ -411,6 +411,67 @@ public sealed class CommentReflowEngineTests
 
     #endregion
 
+    #region End-to-End Reflow Tests (issue #72)
+
+    [TestMethod]
+    public void ReflowComment_TopLevelCodeBlock_PreservesLineBreaks()
+    {
+        var xml = "<code>\r\n    page-link: page-type [ '?' page-tag]\r\n    page-type: fully-qualified-class-name ',' assembly-name\r\n    page-tag: name '=' value [ ',' name '=' value ]*\r\n</code>";
+        var result = RunReflow(xml);
+
+        StringAssert.Contains(result, "    page-link: page-type [ '?' page-tag]");
+        StringAssert.Contains(result, "    page-type: fully-qualified-class-name ',' assembly-name");
+        StringAssert.Contains(result, "    page-tag: name '=' value [ ',' name '=' value ]*");
+    }
+
+    [TestMethod]
+    public void ReflowComment_CodeBlockInsideSummary_PreservesLineBreaks()
+    {
+        var xml = "<summary>\r\n<code>\r\n    page-link: page-type [ '?' page-tag]\r\n    page-type: fully-qualified-class-name ',' assembly-name\r\n    page-tag: name '=' value [ ',' name '=' value ]*\r\n</code>\r\n</summary>";
+        var result = RunReflow(xml);
+
+        StringAssert.Contains(result, "    page-link: page-type [ '?' page-tag]");
+        StringAssert.Contains(result, "    page-type: fully-qualified-class-name ',' assembly-name");
+        StringAssert.Contains(result, "    page-tag: name '=' value [ ',' name '=' value ]*");
+        Assert.IsFalse(result.Contains("page-link: page-type [ '?' page-tag] page-type:"),
+            "Code block lines must not be joined with spaces. Actual result:\n" + result);
+    }
+
+    [TestMethod]
+    public void ReflowComment_CodeBlockInsideRemarks_PreservesLineBreaks()
+    {
+        var xml = "<remarks>\r\nIntro prose that may wrap.\r\n<code>\r\n    line one\r\n    line two\r\n</code>\r\nTrailing prose.\r\n</remarks>";
+        var result = RunReflow(xml);
+
+        StringAssert.Contains(result, "    line one");
+        StringAssert.Contains(result, "    line two");
+        StringAssert.Contains(result, "Intro prose that may wrap.");
+        StringAssert.Contains(result, "Trailing prose.");
+        Assert.IsFalse(result.Contains("line one line two"),
+            "Code block lines must not be joined with spaces. Actual result:\n" + result);
+    }
+
+    private static string RunReflow(string xmlContent)
+    {
+        var block = new CommentsVS.Services.XmlDocCommentBlock(
+            span: new Microsoft.VisualStudio.Text.Span(0, xmlContent.Length),
+            startLine: 0,
+            endLine: 0,
+            indentation: string.Empty,
+            xmlContent: xmlContent,
+            commentStyle: CommentsVS.Services.LanguageCommentStyle.CSharp,
+            isMultiLineStyle: false);
+
+        var engine = new CommentsVS.Services.CommentReflowEngine(
+            maxLineLength: 120,
+            useCompactStyle: true,
+            preserveBlankLines: true);
+
+        return engine.ReflowComment(block);
+    }
+
+    #endregion
+
     #region Test Helper Methods - Mirror CommentReflowEngine internal logic
 
     private static readonly HashSet<string> _blockTags = new(StringComparer.OrdinalIgnoreCase)

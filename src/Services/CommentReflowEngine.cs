@@ -44,6 +44,12 @@ namespace CommentsVS.Services
         // Regex matching a complete <para>...</para> block (treated as its own paragraph during reflow).
         private static readonly Regex _paraBlockRegex = new(@"<para\b[^>]*>.*?</para\s*>", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // Regex matching a complete <code>...</code> block embedded inside other content (preformatted, never reflowed).
+        private static readonly Regex _codeBlockRegex = new(@"<code\b[^>]*>.*?</code\s*>", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Regex used to split an embedded <code>...</code> block into its opening tag, body, and closing tag.
+        private static readonly Regex _codeBlockPartsRegex = new(@"^(?<open><code\b[^>]*>)(?<body>.*?)(?<close></code\s*>)$", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public CommentReflowEngine(int maxLineLength, bool useCompactStyle, bool preserveBlankLines)
         {
             _maxLineLength = maxLineLength > 0 ? maxLineLength : 120;
@@ -150,10 +156,11 @@ namespace CommentsVS.Services
                 return;
             }
 
+            var hasEmbeddedCode = _codeBlockRegex.IsMatch(element.Content);
             var innerContent = NormalizeWhitespace(element.Content);
 
             // Check if content fits on a single line (compact style)
-            if (_useCompactStyle && isBlockTag)
+            if (_useCompactStyle && isBlockTag && !hasEmbeddedCode)
             {
                 var singleLine = $"{element.OpenTag}{innerContent}{element.CloseTag}";
                 if (singleLine.Length <= availableWidth &&
@@ -168,7 +175,53 @@ namespace CommentsVS.Services
             // Multi-line format
             lines.Add(linePrefix + element.OpenTag);
 
-            List<string> paragraphs = SplitIntoParagraphs(innerContent);
+            if (hasEmbeddedCode)
+            {
+                ReflowInnerContentWithCodeBlocks(element.Content, lines, linePrefix, availableWidth);
+            }
+            else
+            {
+                ReflowProseSegment(innerContent, lines, linePrefix, availableWidth);
+            }
+
+            lines.Add(linePrefix + element.CloseTag);
+        }
+
+        /// <summary>
+        /// Reflows a block of inner content that may contain embedded &lt;code&gt;...&lt;/code&gt; blocks.
+        /// Prose segments are normalized and wrapped; code blocks are emitted preformatted with their
+        /// original line breaks preserved (see issue #72).
+        /// </summary>
+        private void ReflowInnerContentWithCodeBlocks(string rawContent, List<string> lines, string linePrefix, int availableWidth)
+        {
+            MatchCollection matches = _codeBlockRegex.Matches(rawContent);
+            var lastIndex = 0;
+
+            foreach (Match match in matches)
+            {
+                if (match.Index > lastIndex)
+                {
+                    var prose = NormalizeWhitespace(rawContent.Substring(lastIndex, match.Index - lastIndex));
+                    ReflowProseSegment(prose, lines, linePrefix, availableWidth);
+                }
+
+                EmitEmbeddedCodeBlock(match.Value, lines, linePrefix);
+                lastIndex = match.Index + match.Length;
+            }
+
+            if (lastIndex < rawContent.Length)
+            {
+                var prose = NormalizeWhitespace(rawContent.Substring(lastIndex));
+                ReflowProseSegment(prose, lines, linePrefix, availableWidth);
+            }
+        }
+
+        /// <summary>
+        /// Reflows a single prose segment (no embedded code blocks) into wrapped paragraph lines.
+        /// </summary>
+        private void ReflowProseSegment(string normalizedContent, List<string> lines, string linePrefix, int availableWidth)
+        {
+            List<string> paragraphs = SplitIntoParagraphs(normalizedContent);
 
             foreach (var paragraph in paragraphs)
             {
@@ -187,8 +240,43 @@ namespace CommentsVS.Services
                     lines.Add(linePrefix + wrappedLine);
                 }
             }
+        }
 
-            lines.Add(linePrefix + element.CloseTag);
+        /// <summary>
+        /// Emits an embedded &lt;code&gt;...&lt;/code&gt; block with line breaks preserved.
+        /// </summary>
+        private static void EmitEmbeddedCodeBlock(string codeBlock, List<string> lines, string linePrefix)
+        {
+            Match parts = _codeBlockPartsRegex.Match(codeBlock);
+            if (!parts.Success)
+            {
+                // Defensive fallback: emit as a single raw line.
+                lines.Add(linePrefix + codeBlock);
+                return;
+            }
+
+            lines.Add(linePrefix + parts.Groups["open"].Value);
+
+            var bodyLines = parts.Groups["body"].Value.Split(["\r\n", "\n"], StringSplitOptions.None);
+            var start = 0;
+            var end = bodyLines.Length - 1;
+
+            // Trim leading/trailing blank lines that come from <code>\n ... \n</code>.
+            while (start <= end && string.IsNullOrWhiteSpace(bodyLines[start]))
+            {
+                start++;
+            }
+            while (end >= start && string.IsNullOrWhiteSpace(bodyLines[end]))
+            {
+                end--;
+            }
+
+            for (var i = start; i <= end; i++)
+            {
+                lines.Add(linePrefix + bodyLines[i]);
+            }
+
+            lines.Add(linePrefix + parts.Groups["close"].Value);
         }
 
         /// <summary>
