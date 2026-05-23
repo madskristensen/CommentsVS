@@ -1,6 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using CommentsVS.Options;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace CommentsVS.ToolWindows
 {
@@ -105,11 +106,16 @@ namespace CommentsVS.ToolWindows
 
             try
             {
-                Solution solution = await VS.Solutions.GetCurrentSolutionAsync();
-                var solutionPath = solution?.FullPath;
-                if (!string.IsNullOrEmpty(solutionPath))
+                // Use IVsSolution.GetSolutionInfo so we return the correct directory in both
+                // regular solution mode and Open Folder mode (where DTE.Solution.FullName is
+                // the folder path itself, causing Path.GetDirectoryName to return its parent).
+                if (Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SVsSolution)) is IVsSolution solution)
                 {
-                    return Path.GetDirectoryName(solutionPath);
+                    solution.GetSolutionInfo(out var solutionDirectory, out _, out _);
+                    if (!string.IsNullOrWhiteSpace(solutionDirectory))
+                    {
+                        return solutionDirectory;
+                    }
                 }
             }
             catch

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CommentsVS.Options;
 using CommentsVS.Services;
 using EnvDTE80;
+using Microsoft.VisualStudio.Shell.Interop;
 using DTESolution = EnvDTE.Solution;
 
 namespace CommentsVS.ToolWindows
@@ -70,21 +71,40 @@ namespace CommentsVS.ToolWindows
 
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
 
-                // Get solution info
-                DTESolution solution = await GetSolutionAsync();
-                if (solution == null || string.IsNullOrEmpty(solution.FullName))
+                // Get solution info. Use IVsSolution.GetSolutionInfo because in Open Folder
+                // mode DTE.Solution.FullName is the opened folder path itself, which would
+                // cause Path.GetDirectoryName to incorrectly return the parent folder.
+                string solutionDir = null;
+                string solutionFullName = null;
+                if (Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SVsSolution)) is IVsSolution vsSolution)
                 {
-                    ScanCompleted?.Invoke(this, new ScanCompletedEventArgs(0, true, "No solution loaded"));
-                    return;
+                    vsSolution.GetSolutionInfo(out solutionDir, out solutionFullName, out _);
                 }
 
-                var solutionDir = Path.GetDirectoryName(solution.FullName);
-                if (string.IsNullOrEmpty(solutionDir))
+                if (string.IsNullOrEmpty(solutionDir) || !Directory.Exists(solutionDir))
                 {
-                    ScanCompleted?.Invoke(this, new ScanCompletedEventArgs(0, true, "Invalid solution path"));
-                    return;
+                    DTESolution dteSolution = await GetSolutionAsync();
+                    if (dteSolution == null || string.IsNullOrEmpty(dteSolution.FullName))
+                    {
+                        ScanCompleted?.Invoke(this, new ScanCompletedEventArgs(0, true, "No solution loaded"));
+                        return;
+                    }
+
+                    solutionFullName ??= dteSolution.FullName;
+                    solutionDir = Path.GetDirectoryName(dteSolution.FullName);
+                    if (string.IsNullOrEmpty(solutionDir))
+                    {
+                        ScanCompleted?.Invoke(this, new ScanCompletedEventArgs(0, true, "Invalid solution path"));
+                        return;
+                    }
                 }
 
+                // In Open Folder mode, solutionFullName may equal the folder path; use the
+                // folder name itself as the synthetic "solution name" in that case.
+                if (string.IsNullOrEmpty(solutionFullName))
+                {
+                    solutionFullName = solutionDir;
+                }
 
 
                 // Get settings
@@ -99,7 +119,7 @@ namespace CommentsVS.ToolWindows
 
                     // Collect all files to scan
                     var filesToScan = new List<(string FilePath, string ProjectName)>();
-                    await CollectFilesFromFileSystemAsync(solutionDir, solution.FullName, filesToScan, extensionsToScan, foldersToIgnore, _linkedFileCache, ct).ConfigureAwait(false);
+                    await CollectFilesFromFileSystemAsync(solutionDir, solutionFullName, filesToScan, extensionsToScan, foldersToIgnore, _linkedFileCache, ct).ConfigureAwait(false);
 
                     if (ct.IsCancellationRequested)
                     {
