@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
 using Community.VisualStudio.Toolkit;
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Outlining;
 
 namespace CommentsVS.ToolWindows
 {
@@ -39,6 +41,8 @@ namespace CommentsVS.ToolWindows
                 {
                     ITextSnapshotLine line = snapshot.GetLineFromLineNumber(anchor.LineNumber - 1);
                     SnapshotPoint point = line.Start.Add(Math.Min(anchor.Column, line.Length));
+
+                    await ExpandCollapsedRegionsAsync(docView.TextView, new SnapshotSpan(line.Start, line.End));
 
                     docView.TextView.Caret.MoveTo(point);
                     docView.TextView.ViewScroller.EnsureSpanVisible(
@@ -79,6 +83,32 @@ namespace CommentsVS.ToolWindows
             if (anchor != null)
             {
                 await NavigateToAnchorAsync(anchor);
+            }
+        }
+
+        private static async Task ExpandCollapsedRegionsAsync(ITextView textView, SnapshotSpan span)
+        {
+            try
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                IComponentModel2 componentModel = await VS.Services.GetComponentModelAsync();
+                IOutliningManagerService outliningManagerService = componentModel?.GetService<IOutliningManagerService>();
+                IOutliningManager outliningManager = outliningManagerService?.GetOutliningManager(textView);
+
+                if (outliningManager == null)
+                {
+                    return;
+                }
+
+                foreach (ICollapsed collapsed in outliningManager.GetCollapsedRegions(span, exposedRegionsOnly: false))
+                {
+                    outliningManager.Expand(collapsed);
+                }
+            }
+            catch (Exception ex)
+            {
+                await ex.LogAsync();
             }
         }
     }
