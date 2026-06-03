@@ -3,6 +3,8 @@ using System.Threading;
 
 using CommentsVS.Options;
 using CommentsVS.Services;
+using Microsoft.VisualStudio.Language.Intellisense;
+using Microsoft.VisualStudio.Language.Intellisense.AsyncCompletion;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
@@ -30,13 +32,18 @@ namespace CommentsVS.Handlers
     internal sealed class TypingReflowHandler : IWpfTextViewCreationListener
     {
 
+        [Import(AllowDefault = true)]
+        internal IAsyncCompletionBroker AsyncCompletionBroker { get; set; }
+
+        [Import(AllowDefault = true)]
+        internal ICompletionBroker LegacyCompletionBroker { get; set; }
 
         private const int _debounceDelayMs = 300;
 
         public void TextViewCreated(IWpfTextView textView)
         {
             _ = textView.Properties.GetOrCreateSingletonProperty(
-                () => new TypingReflowTracker(textView));
+                () => new TypingReflowTracker(textView, AsyncCompletionBroker, LegacyCompletionBroker));
         }
 
         /// <summary>
@@ -45,13 +52,20 @@ namespace CommentsVS.Handlers
         private sealed class TypingReflowTracker : IDisposable
         {
             private readonly IWpfTextView _textView;
+            private readonly IAsyncCompletionBroker _asyncCompletionBroker;
+            private readonly ICompletionBroker _legacyCompletionBroker;
             private CancellationTokenSource _debounceCts;
             private bool _isReflowing;
             private bool _disposed;
 
-            public TypingReflowTracker(IWpfTextView textView)
+            public TypingReflowTracker(
+                IWpfTextView textView,
+                IAsyncCompletionBroker asyncCompletionBroker,
+                ICompletionBroker legacyCompletionBroker)
             {
                 _textView = textView;
+                _asyncCompletionBroker = asyncCompletionBroker;
+                _legacyCompletionBroker = legacyCompletionBroker;
                 _textView.TextBuffer.Changed += OnTextBufferChanged;
                 _textView.Closed += OnTextViewClosed;
             }
@@ -111,6 +125,14 @@ namespace CommentsVS.Handlers
                             return;
                         }
 
+                        // Don't interfere with IntelliSense. Reflowing while a completion
+                        // session is active steals focus from the picklist (e.g. when inserting
+                        // <see> XML elements) and can corrupt the caret position. See issue #77.
+                        if (IsCompletionActive())
+                        {
+                            return;
+                        }
+
                         await TryReflowAtPositionAsync(changePosition, token).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
@@ -153,6 +175,14 @@ namespace CommentsVS.Handlers
                 ITextSnapshotLine line = snapshot.GetLineFromPosition(position);
                 var maxLineLength = EditorConfigSettings.GetMaxLineLength(_textView);
                 if (line.Length <= maxLineLength)
+                {
+                    return;
+                }
+
+                // Don't reflow while the caret is inside an XML tag (e.g. editing
+                // <see cref="..."/>). Wrapping mid-tag breaks the element and disrupts
+                // the VS XML editing/IntelliSense experience. See issue #77.
+                if (IsCaretInsideXmlTag(snapshot))
                 {
                     return;
                 }
@@ -235,6 +265,60 @@ namespace CommentsVS.Handlers
             private void OnTextViewClosed(object sender, EventArgs e)
             {
                 Dispose();
+            }
+
+            /// <summary>
+            /// Returns true when an IntelliSense completion session is currently active in the view.
+            /// </summary>
+            private bool IsCompletionActive()
+            {
+                try
+                {
+                    if (_asyncCompletionBroker != null &&
+                        _asyncCompletionBroker.IsCompletionActive(_textView))
+                    {
+                        return true;
+                    }
+
+                    if (_legacyCompletionBroker != null &&
+                        _legacyCompletionBroker.IsCompletionActive(_textView))
+                    {
+                        return true;
+                    }
+                }
+                catch
+                {
+                    // If the broker can't answer, err on the side of not reflowing.
+                    return true;
+                }
+
+                return false;
+            }
+
+            /// <summary>
+            /// Returns true when the caret sits inside an unclosed XML tag (an unmatched '&lt;'
+            /// appears before the caret on the current line), where reflowing would corrupt the tag.
+            /// </summary>
+            private bool IsCaretInsideXmlTag(ITextSnapshot snapshot)
+            {
+                var caretPosition = _textView.Caret.Position.BufferPosition.Position;
+                if (caretPosition > snapshot.Length)
+                {
+                    return false;
+                }
+
+                ITextSnapshotLine line = snapshot.GetLineFromPosition(Math.Min(caretPosition, Math.Max(snapshot.Length - 1, 0)));
+                var lineStart = line.Start.Position;
+                if (caretPosition < lineStart)
+                {
+                    return false;
+                }
+
+                var textBeforeCaret = snapshot.GetText(lineStart, caretPosition - lineStart);
+                var lastOpen = textBeforeCaret.LastIndexOf('<');
+                var lastClose = textBeforeCaret.LastIndexOf('>');
+
+                return lastOpen > lastClose;
             }
 
             public void Dispose()
