@@ -178,6 +178,99 @@ public sealed class CommentReflowEngineTests
 
     #endregion
 
+    #region Para Block Reflow Tests (issue #78)
+
+    [TestMethod]
+    public void ReflowProseSegment_ConsecutiveParaBlocks_SeparatedByBlankLines()
+    {
+        var content =
+            "This is the leading summary text.\n" +
+            "<para>This is the first paragraph with quite a bit of explanatory text.</para>\n" +
+            "<para>This is the second paragraph with even more explanatory text.</para>";
+
+        List<string> lines = TestReflowProseSegment(content, linePrefix: "/// ", availableWidth: 116, preserveBlankLines: true);
+
+        var firstPara = lines.FindIndex(l => l.Contains("<para>This is the first paragraph"));
+        var secondPara = lines.FindIndex(l => l.Contains("<para>This is the second paragraph"));
+
+        Assert.IsGreaterThan(0, firstPara, "First <para> should be present");
+        Assert.IsGreaterThan(0, secondPara, "Second <para> should be present");
+
+        // A blank documentation line must precede each <para> block so its start is easy to spot.
+        Assert.AreEqual("///", lines[firstPara - 1], "Expected a blank line before the first <para> block");
+        Assert.AreEqual("///", lines[secondPara - 1], "Expected a blank line before the second <para> block");
+    }
+
+    [TestMethod]
+    public void ReflowProseSegment_ParaFollowedByProse_SeparatedByBlankLine()
+    {
+        var content =
+            "<para>A standalone paragraph of text.</para>\nTrailing prose after the paragraph.";
+
+        List<string> lines = TestReflowProseSegment(content, linePrefix: "/// ", availableWidth: 116, preserveBlankLines: true);
+
+        var prose = lines.FindIndex(l => l.Contains("Trailing prose after the paragraph"));
+        Assert.IsGreaterThan(0, prose, "Trailing prose should be present");
+        Assert.AreEqual("///", lines[prose - 1], "Expected a blank line between a <para> block and the following prose");
+    }
+
+    [TestMethod]
+    public void ReflowProseSegment_NoParaBlocks_NoExtraBlankLines()
+    {
+        var content = "Just a single line of prose with no paragraph tags.";
+
+        List<string> lines = TestReflowProseSegment(content, linePrefix: "/// ", availableWidth: 116, preserveBlankLines: true);
+
+        Assert.HasCount(1, lines);
+        Assert.AreEqual("/// Just a single line of prose with no paragraph tags.", lines[0]);
+    }
+
+    /// <summary>
+    /// Mirrors the ReflowProseSegment method from CommentReflowEngine (issue #78 blank-line handling).
+    /// </summary>
+    private static List<string> TestReflowProseSegment(string content, string linePrefix, int availableWidth, bool preserveBlankLines)
+    {
+        var lines = new List<string>();
+        var blankLine = linePrefix.TrimEnd();
+        var paraBlockRegex = new Regex(@"<para\b[^>]*>.*?</para\s*>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+        List<string> paragraphs = TestSplitIntoParagraphs(content, preserveBlankLines);
+        var previousWasPara = false;
+
+        foreach (var paragraph in paragraphs)
+        {
+            if (string.IsNullOrWhiteSpace(paragraph))
+            {
+                if (preserveBlankLines)
+                {
+                    lines.Add(blankLine);
+                }
+
+                previousWasPara = false;
+                continue;
+            }
+
+            var isParaBlock = paragraph.TrimStart().StartsWith("<para", StringComparison.OrdinalIgnoreCase)
+                && paraBlockRegex.IsMatch(paragraph);
+
+            if ((isParaBlock || previousWasPara) && lines.Count > 0 && lines[lines.Count - 1] != blankLine)
+            {
+                lines.Add(blankLine);
+            }
+
+            foreach (var wrappedLine in TestWrapText(paragraph.Trim(), availableWidth))
+            {
+                lines.Add(linePrefix + wrappedLine);
+            }
+
+            previousWasPara = isParaBlock;
+        }
+
+        return lines;
+    }
+
+    #endregion
+
     #region Paragraph Splitting Tests
 
     [TestMethod]

@@ -222,6 +222,11 @@ namespace CommentsVS.Services
         private void ReflowProseSegment(string normalizedContent, List<string> lines, string linePrefix, int availableWidth)
         {
             List<string> paragraphs = SplitIntoParagraphs(normalizedContent);
+            var blankLine = linePrefix.TrimEnd();
+
+            // Tracks whether the previously emitted paragraph was a <para> block so that the
+            // following paragraph also gets a blank-line separator (issue #78).
+            var previousWasPara = false;
 
             foreach (var paragraph in paragraphs)
             {
@@ -229,9 +234,23 @@ namespace CommentsVS.Services
                 {
                     if (_preserveBlankLines)
                     {
-                        lines.Add(linePrefix.TrimEnd());
+                        lines.Add(blankLine);
                     }
+
+                    // A blank line already separates the surrounding content.
+                    previousWasPara = false;
                     continue;
+                }
+
+                var isParaBlock = IsParaBlock(paragraph);
+
+                // Surround <para> blocks with a blank line so the start of each paragraph is easy
+                // to spot in large comment blocks (issue #78). Avoid emitting duplicate blanks.
+                if ((isParaBlock || previousWasPara) &&
+                    lines.Count > 0 &&
+                    lines[lines.Count - 1] != blankLine)
+                {
+                    lines.Add(blankLine);
                 }
 
                 List<string> wrappedLines = WrapText(paragraph.Trim(), availableWidth);
@@ -239,7 +258,17 @@ namespace CommentsVS.Services
                 {
                     lines.Add(linePrefix + wrappedLine);
                 }
+
+                previousWasPara = isParaBlock;
             }
+        }
+
+        // Determines whether a paragraph produced by SplitIntoParagraphs is a complete <para>...</para> block.
+        private static bool IsParaBlock(string paragraph)
+        {
+            return paragraph != null &&
+                paragraph.TrimStart().StartsWith("<para", StringComparison.OrdinalIgnoreCase) &&
+                _paraBlockRegex.IsMatch(paragraph);
         }
 
         /// <summary>
