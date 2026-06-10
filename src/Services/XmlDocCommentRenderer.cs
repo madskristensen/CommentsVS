@@ -1358,11 +1358,31 @@ namespace CommentsVS.Services
                             case "see":
                             case "seealso":
                                 var cref = (string)element.Attribute("cref") ?? "";
-                                var typeName = GetTypeNameFromCref(cref);
-                                if (!string.IsNullOrEmpty(typeName))
+                                var langword = (string)element.Attribute("langword") ?? "";
+                                var href = (string)element.Attribute("href") ?? "";
+                                var innerText = element.Value?.Trim() ?? "";
+                                if (!string.IsNullOrEmpty(cref))
                                 {
-                                    // Wrap in backticks for markdown code styling
-                                    sb.Append($"`{typeName}`");
+                                    var typeName = GetTypeNameFromCref(cref);
+                                    var display = !string.IsNullOrEmpty(innerText) ? innerText : typeName;
+                                    if (!string.IsNullOrEmpty(display))
+                                    {
+                                        // Wrap in backticks for markdown code styling
+                                        sb.Append($"`{display}`");
+                                    }
+                                }
+                                else if (!string.IsNullOrEmpty(langword))
+                                {
+                                    // Language keywords render as code
+                                    sb.Append($"`{langword}`");
+                                }
+                                else if (!string.IsNullOrEmpty(innerText))
+                                {
+                                    sb.Append(innerText);
+                                }
+                                else if (!string.IsNullOrEmpty(href))
+                                {
+                                    sb.Append(href);
                                 }
                                 break;
                             case "c":

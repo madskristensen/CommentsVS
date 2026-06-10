@@ -540,6 +540,33 @@ public sealed class XmlDocCommentRendererTests
     }
 
     [TestMethod]
+    public void GetStrippedSummaryFromXml_WithSeeLangword_IncludesKeywords()
+    {
+        // Issue #81: <see langword="..."/> was rendered as an empty string.
+        var result = XmlDocCommentRenderer.GetStrippedSummaryFromXml(
+            "<summary>The value can be <see langword=\"true\"/>, <see langword=\"false\"/> or <see langword=\"null\"/>.</summary>");
+
+        Assert.Contains("true", result);
+        Assert.Contains("false", result);
+        Assert.Contains("null", result);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_WithSeeLangword_RendersAsCodeSegments()
+    {
+        // Issue #81: <see langword="..."/> should render (preferably as code).
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(
+            "<summary>The value can be <see langword=\"true\"/> or <see langword=\"false\"/>.</summary>");
+
+        Assert.IsNotNull(result.Summary, "Should have a summary section");
+        List<RenderedSegment> allSegments = [.. result.Summary.Lines.SelectMany(l => l.Segments)];
+        Assert.IsTrue(allSegments.Any(s => s.Type == RenderedSegmentType.Code && s.Text == "true"),
+            "Should render 'true' langword as a code segment");
+        Assert.IsTrue(allSegments.Any(s => s.Type == RenderedSegmentType.Code && s.Text == "false"),
+            "Should render 'false' langword as a code segment");
+    }
+
+    [TestMethod]
     public void RenderXmlContent_WithInheritdoc_CreatesSummarySection()
     {
         RenderedComment result = XmlDocCommentRenderer.RenderXmlContent("<inheritdoc/>");
