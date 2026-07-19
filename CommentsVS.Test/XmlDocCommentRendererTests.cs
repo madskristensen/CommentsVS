@@ -864,4 +864,140 @@ public sealed class XmlDocCommentRendererTests
     }
 
     #endregion
+
+    #region List Item Inline Tag Tests
+
+    [TestMethod]
+    public void RenderXmlContent_ListItemWithSelfClosingSeeCref_RendersTypeNameAsCodeSegment()
+    {
+        // A self-closing <see cref="..."/> carries its content in an attribute, so the old
+        // XElement.Value flattening rendered it as an empty string: the item below came out
+        // as "behind the wall ()." with the reference gone.
+        var xml = """
+            <summary>Caps exposure.</summary>
+            <remarks>
+            <list type="bullet">
+            <item>behind the wall (<see cref="MaxExposure"/>).</item>
+            </list>
+            </remarks>
+            """;
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        RenderedCommentSection remarksSection = result.Sections.FirstOrDefault(s => s.Type == CommentSectionType.Remarks);
+        Assert.IsNotNull(remarksSection, "Should have a remarks section");
+
+        List<RenderedLine> contentLines = [.. remarksSection.Lines.Where(l => !l.IsBlank)];
+        Assert.HasCount(1, contentLines, "The list item should render as a single bullet line");
+
+        var lineText = string.Concat(contentLines[0].Segments.Select(s => s.Text));
+        Assert.AreEqual("  • behind the wall (MaxExposure).", lineText);
+
+        RenderedSegment crefSegment = contentLines[0].Segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Code);
+        Assert.IsNotNull(crefSegment, "The cref should render as a code segment, like it does in prose");
+        Assert.AreEqual("MaxExposure", crefSegment.Text);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_ListItemWithInlineCode_RendersCodeSegment()
+    {
+        var xml = """
+            <summary>
+            <list type="bullet">
+            <item>calls <c>Apply()</c> per delta</item>
+            </list>
+            </summary>
+            """;
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        List<RenderedLine> contentLines = [.. result.Summary!.Lines.Where(l => !l.IsBlank)];
+        Assert.HasCount(1, contentLines, "The list item should render as a single bullet line");
+
+        var lineText = string.Concat(contentLines[0].Segments.Select(s => s.Text));
+        Assert.AreEqual("  • calls Apply() per delta", lineText);
+
+        RenderedSegment codeSegment = contentLines[0].Segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Code);
+        Assert.IsNotNull(codeSegment, "The <c> content should keep its code styling inside a list item");
+        Assert.AreEqual("Apply()", codeSegment.Text);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_ListItemPlainText_RendersBulletAndTextUnchanged()
+    {
+        var xml = """
+            <summary>
+            <list type="bullet">
+            <item>plain item</item>
+            </list>
+            </summary>
+            """;
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        List<RenderedLine> contentLines = [.. result.Summary!.Lines.Where(l => !l.IsBlank)];
+        Assert.HasCount(1, contentLines);
+
+        // The common plain-text case must be untouched: bullet segment + one text segment.
+        Assert.HasCount(2, contentLines[0].Segments);
+        Assert.AreEqual("  • ", contentLines[0].Segments[0].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, contentLines[0].Segments[0].Type);
+        Assert.AreEqual("plain item", contentLines[0].Segments[1].Text);
+        Assert.AreEqual(RenderedSegmentType.Text, contentLines[0].Segments[1].Type);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_ListItemWithTermAndDescription_KeepsTermBoldAndRendersInlineTags()
+    {
+        var xml = """
+            <summary>
+            <list type="bullet">
+            <item><term>Fast</term><description>uses <see cref="Span"/> throughout</description></item>
+            </list>
+            </summary>
+            """;
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        List<RenderedLine> contentLines = [.. result.Summary!.Lines.Where(l => !l.IsBlank)];
+        Assert.HasCount(1, contentLines);
+
+        var lineText = string.Concat(contentLines[0].Segments.Select(s => s.Text));
+        Assert.AreEqual("  • Fast – uses Span throughout", lineText);
+
+        RenderedSegment termSegment = contentLines[0].Segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Bold);
+        Assert.IsNotNull(termSegment, "The term should stay bold");
+        Assert.AreEqual("Fast", termSegment.Text);
+
+        RenderedSegment crefSegment = contentLines[0].Segments.FirstOrDefault(s => s.Type == RenderedSegmentType.Code);
+        Assert.IsNotNull(crefSegment, "A cref inside the description should render as a code segment");
+        Assert.AreEqual("Span", crefSegment.Text);
+    }
+
+    [TestMethod]
+    public void RenderXmlContent_ListItemWrappedAcrossSourceLines_StaysOnOneBulletLine()
+    {
+        // Item content spanning source lines must not fall into RenderTextNode's line
+        // splitting, which would detach the bullet from its text.
+        var xml = """
+            <summary>
+            <list type="bullet">
+            <item>
+            wrapped across
+            source lines
+            </item>
+            </list>
+            </summary>
+            """;
+
+        RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
+
+        List<RenderedLine> contentLines = [.. result.Summary!.Lines.Where(l => !l.IsBlank)];
+        Assert.HasCount(1, contentLines, "A wrapped item should still render as a single bullet line");
+
+        var lineText = string.Concat(contentLines[0].Segments.Select(s => s.Text));
+        Assert.AreEqual("  • wrapped across source lines", lineText);
+    }
+
+    #endregion
 }

@@ -774,6 +774,10 @@ namespace CommentsVS.Services
                         var bullet = listType == "number" ? $"{itemNumber++}. " : "  • ";
                         line.Segments.Add(new RenderedSegment(bullet));
 
+                        // Add the bullet line before rendering content so inline elements
+                        // appended via GetOrCreateCurrentLine land on this line.
+                        section.Lines.Add(line);
+
                         // Get term and description if present
                         XElement term = itemElement.Element("term");
                         XElement description = itemElement.Element("description");
@@ -784,19 +788,65 @@ namespace CommentsVS.Services
                             if (description != null)
                             {
                                 line.Segments.Add(new RenderedSegment(" – "));
-                                line.Segments.Add(new RenderedSegment(description.Value.Trim()));
+                                RenderInlineChildNodes(description, section);
                             }
                         }
                         else
                         {
-                            line.Segments.Add(new RenderedSegment(itemElement.Value.Trim()));
+                            // An item without a term holds its content directly (or in a
+                            // bare description element).
+                            RenderInlineChildNodes(description ?? itemElement, section);
                         }
-
-                        section.Lines.Add(line);
                     }
                 }
 
                 // Note: No trailing blank line - section spacing is handled by the tagger
+            }
+
+            /// <summary>
+            /// Renders an element's child nodes onto the current line, keeping the content on one
+            /// rendered line. Inline elements (see, c, b, paramref, ...) go through RenderNode so
+            /// they keep their styling - list items were previously flattened via XElement.Value,
+            /// which drops attribute-carried content entirely (a self-closing see-cref rendered as
+            /// an empty string). Text nodes are whitespace-collapsed (line breaks included) instead
+            /// of routed through RenderTextNode, whose line splitting would detach the bullet from
+            /// the content of items wrapped across multiple source lines.
+            /// </summary>
+            private static void RenderInlineChildNodes(XElement parent, RenderedCommentSection section)
+            {
+                List<XNode> nodes = [.. parent.Nodes()];
+
+                for (var i = 0; i < nodes.Count; i++)
+                {
+                    if (nodes[i] is XText textNode)
+                    {
+                        var text = CleanText(textNode.Value);
+
+                        // Match the old .Value.Trim() at the content boundaries while keeping
+                        // single spaces next to inline elements in the middle
+                        if (i == 0)
+                        {
+                            text = text.TrimStart();
+                        }
+                        if (i == nodes.Count - 1)
+                        {
+                            text = text.TrimEnd();
+                        }
+
+                        if (text.Length > 0)
+                        {
+                            RenderedLine line = GetOrCreateCurrentLine(section);
+                            foreach (RenderedSegment segment in ProcessMarkdownInText(text, _currentRepoInfo))
+                            {
+                                line.Segments.Add(segment);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        RenderNode(nodes[i], section);
+                    }
+                }
             }
 
             private static void RenderBold(XElement element, RenderedCommentSection section)
