@@ -24,6 +24,7 @@ namespace CommentsVS.Services
         private readonly int _maxLineLength;
         private readonly bool _useCompactStyle;
         private readonly bool _preserveBlankLines;
+        private readonly bool _preserveStandaloneParaTags;
 
         // XML tags that should typically stay on their own line or preserve formatting
         private static readonly HashSet<string> _blockTags = new(StringComparer.OrdinalIgnoreCase)
@@ -45,6 +46,10 @@ namespace CommentsVS.Services
         // Regex matching a complete <para>...</para> block (treated as its own paragraph during reflow).
         private static readonly Regex _paraBlockRegex = new(@"<para\b[^>]*>.*?</para\s*>", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        private static readonly Regex _standaloneParaRegex = new(
+            @"^\s*<para\s*/>\s*$",
+            RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         // Regex matching blocks whose internal line structure must be preserved.
         private static readonly Regex _preformattedBlockRegex = new(
             @"<(?<tag>code|list)\b[^>]*>.*?</\k<tag>\s*>",
@@ -55,11 +60,16 @@ namespace CommentsVS.Services
             @"^(?<open><(?<tag>code|list)\b[^>]*>)(?<body>.*?)(?<close></\k<tag>\s*>)$",
             RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        public CommentReflowEngine(int maxLineLength, bool useCompactStyle, bool preserveBlankLines)
+        public CommentReflowEngine(
+            int maxLineLength,
+            bool useCompactStyle,
+            bool preserveBlankLines,
+            bool preserveStandaloneParaTags = false)
         {
             _maxLineLength = maxLineLength > 0 ? maxLineLength : 120;
             _useCompactStyle = useCompactStyle;
             _preserveBlankLines = preserveBlankLines;
+            _preserveStandaloneParaTags = preserveStandaloneParaTags;
         }
 
         /// <summary>
@@ -385,10 +395,45 @@ namespace CommentsVS.Services
                     continue;
                 }
 
-                AddParagraphsSplitByParaTags(part, paragraphs);
+                AddParagraphsSplitByStandaloneParaTags(part, paragraphs);
             }
 
             return paragraphs;
+        }
+
+        private void AddParagraphsSplitByStandaloneParaTags(string segment, List<string> paragraphs)
+        {
+            if (!_preserveStandaloneParaTags)
+            {
+                AddParagraphsSplitByParaTags(segment, paragraphs);
+                return;
+            }
+
+            MatchCollection matches = _standaloneParaRegex.Matches(segment);
+            if (matches.Count == 0)
+            {
+                AddParagraphsSplitByParaTags(segment, paragraphs);
+                return;
+            }
+
+            var lastIndex = 0;
+            foreach (Match match in matches)
+            {
+                if (match.Index > lastIndex)
+                {
+                    AddParagraphsSplitByParaTags(
+                        segment.Substring(lastIndex, match.Index - lastIndex),
+                        paragraphs);
+                }
+
+                paragraphs.Add("<para/>");
+                lastIndex = match.Index + match.Length;
+            }
+
+            if (lastIndex < segment.Length)
+            {
+                AddParagraphsSplitByParaTags(segment.Substring(lastIndex), paragraphs);
+            }
         }
 
         // Splits a segment around complete <para>...</para> blocks so each <para> is preserved as its own paragraph.

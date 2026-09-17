@@ -14,6 +14,7 @@ Configure Comment Studio via **Tools > Options > CommentsVS**.
 | Enable Reflow While Typing | On | Automatically reflow when line exceeds max length while typing |
 | Use Compact Style for Short Summaries | On | Use single-line format for short summaries |
 | Preserve Blank Lines | On | Keep intentional blank lines in comments |
+| Preserve Standalone `<para/>` Lines | Off | Keep standalone paragraph separator elements on their own lines |
 
 ## Comment Outlining
 

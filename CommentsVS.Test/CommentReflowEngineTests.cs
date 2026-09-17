@@ -417,6 +417,33 @@ public sealed class CommentReflowEngineTests
     }
 
     [TestMethod]
+    public void SplitIntoParagraphs_StandaloneParaTags_PreserveOptionKeepsTagsSeparate()
+    {
+        var input = string.Join("\n",
+            "Remarks:",
+            "<para/>",
+            "First paragraph.",
+            "<para/>",
+            "<see cref=\"Context\"/>");
+
+        List<string> result = TestSplitIntoParagraphs(
+            input,
+            preserveBlankLines: true,
+            preserveStandaloneParaTags: true);
+
+        CollectionAssert.AreEqual(
+            new[]
+            {
+                "Remarks:",
+                "<para/>",
+                "First paragraph.",
+                "<para/>",
+                "<see cref=\"Context\"/>"
+            },
+            result);
+    }
+
+    [TestMethod]
     public void WrapText_OpeningXmlTag_NoLeadingSpaceBeforeContent()
     {
         List<string> result = TestWrapText("<para>Hello world</para>", maxWidth: 80);
@@ -776,7 +803,10 @@ public sealed class CommentReflowEngineTests
     /// <summary>
     /// Mirrors the SplitIntoParagraphs method from CommentReflowEngine.
     /// </summary>
-    private static List<string> TestSplitIntoParagraphs(string content, bool preserveBlankLines)
+    private static List<string> TestSplitIntoParagraphs(
+        string content,
+        bool preserveBlankLines,
+        bool preserveStandaloneParaTags = false)
     {
         var paragraphs = new List<string>();
 
@@ -799,11 +829,50 @@ public sealed class CommentReflowEngineTests
                 continue;
             }
 
-            MatchCollection matches = paraBlockRegex.Matches(part);
+            if (preserveStandaloneParaTags)
+            {
+                var standaloneParaRegex = new Regex(
+                    @"^\s*<para\s*/>\s*$",
+                    RegexOptions.Multiline | RegexOptions.IgnoreCase);
+                MatchCollection standaloneMatches = standaloneParaRegex.Matches(part);
+
+                if (standaloneMatches.Count > 0)
+                {
+                    var lastStandaloneIndex = 0;
+                    foreach (Match standaloneMatch in standaloneMatches)
+                    {
+                        if (standaloneMatch.Index > lastStandaloneIndex)
+                        {
+                            AppendParaBlocks(
+                                part.Substring(lastStandaloneIndex, standaloneMatch.Index - lastStandaloneIndex),
+                                paragraphs);
+                        }
+
+                        paragraphs.Add("<para/>");
+                        lastStandaloneIndex = standaloneMatch.Index + standaloneMatch.Length;
+                    }
+
+                    if (lastStandaloneIndex < part.Length)
+                    {
+                        AppendParaBlocks(part.Substring(lastStandaloneIndex), paragraphs);
+                    }
+
+                    continue;
+                }
+            }
+
+            AppendParaBlocks(part, paragraphs);
+        }
+
+        return paragraphs;
+
+        void AppendParaBlocks(string text, List<string> destination)
+        {
+            MatchCollection matches = paraBlockRegex.Matches(text);
             if (matches.Count == 0)
             {
-                AppendJoined(part, paragraphs);
-                continue;
+                AppendJoined(text, destination);
+                return;
             }
 
             var lastIndex = 0;
@@ -811,20 +880,18 @@ public sealed class CommentReflowEngineTests
             {
                 if (match.Index > lastIndex)
                 {
-                    AppendJoined(part.Substring(lastIndex, match.Index - lastIndex), paragraphs);
+                    AppendJoined(text.Substring(lastIndex, match.Index - lastIndex), destination);
                 }
 
-                AppendJoined(match.Value, paragraphs);
+                AppendJoined(match.Value, destination);
                 lastIndex = match.Index + match.Length;
             }
 
-            if (lastIndex < part.Length)
+            if (lastIndex < text.Length)
             {
-                AppendJoined(part.Substring(lastIndex), paragraphs);
+                AppendJoined(text.Substring(lastIndex), destination);
             }
         }
-
-        return paragraphs;
 
         static void AppendJoined(string text, List<string> dest)
         {

@@ -6,6 +6,8 @@ Comment Studio automatically reformats XML documentation comments to fit within 
 
 The extension intelligently wraps text while preserving XML structure. The default maximum line length is **120 characters**, configurable via [settings](settings.md#comment-reflow).
 
+Enable **Preserve standalone `<para/>` lines** to keep paragraph separator elements on their own documentation lines during reflow.
+
 ## Format Document Integration
 
 When you use **Format Document** (`Ctrl+K, Ctrl+D`) or **Format Selection** (`Ctrl+K, Ctrl+F`), all XML documentation comments in scope are automatically reflowed to your configured line length.

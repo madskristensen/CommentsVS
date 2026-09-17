@@ -184,6 +184,12 @@ namespace CommentsVS.Options
         [DefaultValue(true)]
         public bool PreserveBlankLines { get; set; } = true;
 
+        [Category(_reflowCategory)]
+        [DisplayName("Preserve standalone <para/> lines")]
+        [Description("When enabled, <para/> elements that are on their own documentation line remain on their own line during reflow.")]
+        [DefaultValue(false)]
+        public bool PreserveStandaloneParaTags { get; set; }
+
         private const string _outliningCategory = "Comment Outlining";
 
         [Category(_outliningCategory)]

@@ -429,7 +429,8 @@ namespace CommentsVS.Services
             return new CommentReflowEngine(
                 GetMaxLineLength(textView),
                 options.UseCompactStyleForShortSummaries,
-                options.PreserveBlankLines);
+                options.PreserveBlankLines,
+                options.PreserveStandaloneParaTags);
         }
 
         /// <summary>
