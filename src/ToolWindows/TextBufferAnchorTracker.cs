@@ -228,7 +228,7 @@ namespace CommentsVS.ToolWindows
                     CancellationToken token = _cts.Token;
 
                     // Schedule the update after debounce delay
-                    Task.Delay(DebounceDelayMs, token).ContinueWith(t =>
+                    _ = Task.Delay(DebounceDelayMs, token).ContinueWith(t =>
                     {
                         if (!t.IsCanceled && !token.IsCancellationRequested)
                         {
