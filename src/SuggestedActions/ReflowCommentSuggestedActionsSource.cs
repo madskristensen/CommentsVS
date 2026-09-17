@@ -18,7 +18,16 @@ namespace CommentsVS.SuggestedActions
     /// </summary>
     [Export(typeof(ISuggestedActionsSourceProvider))]
     [Name("Reflow XML Doc Comment Suggested Actions")]
-    [ContentType("text")]
+    [ContentType(SupportedContentTypes.CSharp)]
+    [ContentType(SupportedContentTypes.VisualBasic)]
+    [ContentType(SupportedContentTypes.FSharp)]
+    [ContentType(SupportedContentTypes.CPlusPlus)]
+    [ContentType(SupportedContentTypes.TypeScript)]
+    [ContentType(SupportedContentTypes.JavaScript)]
+    [ContentType(SupportedContentTypes.Razor)]
+    [ContentType(SupportedContentTypes.Sql)]
+    [ContentType(SupportedContentTypes.PowerShell)]
+    [ContentType(SupportedContentTypes.PowerShellProTools)]
     internal sealed class ReflowCommentSuggestedActionsSourceProvider : ISuggestedActionsSourceProvider
     {
         [Import(typeof(ITextStructureNavigatorSelectorService))]
