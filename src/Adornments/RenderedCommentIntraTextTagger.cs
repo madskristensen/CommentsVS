@@ -77,6 +77,7 @@ namespace CommentsVS.Adornments
         private FontFamily _codeFontFamily;
         private bool _codeIsBold;
         private bool _codeIsItalic;
+        private double? _textFontSize;
 
         public RenderedCommentIntraTextTagger(IWpfTextView view, IEditorFormatMap formatMap) : base(view)
         {
@@ -143,6 +144,7 @@ namespace CommentsVS.Adornments
             _codeFontFamily = GetFontFamilyFromFormatMap(CommentTagClassificationTypes.RenderedCode)
                 ?? new FontFamily("Consolas");
             (_codeIsBold, _codeIsItalic) = GetFontStyleFromFormatMap(CommentTagClassificationTypes.RenderedCode);
+            _textFontSize = GetFontSizeFromFormatMap(CommentTagClassificationTypes.RenderedText);
         }
 
         private Brush GetBrushFromFormatMap(string classificationTypeName)
@@ -166,6 +168,14 @@ namespace CommentsVS.Adornments
             ResourceDictionary properties = _formatMap.GetProperties(classificationTypeName);
             return properties != null && properties.Contains(EditorFormatDefinition.BackgroundBrushId)
                 ? properties[EditorFormatDefinition.BackgroundBrushId] as Brush
+                : null;
+        }
+
+        private double? GetFontSizeFromFormatMap(string classificationTypeName)
+        {
+            ResourceDictionary properties = _formatMap.GetProperties(classificationTypeName);
+            return properties?[ClassificationFormatDefinition.FontRenderingSizeId] is double fontSize && fontSize > 0
+                ? fontSize
                 : null;
         }
 
@@ -416,9 +426,9 @@ namespace CommentsVS.Adornments
         {
             RenderingMode renderingMode = General.Instance.CommentRenderingMode;
 
-            // Get editor font settings - use 1pt smaller than editor font
+            // Match the editor size unless the rendered-text classification specifies one.
             var editorFontSize = view.FormattedLineSource?.DefaultTextProperties?.FontRenderingEmSize ?? 13.0;
-            var fontSize = Math.Max(editorFontSize - 1.0, 8.0); // At least 8pt
+            var fontSize = Math.Max(_textFontSize ?? editorFontSize, 8.0);
             FontFamily fontFamily = view.FormattedLineSource?.DefaultTextProperties?.Typeface?.FontFamily
                 ?? new FontFamily("Consolas");
 
