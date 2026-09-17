@@ -565,6 +565,34 @@ public sealed class CommentReflowEngineTests
     }
 
     [TestMethod]
+    public void IsPreformattedTag_List_ReturnsTrue()
+    {
+        Assert.IsTrue(IsPreformattedTag("list"));
+    }
+
+    [TestMethod]
+    public void PreformattedListBlock_PreservesItemLines()
+    {
+        var block = string.Join(Environment.NewLine,
+            "<list type=\"bullet\">",
+            "<item>If an input has no ID, add it.</item>",
+            "<item>If an input matches, update it.</item>",
+            "</list>");
+
+        List<string> lines = TestEmitEmbeddedPreformattedBlock(block);
+
+        CollectionAssert.AreEqual(
+            new[]
+            {
+                "<list type=\"bullet\">",
+                "<item>If an input has no ID, add it.</item>",
+                "<item>If an input matches, update it.</item>",
+                "</list>"
+            },
+            lines);
+    }
+
+    [TestMethod]
     [DataRow("summary")]
     [DataRow("c")]
     [DataRow("see")]
@@ -585,12 +613,46 @@ public sealed class CommentReflowEngineTests
 
     private static readonly HashSet<string> _preformattedTags = new(StringComparer.OrdinalIgnoreCase)
     {
-        "code"
+        "code",
+        "list"
     };
+
+    private static readonly Regex _preformattedBlockPartsRegex = new(
+        @"^(?<open><(?<tag>code|list)\b[^>]*>)(?<body>.*?)(?<close></\k<tag>\s*>)$",
+        RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
     private static bool IsBlockTag(string tagName) => _blockTags.Contains(tagName);
 
     private static bool IsPreformattedTag(string tagName) => _preformattedTags.Contains(tagName);
+
+    private static List<string> TestEmitEmbeddedPreformattedBlock(string block)
+    {
+        Match parts = _preformattedBlockPartsRegex.Match(block);
+        Assert.IsTrue(parts.Success);
+
+        var lines = new List<string> { parts.Groups["open"].Value };
+        string[] bodyLines = parts.Groups["body"].Value.Split(["\r\n", "\n"], StringSplitOptions.None);
+        var start = 0;
+        var end = bodyLines.Length - 1;
+
+        while (start <= end && string.IsNullOrWhiteSpace(bodyLines[start]))
+        {
+            start++;
+        }
+
+        while (end >= start && string.IsNullOrWhiteSpace(bodyLines[end]))
+        {
+            end--;
+        }
+
+        for (var i = start; i <= end; i++)
+        {
+            lines.Add(bodyLines[i]);
+        }
+
+        lines.Add(parts.Groups["close"].Value);
+        return lines;
+    }
 
     /// <summary>
     /// Mirrors the WrapText method from CommentReflowEngine.

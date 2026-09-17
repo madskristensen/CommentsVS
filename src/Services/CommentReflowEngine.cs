@@ -35,7 +35,8 @@ namespace CommentsVS.Services
         // Tags whose content should not be reflowed (preformatted)
         private static readonly HashSet<string> _preformattedTags = new(StringComparer.OrdinalIgnoreCase)
         {
-            "code"
+            "code",
+            "list"
         };
 
         // Regex to parse XML elements
@@ -44,11 +45,15 @@ namespace CommentsVS.Services
         // Regex matching a complete <para>...</para> block (treated as its own paragraph during reflow).
         private static readonly Regex _paraBlockRegex = new(@"<para\b[^>]*>.*?</para\s*>", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        // Regex matching a complete <code>...</code> block embedded inside other content (preformatted, never reflowed).
-        private static readonly Regex _codeBlockRegex = new(@"<code\b[^>]*>.*?</code\s*>", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // Regex matching blocks whose internal line structure must be preserved.
+        private static readonly Regex _preformattedBlockRegex = new(
+            @"<(?<tag>code|list)\b[^>]*>.*?</\k<tag>\s*>",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        // Regex used to split an embedded <code>...</code> block into its opening tag, body, and closing tag.
-        private static readonly Regex _codeBlockPartsRegex = new(@"^(?<open><code\b[^>]*>)(?<body>.*?)(?<close></code\s*>)$", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // Regex used to split a protected block into its opening tag, body, and closing tag.
+        private static readonly Regex _preformattedBlockPartsRegex = new(
+            @"^(?<open><(?<tag>code|list)\b[^>]*>)(?<body>.*?)(?<close></\k<tag>\s*>)$",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public CommentReflowEngine(int maxLineLength, bool useCompactStyle, bool preserveBlankLines)
         {
@@ -156,11 +161,11 @@ namespace CommentsVS.Services
                 return;
             }
 
-            var hasEmbeddedCode = _codeBlockRegex.IsMatch(element.Content);
+            var hasEmbeddedPreformattedBlock = _preformattedBlockRegex.IsMatch(element.Content);
             var innerContent = NormalizeWhitespace(element.Content);
 
             // Check if content fits on a single line (compact style)
-            if (_useCompactStyle && isBlockTag && !hasEmbeddedCode)
+            if (_useCompactStyle && isBlockTag && !hasEmbeddedPreformattedBlock)
             {
                 var singleLine = $"{element.OpenTag}{innerContent}{element.CloseTag}";
                 if (singleLine.Length <= availableWidth &&
@@ -175,9 +180,9 @@ namespace CommentsVS.Services
             // Multi-line format
             lines.Add(linePrefix + element.OpenTag);
 
-            if (hasEmbeddedCode)
+            if (hasEmbeddedPreformattedBlock)
             {
-                ReflowInnerContentWithCodeBlocks(element.Content, lines, linePrefix, availableWidth);
+                ReflowInnerContentWithPreformattedBlocks(element.Content, lines, linePrefix, availableWidth);
             }
             else
             {
@@ -188,13 +193,15 @@ namespace CommentsVS.Services
         }
 
         /// <summary>
-        /// Reflows a block of inner content that may contain embedded &lt;code&gt;...&lt;/code&gt; blocks.
-        /// Prose segments are normalized and wrapped; code blocks are emitted preformatted with their
-        /// original line breaks preserved (see issue #72).
+        /// Reflows inner content around embedded blocks whose line structure must be preserved.
         /// </summary>
-        private void ReflowInnerContentWithCodeBlocks(string rawContent, List<string> lines, string linePrefix, int availableWidth)
+        private void ReflowInnerContentWithPreformattedBlocks(
+            string rawContent,
+            List<string> lines,
+            string linePrefix,
+            int availableWidth)
         {
-            MatchCollection matches = _codeBlockRegex.Matches(rawContent);
+            MatchCollection matches = _preformattedBlockRegex.Matches(rawContent);
             var lastIndex = 0;
 
             foreach (Match match in matches)
@@ -205,7 +212,7 @@ namespace CommentsVS.Services
                     ReflowProseSegment(prose, lines, linePrefix, availableWidth);
                 }
 
-                EmitEmbeddedCodeBlock(match.Value, lines, linePrefix);
+                EmitEmbeddedPreformattedBlock(match.Value, lines, linePrefix);
                 lastIndex = match.Index + match.Length;
             }
 
@@ -272,15 +279,18 @@ namespace CommentsVS.Services
         }
 
         /// <summary>
-        /// Emits an embedded &lt;code&gt;...&lt;/code&gt; block with line breaks preserved.
+        /// Emits an embedded preformatted block with its line breaks preserved.
         /// </summary>
-        private static void EmitEmbeddedCodeBlock(string codeBlock, List<string> lines, string linePrefix)
+        private static void EmitEmbeddedPreformattedBlock(
+            string preformattedBlock,
+            List<string> lines,
+            string linePrefix)
         {
-            Match parts = _codeBlockPartsRegex.Match(codeBlock);
+            Match parts = _preformattedBlockPartsRegex.Match(preformattedBlock);
             if (!parts.Success)
             {
                 // Defensive fallback: emit as a single raw line.
-                lines.Add(linePrefix + codeBlock);
+                lines.Add(linePrefix + preformattedBlock);
                 return;
             }
 
