@@ -13,9 +13,18 @@ namespace CommentsVS.Handlers
     /// Handles paste operations to detect and reflow XML documentation comments.
     /// </summary>
     [Export(typeof(ICommandHandler))]
-    [ContentType("text")]
+    [ContentType(SupportedContentTypes.CSharp)]
+    [ContentType(SupportedContentTypes.VisualBasic)]
+    [ContentType(SupportedContentTypes.FSharp)]
+    [ContentType(SupportedContentTypes.CPlusPlus)]
+    [ContentType(SupportedContentTypes.TypeScript)]
+    [ContentType(SupportedContentTypes.JavaScript)]
+    [ContentType(SupportedContentTypes.Razor)]
+    [ContentType(SupportedContentTypes.Sql)]
+    [ContentType(SupportedContentTypes.PowerShell)]
+    [ContentType(SupportedContentTypes.PowerShellProTools)]
     [Name(nameof(PasteHandler))]
-    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.Document)]
     public sealed class PasteHandler : ICommandHandler<PasteCommandArgs>
     {
         public string DisplayName => "Reflow XML Doc Comments on Paste";
