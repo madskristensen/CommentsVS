@@ -28,15 +28,6 @@ namespace CommentsVS.Services
         private static volatile Regex _cachedMetadataParseRegex;
 
         /// <summary>
-        /// Gets the current anchor keywords pattern including custom tags.
-        /// </summary>
-        public static string GetAnchorKeywordsPattern()
-        {
-            EnsurePatternsCurrent();
-            return _cachedAnchorKeywordsPattern;
-        }
-
-        /// <summary>
         /// Regex to match comment tags (anchors) with optional trailing delimiter for uppercase tags.
         /// Captures the tag keyword in the "tag" group.
         /// </summary>
@@ -52,90 +43,7 @@ namespace CommentsVS.Services
             RegexOptions.Compiled);
 
         /// <summary>
-        /// Gets the regex to match anchors in comments for classification.
-        /// Looks for anchor keywords after C-style (//), block comment (/*), or VB-style (') comment prefixes.
-        /// </summary>
-        public static Regex GetAnchorClassificationRegex()
-        {
-            EnsurePatternsCurrent();
-            return _cachedAnchorClassificationRegex;
-        }
-
-        /// <summary>
-        /// Gets the regex to match anchor keywords with optional metadata (parentheses or brackets).
-        /// Captures the metadata in the "metadata" group.
-        /// </summary>
-        public static Regex GetAnchorWithMetadataRegex()
-        {
-            EnsurePatternsCurrent();
-            return _cachedAnchorWithMetadataRegex;
-        }
-
-        /// <summary>
-        /// Gets the regex to match anchors in comments for the anchor service.
-        /// Captures prefix, tag, metadata, and message groups.
-        /// Supports C-style (// and /* */), VB-style ('), and HTML-style (<!-- -->) comments.
-        /// </summary>
-        public static Regex GetAnchorServiceRegex()
-        {
-            EnsurePatternsCurrent();
-            return _cachedAnchorServiceRegex;
-        }
-
-        /// <summary>
-        /// Gets the regex to match anchor tags with optional metadata for parsing.
-        /// </summary>
-        public static Regex GetMetadataParseRegex()
-        {
-            EnsurePatternsCurrent();
-            return _cachedMetadataParseRegex;
-        }
-
-        // Keep static fields for backward compatibility with existing code that references them directly
-        // These will be updated by EnsurePatternsCurrent()
-
-        /// <summary>
-        /// Regex to match anchors in comments for classification.
-        /// Use GetAnchorClassificationRegex() for dynamic patterns that include custom tags.
-        /// </summary>
-        public static Regex AnchorClassificationRegex
-        {
-            get
-            {
-                EnsurePatternsCurrent();
-                return _cachedAnchorClassificationRegex;
-            }
-        }
-
-        /// <summary>
-        /// Regex to match anchor keywords with optional metadata.
-        /// Use GetAnchorWithMetadataRegex() for dynamic patterns that include custom tags.
-        /// </summary>
-        public static Regex AnchorWithMetadataRegex
-        {
-            get
-            {
-                EnsurePatternsCurrent();
-                return _cachedAnchorWithMetadataRegex;
-            }
-        }
-
-        /// <summary>
-        /// Regex to match anchors in comments for the anchor service.
-        /// Use GetAnchorServiceRegex() for dynamic patterns that include custom tags.
-        /// </summary>
-        public static Regex AnchorServiceRegex
-        {
-            get
-            {
-                EnsurePatternsCurrent();
-                return _cachedAnchorServiceRegex;
-            }
-        }
-
-        /// <summary>
         /// Regex to match anchor tags with optional metadata for parsing.
-        /// Use GetMetadataParseRegex() for dynamic patterns that include custom tags.
         /// </summary>
         public static Regex MetadataParseRegex
         {
@@ -170,7 +78,12 @@ namespace CommentsVS.Services
             }
         }
 
-        private static string BuildAnchorKeywordsPattern(string customTagsStr)
+        /// <summary>
+        /// Builds the anchor keywords alternation pattern from a raw comma-separated custom-tags string.
+        /// Pure and side-effect free, so it can be exercised directly by unit tests without touching
+        /// General.Instance.
+        /// </summary>
+        internal static string BuildAnchorKeywordsPattern(string customTagsStr)
         {
             // Parse custom tags directly here instead of calling General.Instance.GetCustomTagsSet()
             // to avoid race conditions if General.Instance changes during execution
@@ -200,31 +113,44 @@ namespace CommentsVS.Services
 
         private static void RebuildRegexPatterns()
         {
-            var pattern = _cachedAnchorKeywordsPattern;
-            var classificationTagPattern = @"(?:(?<tag>\b(?:" + pattern + @")\b)[:!]?|(?<tag>\b(?i:" + pattern + @")\b)[:!])";
-            var serviceTagPattern = @"(?:(?<tag>\b(?:" + pattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!]?|(?<tag>\b(?i:" + pattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!])";
-            var metadataTagPattern = @"(?:(?<tag>\b(?:" + pattern + @")\b)|(?<tag>\b(?i:" + pattern + @")\b(?=\s*(?:\([^)]*\)|\[[^\]]*\])\s*[:!])))";
+            (_cachedAnchorClassificationRegex, _cachedAnchorWithMetadataRegex, _cachedAnchorServiceRegex, _cachedMetadataParseRegex) =
+                BuildRegexPatterns(_cachedAnchorKeywordsPattern);
+        }
+
+        /// <summary>
+        /// Builds the classification, metadata, service, and metadata-parse regexes from an already-resolved
+        /// anchor keywords pattern string. Pure and side-effect free (no VS Shell / General.Instance dependency),
+        /// so it can be exercised directly by unit tests.
+        /// </summary>
+        /// <param name="keywordsPattern">The alternation pattern of anchor keywords, e.g. from <see cref="BuildAnchorKeywordsPattern"/>.</param>
+        internal static (Regex Classification, Regex WithMetadata, Regex Service, Regex MetadataParse) BuildRegexPatterns(string keywordsPattern)
+        {
+            var classificationTagPattern = @"(?:(?<tag>\b(?:" + keywordsPattern + @")\b)[:!]?|(?<tag>\b(?i:" + keywordsPattern + @")\b)[:!])";
+            var serviceTagPattern = @"(?:(?<tag>\b(?:" + keywordsPattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!]?|(?<tag>\b(?i:" + keywordsPattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!])";
+            var metadataTagPattern = @"(?:(?<tag>\b(?:" + keywordsPattern + @")\b)|(?<tag>\b(?i:" + keywordsPattern + @")\b(?=\s*(?:\([^)]*\)|\[[^\]]*\])\s*[:!])))";
 
             // Anchor must be the first word after comment prefix (and optional whitespace/asterisks)
             // This prevents matching "bug" in "straightforward bug fix"
-            _cachedAnchorClassificationRegex = new Regex(
+            var classification = new Regex(
                 @"(?<=//\s*)" + classificationTagPattern + @"|" +
                 @"(?<=/\*[\s\*]*)" + classificationTagPattern + @"|" +
                 @"(?<='\s*)" + classificationTagPattern + @"|" +
                 @"(?<=^\s*\*\s*)" + classificationTagPattern,
                 RegexOptions.Compiled | RegexOptions.Multiline);
 
-            _cachedAnchorWithMetadataRegex = new Regex(
+            var withMetadata = new Regex(
                 metadataTagPattern + @"(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
                 RegexOptions.Compiled);
 
-            _cachedAnchorServiceRegex = new Regex(
+            var service = new Regex(
                 @"(?<prefix>//|/\*|'|<!--)\s*" + serviceTagPattern + @"\s*(?<message>.*?)(?:\*/|-->|$)",
                 RegexOptions.Compiled);
 
-            _cachedMetadataParseRegex = new Regex(
-                @"(?:(?<tag>\b(?:" + pattern + @")\b)(?:\s*(?:\((?<metaParen>[^)]*)\)|\[(?<metaBracket>[^\]]*)\]))?\s*[:!]?|(?<tag>\b(?i:" + pattern + @")\b)(?:\s*(?:\((?<metaParen>[^)]*)\)|\[(?<metaBracket>[^\]]*)\]))?\s*[:!]) ?",
+            var metadataParse = new Regex(
+                @"(?:(?<tag>\b(?:" + keywordsPattern + @")\b)(?:\s*(?:\((?<metaParen>[^)]*)\)|\[(?<metaBracket>[^\]]*)\]))?\s*[:!]?|(?<tag>\b(?i:" + keywordsPattern + @")\b)(?:\s*(?:\((?<metaParen>[^)]*)\)|\[(?<metaBracket>[^\]]*)\]))?\s*[:!]) ?",
                 RegexOptions.Compiled);
+
+            return (classification, withMetadata, service, metadataParse);
         }
     }
 }

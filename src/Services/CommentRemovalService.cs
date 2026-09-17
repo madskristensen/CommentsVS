@@ -85,15 +85,22 @@ namespace CommentsVS.Services
         /// </summary>
         public static bool IsLineEmpty(ITextSnapshotLine line)
         {
-            var text = line.GetText().Trim();
+            return IsTextEmpty(line.GetText().Trim());
+        }
 
-            return string.IsNullOrWhiteSpace(text)
-                   || text == "<!--"
-                   || text == "-->"
-                   || text == "<%%>"
-                   || text == "<%"
-                   || text == "%>"
-                   || Regex.IsMatch(text, @"^<!--(\s+)?-->$");
+        /// <summary>
+        /// Determines if already-trimmed text is effectively empty after comment removal.
+        /// Pure and side-effect free, so it can be exercised directly by unit tests.
+        /// </summary>
+        internal static bool IsTextEmpty(string trimmedText)
+        {
+            return string.IsNullOrWhiteSpace(trimmedText)
+                   || trimmedText == "<!--"
+                   || trimmedText == "-->"
+                   || trimmedText == "<%%>"
+                   || trimmedText == "<%"
+                   || trimmedText == "%>"
+                   || Regex.IsMatch(trimmedText, @"^<!--(\s+)?-->$");
         }
 
         /// <summary>
@@ -104,14 +111,23 @@ namespace CommentsVS.Services
             var text = line.GetText().TrimStart();
             var contentType = line.Snapshot.TextBuffer.ContentType.TypeName;
 
+            return IsXmlDocCommentText(text, contentType);
+        }
+
+        /// <summary>
+        /// Determines if already-trim-started text is an XML documentation comment for the given content type.
+        /// Pure and side-effect free, so it can be exercised directly by unit tests.
+        /// </summary>
+        internal static bool IsXmlDocCommentText(string trimStartText, string contentTypeName)
+        {
             // C# and F# use ///
-            if ((contentType.Contains("CSharp") || contentType.Contains("FSharp")) && text.StartsWith("///"))
+            if ((contentTypeName.Contains("CSharp") || contentTypeName.Contains("FSharp")) && trimStartText.StartsWith("///"))
             {
                 return true;
             }
 
             // VB uses '''
-            if (contentType.Contains("Basic") && text.StartsWith("'''"))
+            if (contentTypeName.Contains("Basic") && trimStartText.StartsWith("'''"))
             {
                 return true;
             }
@@ -127,6 +143,19 @@ namespace CommentsVS.Services
         {
             var text = line.GetText();
             var customTags = General.Instance?.CustomTags ?? string.Empty;
+
+            return ContainsAnchorCommentInText(text, customTags);
+        }
+
+        /// <summary>
+        /// Determines if the given text contains an anchor comment, using an already-resolved custom tags string.
+        /// Pure and side-effect free (no VS Shell / General.Instance dependency), so it can be exercised directly
+        /// by unit tests.
+        /// </summary>
+        /// <param name="text">The line text to search.</param>
+        /// <param name="customTags">A raw comma/semicolon/space-separated list of custom anchor tags (can be empty).</param>
+        internal static bool ContainsAnchorCommentInText(string text, string customTags)
+        {
             var keywords = CommentPatterns.BuiltInAnchorKeywordsPattern;
 
             if (!string.IsNullOrWhiteSpace(customTags))

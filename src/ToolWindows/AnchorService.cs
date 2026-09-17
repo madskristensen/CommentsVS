@@ -222,8 +222,9 @@ namespace CommentsVS.ToolWindows
 
         /// <summary>
         /// Parses the metadata string to extract owner, issue reference, and anchor ID.
+        /// Internal for direct unit testing (pure logic, no VS Shell dependency).
         /// </summary>
-        private (string owner, string issueReference, string anchorId) ParseMetadata(string rawMetadata, AnchorType anchorType)
+        internal (string owner, string issueReference, string anchorId) ParseMetadata(string rawMetadata, AnchorType anchorType)
         {
             if (string.IsNullOrEmpty(rawMetadata))
             {

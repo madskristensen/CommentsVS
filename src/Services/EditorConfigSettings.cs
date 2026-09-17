@@ -68,12 +68,23 @@ namespace CommentsVS.Services
         public static string GetAnchorKeywordsPattern(string filePath)
         {
             HashSet<string> customTags = GetCustomAnchorTags(filePath);
-            if (customTags.Count == 0)
+            return BuildAnchorKeywordsPattern(customTags);
+        }
+
+        /// <summary>
+        /// Builds the anchor keywords regex pattern from an already-resolved set of custom tags.
+        /// Pure and side-effect free, so it can be exercised directly by unit tests.
+        /// </summary>
+        /// <param name="customTags">The resolved set of custom anchor tags (can be empty).</param>
+        internal static string BuildAnchorKeywordsPattern(IEnumerable<string> customTags)
+        {
+            var tags = customTags as ICollection<string> ?? [.. customTags];
+            if (tags.Count == 0)
             {
                 return BuiltInAnchorPattern;
             }
 
-            IEnumerable<string> escapedCustomTags = customTags.Select(Regex.Escape);
+            IEnumerable<string> escapedCustomTags = tags.Select(Regex.Escape);
             return BuiltInAnchorPattern + "|" + string.Join("|", escapedCustomTags);
         }
 
@@ -123,8 +134,9 @@ namespace CommentsVS.Services
 
         /// <summary>
         /// Builds a regex character class pattern from a comma-separated list of prefix characters.
+        /// Pure and side-effect free, so it can be exercised directly by unit tests.
         /// </summary>
-        private static string BuildPrefixPattern(string tagPrefixes)
+        internal static string BuildPrefixPattern(string tagPrefixes)
         {
             if (string.IsNullOrWhiteSpace(tagPrefixes))
             {
@@ -162,10 +174,10 @@ namespace CommentsVS.Services
         /// <summary>
         /// Builds the optional tag prefix regex fragment.
         /// Returns empty string when no prefixes are configured.
+        /// Pure and side-effect free, so it can be exercised directly by unit tests.
         /// </summary>
-        private static string GetPrefixFragment(string filePath)
+        internal static string BuildPrefixFragment(string prefixPattern)
         {
-            var prefixPattern = GetTagPrefixPattern(filePath);
             if (prefixPattern == null)
             {
                 return "";
@@ -173,6 +185,15 @@ namespace CommentsVS.Services
 
             // Captures the prefix char in <tagprefix> group, optional with \s* after
             return @"(?<tagprefix>" + prefixPattern + @")?\s*";
+        }
+
+        /// <summary>
+        /// Builds the optional tag prefix regex fragment for a specific file, resolving the prefix
+        /// pattern from .editorconfig/Options first.
+        /// </summary>
+        private static string GetPrefixFragment(string filePath)
+        {
+            return BuildPrefixFragment(GetTagPrefixPattern(filePath));
         }
 
         /// <summary>
@@ -185,15 +206,29 @@ namespace CommentsVS.Services
         {
             var cacheKey = GetRegexCacheKey(filePath);
             var p = GetAnchorKeywordsPattern(filePath);
-            var pfx = GetPrefixFragment(filePath);
-            var tagPattern = @"(?:(?<tag>\b(?:" + p + @")\b)[:!]?|(?<tag>\b(?i:" + p + @")\b)[:!])";
+            var prefixPattern = GetTagPrefixPattern(filePath);
 
-            return _classificationRegexCache.GetOrAdd(cacheKey, _ => new Regex(
+            return _classificationRegexCache.GetOrAdd(cacheKey, _ => BuildAnchorClassificationRegex(p, prefixPattern));
+        }
+
+        /// <summary>
+        /// Builds a classification regex for anchor tags from explicit pattern strings.
+        /// Pure and side-effect free, so it can be exercised directly by unit tests without touching
+        /// .editorconfig or General.Instance.
+        /// </summary>
+        /// <param name="keywordsPattern">The alternation pattern of anchor keywords.</param>
+        /// <param name="prefixPattern">The optional tag prefix character-class pattern, or null.</param>
+        internal static Regex BuildAnchorClassificationRegex(string keywordsPattern, string prefixPattern)
+        {
+            var pfx = BuildPrefixFragment(prefixPattern);
+            var tagPattern = @"(?:(?<tag>\b(?:" + keywordsPattern + @")\b)[:!]?|(?<tag>\b(?i:" + keywordsPattern + @")\b)[:!])";
+
+            return new Regex(
                 @"(?<=//\s*)" + pfx + tagPattern + @"|" +
                 @"(?<=/\*[\s\*]*)" + pfx + tagPattern + @"|" +
                 @"(?<='\s*)" + pfx + tagPattern + @"|" +
                 @"(?<=^\s*\*\s*)" + pfx + tagPattern,
-                RegexOptions.Compiled | RegexOptions.Multiline));
+                RegexOptions.Compiled | RegexOptions.Multiline);
         }
 
         /// <summary>
@@ -206,11 +241,22 @@ namespace CommentsVS.Services
         {
             var cacheKey = GetRegexCacheKey(filePath);
             var p = GetAnchorKeywordsPattern(filePath);
-            var metadataTagPattern = @"(?:\b(?:" + p + @")\b|\b(?i:" + p + @")\b(?=\s*(?:\([^)]*\)|\[[^\]]*\])\s*[:!]))";
 
-            return _metadataRegexCache.GetOrAdd(cacheKey, _ => new Regex(
+            return _metadataRegexCache.GetOrAdd(cacheKey, _ => BuildAnchorWithMetadataRegex(p));
+        }
+
+        /// <summary>
+        /// Builds a metadata regex for anchor tags from an explicit keywords pattern.
+        /// Pure and side-effect free, so it can be exercised directly by unit tests.
+        /// </summary>
+        /// <param name="keywordsPattern">The alternation pattern of anchor keywords.</param>
+        internal static Regex BuildAnchorWithMetadataRegex(string keywordsPattern)
+        {
+            var metadataTagPattern = @"(?:\b(?:" + keywordsPattern + @")\b|\b(?i:" + keywordsPattern + @")\b(?=\s*(?:\([^)]*\)|\[[^\]]*\])\s*[:!]))";
+
+            return new Regex(
                 metadataTagPattern + @"(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
-                RegexOptions.Compiled));
+                RegexOptions.Compiled);
         }
 
         /// <summary>
@@ -223,12 +269,26 @@ namespace CommentsVS.Services
         {
             var cacheKey = GetRegexCacheKey(filePath);
             var p = GetAnchorKeywordsPattern(filePath);
-            var pfx = GetPrefixFragment(filePath);
-            var serviceTagPattern = @"(?:(?<tag>\b(?:" + p + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!]?|(?<tag>\b(?i:" + p + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!])";
+            var prefixPattern = GetTagPrefixPattern(filePath);
 
-            return _serviceRegexCache.GetOrAdd(cacheKey, _ => new Regex(
+            return _serviceRegexCache.GetOrAdd(cacheKey, _ => BuildAnchorServiceRegex(p, prefixPattern));
+        }
+
+        /// <summary>
+        /// Builds a service regex for scanning anchors in comments from explicit pattern strings.
+        /// Pure and side-effect free, so it can be exercised directly by unit tests without touching
+        /// .editorconfig or General.Instance.
+        /// </summary>
+        /// <param name="keywordsPattern">The alternation pattern of anchor keywords.</param>
+        /// <param name="prefixPattern">The optional tag prefix character-class pattern, or null.</param>
+        internal static Regex BuildAnchorServiceRegex(string keywordsPattern, string prefixPattern)
+        {
+            var pfx = BuildPrefixFragment(prefixPattern);
+            var serviceTagPattern = @"(?:(?<tag>\b(?:" + keywordsPattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!]?|(?<tag>\b(?i:" + keywordsPattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!])";
+
+            return new Regex(
                 @"(?<prefix>//|/\*|'|<!--)\s*" + pfx + serviceTagPattern + @"\s*(?<message>.*?)(?:\*/|-->|$)",
-                RegexOptions.Compiled));
+                RegexOptions.Compiled);
         }
 
         /// <summary>

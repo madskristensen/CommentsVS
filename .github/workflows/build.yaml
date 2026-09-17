@@ -59,10 +59,11 @@ jobs:
 
     - name: Run tests
       run: >
-        dotnet vstest /_built/CommentsVS.Test.dll
-        --ResultsDirectory:"${{ env.TestResultsDirectory }}"
+        dotnet test CommentsVS.Test\CommentsVS.Test.csproj
+        --configuration ${{ env.Configuration }}
+        --results-directory "${{ env.TestResultsDirectory }}"
         --logger:"trx;LogFileName=test-results.trx"
-        --Collect:"Code Coverage;Format=Cobertura"
+        --collect:"Code Coverage;Format=Cobertura"
 
     - name: Report test results
       uses: dorny/test-reporter@v3

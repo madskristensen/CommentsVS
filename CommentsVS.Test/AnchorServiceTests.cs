@@ -1,35 +1,28 @@
 using System.Text.RegularExpressions;
+using CommentsVS.Services;
 using CommentsVS.ToolWindows;
 
 namespace CommentsVS.Test;
 
 /// <summary>
 /// Tests for AnchorService regex matching and metadata parsing logic.
-/// Uses mirrored regex patterns since CommentPatterns is internal.
+/// Exercises the real CommentPatterns/EditorConfigSettings pure builder methods and the real
+/// AnchorService.ParseMetadata (exposed internally via InternalsVisibleTo).
 /// </summary>
 [TestClass]
 public sealed class AnchorServiceTests
 {
-    #region Mirrored Regex Patterns from CommentPatterns (internal class)
+    #region Real Patterns from Production Code
+
+    private static readonly string _anchorKeywordsPattern = CommentPatterns.BuildAnchorKeywordsPattern(null);
+
+    private static readonly Regex _anchorServiceRegex = EditorConfigSettings.BuildAnchorServiceRegex(_anchorKeywordsPattern, null);
 
     /// <summary>
-    /// Mirror of CommentPatterns.AnchorKeywordsPattern
+    /// CommentPatterns.CommentTagRegex is public and pure (no General.Instance dependency), so it can be
+    /// exercised directly without a mirror.
     /// </summary>
-    private const string _anchorKeywordsPattern = "TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR";
-
-    /// <summary>
-    /// Mirror of CommentPatterns.AnchorServiceRegex
-    /// </summary>
-    private static readonly Regex _anchorServiceRegex = new(
-        @"(?<prefix>//|/\*|'|<!--)\s*(?:(?<tag>\b(?:" + _anchorKeywordsPattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!]?|(?<tag>\b(?i:" + _anchorKeywordsPattern + @")\b)\s*(?<metadata>(?:\([^)]*\)|\[[^\]]*\]))?\s*[:!])\s*(?<message>.*?)(?:\*/|-->|$)",
-        RegexOptions.Compiled);
-
-    /// <summary>
-    /// Mirror of CommentPatterns.CommentTagRegex
-    /// </summary>
-    private static readonly Regex _commentTagRegex = new(
-        @"(?:(?<tag>\b(?:" + _anchorKeywordsPattern + @"|LINK)\b)[:!]?|(?<tag>\b(?i:" + _anchorKeywordsPattern + @"|LINK)\b)[:!])",
-        RegexOptions.Compiled);
+    private static readonly Regex _commentTagRegex = CommentPatterns.CommentTagRegex;
 
     /// <summary>
     /// Mirror of Constants.AnchorKeywords
@@ -439,57 +432,16 @@ public sealed class AnchorServiceTests
 
     #endregion
 
-    #region Test Helper Methods - Mirror AnchorService logic
-
-    private static readonly Regex _ownerRegex = new(
-        @"@(\w+)",
-        RegexOptions.Compiled);
-
-    private static readonly Regex _issueRegex = new(
-        @"#(\d+)",
-        RegexOptions.Compiled);
+    #region Test Helper Methods
 
     /// <summary>
-    /// Mirrors the ParseMetadata method from AnchorService.
+    /// Calls the real AnchorService.ParseMetadata (internal, exposed via InternalsVisibleTo).
     /// </summary>
     private static (string? owner, string? issueReference, string? anchorId) TestParseMetadata(
         string? rawMetadata, AnchorType anchorType)
     {
-        if (string.IsNullOrEmpty(rawMetadata))
-        {
-            return (null, null, null);
-        }
-
-        string? owner = null;
-        string? issueReference = null;
-        string? anchorId = null;
-
-        // Extract owner (@username)
-        Match ownerMatch = _ownerRegex.Match(rawMetadata);
-        if (ownerMatch.Success)
-        {
-            owner = ownerMatch.Groups[1].Value;
-        }
-
-        // Extract issue reference (#123)
-        Match issueMatch = _issueRegex.Match(rawMetadata);
-        if (issueMatch.Success)
-        {
-            issueReference = "#" + issueMatch.Groups[1].Value;
-        }
-
-        // For ANCHOR type, the metadata content is the anchor ID
-        if (anchorType == AnchorType.Anchor)
-        {
-            // Strip parentheses/brackets and use as anchor ID
-            var content = rawMetadata?.Trim('(', ')', '[', ']');
-            if (!string.IsNullOrWhiteSpace(content) && owner == null && issueReference == null)
-            {
-                anchorId = content;
-            }
-        }
-
-        return (owner, issueReference, anchorId);
+        var service = new AnchorService();
+        return service.ParseMetadata(rawMetadata, anchorType);
     }
 
     #endregion

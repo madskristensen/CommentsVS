@@ -5,20 +5,20 @@ namespace CommentsVS.Test;
 
 /// <summary>
 /// Tests range-based anchor tag matching logic used by classifier/overview taggers.
-/// Mirrors production behavior to validate offset and span correctness.
+/// Exercises the real CommentPatterns/EditorConfigSettings regexes to validate offset and span correctness.
 /// </summary>
 [TestClass]
 public sealed class CommentTagRangeMatchingTests
 {
-    private const string AnchorKeywordsPattern = "TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR";
+    private static readonly string AnchorKeywordsPattern = CommentPatterns.BuildAnchorKeywordsPattern(null);
 
-    private static readonly Regex AnchorRegex = new(
-        @"(?:(?<tag>\b(?:" + AnchorKeywordsPattern + @")\b)[:!]?|(?<tag>\b(?i:" + AnchorKeywordsPattern + @")\b)[:!])",
-        RegexOptions.Compiled);
+    /// <summary>
+    /// CommentPatterns.CommentTagRegex is public and pure (no General.Instance dependency), so it can be
+    /// exercised directly. It also matches the LINK keyword, which does not affect these tests.
+    /// </summary>
+    private static readonly Regex AnchorRegex = CommentPatterns.CommentTagRegex;
 
-    private static readonly Regex MetadataRegex = new(
-        @"(?:\b(?:" + AnchorKeywordsPattern + @")\b|\b(?i:" + AnchorKeywordsPattern + @")\b(?=\s*(?:\([^)]*\)|\[[^\]]*\])\s*[:!]))(?<metadata>\s*(?:\([^)]*\)|\[[^\]]*\]))",
-        RegexOptions.Compiled);
+    private static readonly Regex MetadataRegex = EditorConfigSettings.BuildAnchorWithMetadataRegex(AnchorKeywordsPattern);
 
     private static readonly string[] AnchorKeywords =
         ["TODO", "HACK", "NOTE", "BUG", "FIXME", "UNDONE", "REVIEW", "ANCHOR"];

@@ -12,9 +12,9 @@ public sealed class AnchorExporterTests
         string filePath = @"C:\src\Foo.cs",
         int line = 10,
         string project = "MyProject",
-        string owner = null,
-        string issue = null,
-        string anchorId = null)
+        string? owner = null,
+        string? issue = null,
+        string? anchorId = null)
     {
         return new AnchorItem
         {
