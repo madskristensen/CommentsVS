@@ -236,7 +236,7 @@ namespace CommentsVS.Options
 
         [Category(_renderingCategory)]
         [DisplayName("Rendering mode")]
-        [Description("Controls how XML documentation comments are displayed. Off: Raw XML syntax. Compact: Outlining with stripped tags. Full: Rich formatted rendering. Toggle with Ctrl+M, Ctrl+R.")]
+        [Description("Controls how XML documentation comments are displayed. Off: Raw XML syntax. Compact: Outlining with stripped tags. Full: Rich formatted rendering. Toggle with Ctrl+M, Ctrl+R. Customize fonts, sizes, and colors in Tools > Options > Environment > Fonts and Colors under Rendered Comment - Text, Heading, Code, and Link.")]
         [DefaultValue(RenderingMode.Off)]
         [TypeConverter(typeof(EnumDescriptionTypeConverter))]
         public RenderingMode CommentRenderingMode { get; set; } = RenderingMode.Off;
