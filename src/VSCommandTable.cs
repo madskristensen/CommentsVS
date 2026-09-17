@@ -72,5 +72,6 @@ namespace CommentsVS
         public const int RemoveAnchorComments = 0x0224;
         public const int RemoveAllExceptAnchorComments = 0x0225;
         public const int RemoveRegions = 0x0226;
+        public const int ReflowComment = 0x0228;
     }
 }

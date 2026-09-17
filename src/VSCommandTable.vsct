@@ -160,6 +160,18 @@
           <LocCanonicalName>.CommentsVS.ToggleCollapseByDefault</LocCanonicalName>
         </Strings>
       </Button>
+      <!-- Reflow the XML documentation comment at the caret -->
+      <Button guid="CommentsVS" id="ReflowComment" priority="0x0102" type="Button">
+        <Parent guid="CommentsVS" id="CommentsToggleGroup"/>
+        <Icon guid="ImageCatalogGuid" id="FormatDocument" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Reflow Comment</ButtonText>
+          <CanonicalName>.CommentsVS.ReflowComment</CanonicalName>
+          <LocCanonicalName>.CommentsVS.ReflowComment</LocCanonicalName>
+        </Strings>
+      </Button>
       <!-- Rendering Mode: Off -->
       <Button guid="CommentsVS" id="SetRenderingModeOff" priority="0x0100" type="Button">
         <Parent guid="CommentsVS" id="CommentsRenderingGroup"/>
@@ -426,6 +438,7 @@
   <VisibilityConstraints>
     <VisibilityItem guid="CommentsVS" id="ToggleCommentVisibility" context="GUID_TextEditorFactory" />
     <VisibilityItem guid="CommentsVS" id="ToggleCollapseByDefault" context="GUID_TextEditorFactory" />
+    <VisibilityItem guid="CommentsVS" id="ReflowComment" context="GUID_TextEditorFactory" />
     <VisibilityItem guid="CommentsVS" id="SetRenderingModeOff" context="GUID_TextEditorFactory" />
     <VisibilityItem guid="CommentsVS" id="SetRenderingModeCompact" context="GUID_TextEditorFactory" />
     <VisibilityItem guid="CommentsVS" id="SetRenderingModeFull" context="GUID_TextEditorFactory" />
@@ -442,6 +455,7 @@
 
   <KeyBindings>
     <KeyBinding guid="CommentsVS" id="ToggleCommentVisibility" editor="guidVSStd97" key1="M" mod1="Control" key2="C" mod2="Control" />
+    <KeyBinding guid="CommentsVS" id="ReflowComment" editor="GUID_TextEditorFactory" key1="Q" mod1="Alt" />
     <KeyBinding guid="CommentsVS" id="NextAnchor" editor="GUID_TextEditorFactory" key1="VK_NEXT" mod1="Alt" />
     <KeyBinding guid="CommentsVS" id="PreviousAnchor" editor="GUID_TextEditorFactory" key1="VK_PRIOR" mod1="Alt" />
     <KeyBinding guid="CommentsVS" id="RemoveAllComments" editor="guidVSStd97" key1="K" mod1="Control" key2="Q" mod2="Control" />
@@ -501,6 +515,7 @@
       <IDSymbol name="RemoveAnchorComments" value="0x0224" />
       <IDSymbol name="RemoveAllExceptAnchorComments" value="0x0225" />
       <IDSymbol name="RemoveRegions" value="0x0226" />
+      <IDSymbol name="ReflowComment" value="0x0228" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>
