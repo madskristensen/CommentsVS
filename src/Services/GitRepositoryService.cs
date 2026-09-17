@@ -284,7 +284,9 @@ namespace CommentsVS.Services
             return null;
         }
 
-        private static GitRepositoryInfo ParseRemoteUrl(string remoteUrl)
+        // Made internal (rather than private) so the test project can exercise the
+        // real parsing logic directly via InternalsVisibleTo instead of a hand-copied mirror.
+        internal static GitRepositoryInfo ParseRemoteUrl(string remoteUrl)
         {
             if (string.IsNullOrWhiteSpace(remoteUrl))
             {

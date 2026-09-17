@@ -1,17 +1,15 @@
-using System.Text.RegularExpressions;
 using CommentsVS.Services;
 
 namespace CommentsVS.Test;
 
 /// <summary>
 /// Tests for GitRepositoryService URL parsing logic.
-/// Since ParseRemoteUrl is internal, we test using helper methods that mirror the regex patterns.
+/// Calls the real internal GitRepositoryService.ParseRemoteUrl (exposed via InternalsVisibleTo)
+/// instead of a hand-copied mirror, so regressions in the production regex/parsing are caught.
 /// </summary>
 [TestClass]
 public sealed class GitRepositoryServiceTests
 {
-    private static readonly Regex _scpRemoteUrlPattern = new(@"^(?<user>[^@]+)@(?<host>[^:]+):(?<path>.+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
     #region GitHub URL Parsing
 
     [TestMethod]
@@ -19,7 +17,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://github.com/owner/repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitHub, result.Provider);
@@ -33,7 +31,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://github.com/owner/repo.git";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitHub, result.Provider);
@@ -46,7 +44,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "git@github.com:owner/repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitHub, result.Provider);
@@ -59,7 +57,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "git@github.com:owner/repo.git";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitHub, result.Provider);
@@ -72,7 +70,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://github.com/Microsoft/vscode";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual("Microsoft", result.Owner);
@@ -84,7 +82,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://github.contoso.com/owner/repo.git";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitHub, result.Provider);
@@ -98,7 +96,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "git@github.contoso.com:owner/repo.git";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitHub, result.Provider);
@@ -116,7 +114,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://gitlab.com/owner/repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitLab, result.Provider);
@@ -130,7 +128,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "git@gitlab.com:owner/repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitLab, result.Provider);
@@ -143,7 +141,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://gitlab.contoso.com/group/subgroup/repo.git";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitLab, result.Provider);
@@ -157,7 +155,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "git@gitlab.contoso.com:group/subgroup/repo.git";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitLab, result.Provider);
@@ -175,7 +173,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://bitbucket.org/owner/repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.Bitbucket, result.Provider);
@@ -189,7 +187,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "git@bitbucket.org:owner/repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.Bitbucket, result.Provider);
@@ -206,7 +204,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://dev.azure.com/org/project/_git/repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.AzureDevOps, result.Provider);
@@ -220,7 +218,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "git@ssh.dev.azure.com:v3/org/project/repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.AzureDevOps, result.Provider);
@@ -233,7 +231,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://myorg.visualstudio.com/myproject/_git/myrepo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.AzureDevOps, result.Provider);
@@ -248,7 +246,7 @@ public sealed class GitRepositoryServiceTests
         // Format: /{collection}/{project}/_git/{repo} - we extract collection as owner, project as repository
         var url = "https://tfs.example.com/DefaultCollection/MyProject/_git/MyRepo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.AzureDevOps, result.Provider);
@@ -263,7 +261,7 @@ public sealed class GitRepositoryServiceTests
         // Ensure work item URL is generated correctly for self-hosted Azure DevOps
         var url = "https://tfs.company.local/org/project/_git/repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.AzureDevOps, result.Provider);
@@ -282,7 +280,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://example.com/repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNull(result);
     }
@@ -292,7 +290,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = @"C:\repos\myrepo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNull(result);
     }
@@ -300,7 +298,7 @@ public sealed class GitRepositoryServiceTests
     [TestMethod]
     public void ParseRemoteUrl_EmptyString_ReturnsNull()
     {
-        GitRepositoryInfo? result = TestParseRemoteUrl("");
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl("");
 
         Assert.IsNull(result);
     }
@@ -308,7 +306,7 @@ public sealed class GitRepositoryServiceTests
     [TestMethod]
     public void ParseRemoteUrl_NullString_ReturnsNull()
     {
-        GitRepositoryInfo? result = TestParseRemoteUrl(null);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(null);
 
         Assert.IsNull(result);
     }
@@ -318,7 +316,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "not-a-url";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNull(result);
     }
@@ -328,7 +326,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://github.com/owner/repo/";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         // Should still match the owner/repo
         Assert.IsNotNull(result);
@@ -340,7 +338,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "HTTPS://GITHUB.COM/Owner/Repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitHub, result.Provider);
@@ -351,7 +349,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://code.contoso.com/owner/repo.git";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(GitHostingProvider.GitHub, result.Provider);
@@ -369,7 +367,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://github.com/my-org/my-repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual("my-org", result.Owner);
@@ -381,7 +379,7 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://github.com/my_org/my_repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual("my_org", result.Owner);
@@ -393,247 +391,11 @@ public sealed class GitRepositoryServiceTests
     {
         var url = "https://github.com/123org/456repo";
 
-        GitRepositoryInfo? result = TestParseRemoteUrl(url);
+        GitRepositoryInfo? result = GitRepositoryService.ParseRemoteUrl(url);
 
         Assert.IsNotNull(result);
         Assert.AreEqual("123org", result.Owner);
         Assert.AreEqual("456repo", result.Repository);
-    }
-
-    #endregion
-
-    #region Test Helper - Mirrors GitRepositoryService.ParseRemoteUrl logic
-
-    /// <summary>
-    /// Pattern definition matching the Azure DevOps parsing rules in GitRepositoryService.
-    /// </summary>
-    private sealed class RemoteUrlPattern(Regex regex, GitHostingProvider provider, string baseUrl, bool usesOrgProject = false)
-    {
-        public Regex Regex { get; } = regex;
-        public GitHostingProvider Provider { get; } = provider;
-        public string BaseUrl { get; } = baseUrl;
-        public bool UsesOrgProject { get; } = usesOrgProject;
-    }
-
-    private static readonly RemoteUrlPattern[] _remoteUrlPatterns =
-    [
-        // GitHub
-        new(new(@"https?://github\.com/(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
-            GitHostingProvider.GitHub, "https://github.com"),
-        new(new(@"git@github\.com:(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
-            GitHostingProvider.GitHub, "https://github.com"),
-
-        // GitLab
-        new(new(@"https?://gitlab\.com/(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
-            GitHostingProvider.GitLab, "https://gitlab.com"),
-        new(new(@"git@gitlab\.com:(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
-            GitHostingProvider.GitLab, "https://gitlab.com"),
-
-        // Bitbucket
-        new(new(@"https?://bitbucket\.org/(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
-            GitHostingProvider.Bitbucket, "https://bitbucket.org"),
-        new(new(@"git@bitbucket\.org:(?<owner>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
-            GitHostingProvider.Bitbucket, "https://bitbucket.org"),
-
-        // Azure DevOps (new format)
-        new(new(@"https?://dev\.azure\.com/(?<org>[^/]+)/(?<project>[^/]+)/_git/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
-            GitHostingProvider.AzureDevOps, "https://dev.azure.com", usesOrgProject: true),
-        new(new(@"git@ssh\.dev\.azure\.com:v3/(?<org>[^/]+)/(?<project>[^/]+)/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
-            GitHostingProvider.AzureDevOps, "https://dev.azure.com", usesOrgProject: true),
-
-        // Azure DevOps (old visualstudio.com format)
-        new(new(@"https?://(?<org>[^\.]+)\.visualstudio\.com/(?<project>[^/]+)/_git/(?<repo>[^/\.]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
-            GitHostingProvider.AzureDevOps, "https://dev.azure.com", usesOrgProject: true),
-    ];
-
-    /// <summary>
-    /// Mirrors the ParseRemoteUrl method from GitRepositoryService.
-    /// </summary>
-    private static GitRepositoryInfo? TestParseRemoteUrl(string? remoteUrl)
-    {
-        if (string.IsNullOrWhiteSpace(remoteUrl))
-        {
-            return null;
-        }
-
-        foreach (RemoteUrlPattern pattern in _remoteUrlPatterns)
-        {
-            Match match = pattern.Regex.Match(remoteUrl);
-            if (match.Success)
-            {
-                var owner = pattern.UsesOrgProject ? match.Groups["org"].Value : match.Groups["owner"].Value;
-                var repo = pattern.UsesOrgProject ? match.Groups["project"].Value : match.Groups["repo"].Value;
-
-                return new GitRepositoryInfo(pattern.Provider, owner, repo, pattern.BaseUrl);
-            }
-        }
-
-        if (!TryGetRemoteLocation(remoteUrl!, out var host, out var baseUrl, out var pathSegments))
-        {
-            return null;
-        }
-
-        GitHostingProvider provider = GetProviderFromHost(host, pathSegments);
-        if (provider == GitHostingProvider.Unknown)
-        {
-            return null;
-        }
-
-        if (!TryGetOwnerAndRepository(provider, pathSegments, out var ownerName, out var repositoryName))
-        {
-            return null;
-        }
-
-        return new GitRepositoryInfo(provider, ownerName, repositoryName, baseUrl);
-
-    }
-
-    private static bool TryGetRemoteLocation(string remoteUrl, out string host, out string baseUrl, out string[] pathSegments)
-    {
-        if (Uri.TryCreate(remoteUrl, UriKind.Absolute, out Uri? remoteUri) && !string.IsNullOrEmpty(remoteUri.Host))
-        {
-            host = remoteUri.Host;
-            baseUrl = remoteUri.GetLeftPart(UriPartial.Authority);
-            pathSegments = GetPathSegments(remoteUri.AbsolutePath);
-            return pathSegments.Length >= 2;
-        }
-
-        Match sshMatch = _scpRemoteUrlPattern.Match(remoteUrl);
-        if (sshMatch.Success)
-        {
-            host = sshMatch.Groups["host"].Value;
-            baseUrl = $"https://{host}";
-            pathSegments = GetPathSegments(sshMatch.Groups["path"].Value);
-            return pathSegments.Length >= 2;
-        }
-
-        host = string.Empty;
-        baseUrl = string.Empty;
-        pathSegments = [];
-        return false;
-    }
-
-    private static string[] GetPathSegments(string repositoryPath)
-    {
-        if (string.IsNullOrWhiteSpace(repositoryPath))
-        {
-            return [];
-        }
-
-        return repositoryPath.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
-    }
-
-    private static GitHostingProvider GetProviderFromHost(string host, string[] pathSegments)
-    {
-        if (ContainsHostKeyword(host, "gitlab"))
-        {
-            return GitHostingProvider.GitLab;
-        }
-
-        if (ContainsHostKeyword(host, "github"))
-        {
-            return GitHostingProvider.GitHub;
-        }
-
-        if (ContainsHostKeyword(host, "bitbucket"))
-        {
-            return GitHostingProvider.Bitbucket;
-        }
-
-        // Check for Azure DevOps by host keywords or URL pattern
-        if (ContainsHostKeyword(host, "azure") ||
-            ContainsHostKeyword(host, "visualstudio") ||
-            ContainsGitSegment(pathSegments))
-        {
-            return GitHostingProvider.AzureDevOps;
-        }
-
-        return pathSegments.Length > 2
-            ? GitHostingProvider.GitLab
-            : GitHostingProvider.GitHub;
-    }
-
-    private static bool ContainsGitSegment(string[] pathSegments)
-    {
-        // Azure DevOps URLs contain a "_git" segment (e.g., /{project}/_git/{repo})
-        foreach (var segment in pathSegments)
-        {
-            if (string.Equals(segment, "_git", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool TryGetOwnerAndRepository(GitHostingProvider provider, string[] pathSegments, out string owner, out string repository)
-    {
-        owner = string.Empty;
-        repository = string.Empty;
-
-        if (pathSegments.Length < 2)
-        {
-            return false;
-        }
-
-        repository = TrimGitSuffix(pathSegments[pathSegments.Length - 1]);
-        if (string.IsNullOrWhiteSpace(repository))
-        {
-            return false;
-        }
-
-        switch (provider)
-        {
-            case GitHostingProvider.AzureDevOps:
-                // Azure DevOps: /{org}/{project}/_git/{repo} or /{collection}/{project}/_git/{repo}
-                // Find the _git segment and extract org as owner, project as repository
-                var gitIndex = Array.FindIndex(pathSegments, s => string.Equals(s, "_git", StringComparison.OrdinalIgnoreCase));
-                if (gitIndex < 2 || gitIndex >= pathSegments.Length - 1)
-                {
-                    return false;
-                }
-
-                // Owner is the organization/collection (first segment before project)
-                // Repository is the project (segment immediately before _git)
-                owner = string.Join("/", pathSegments, 0, gitIndex - 1);
-                repository = pathSegments[gitIndex - 1];
-                return !string.IsNullOrWhiteSpace(owner) && !string.IsNullOrWhiteSpace(repository);
-
-            case GitHostingProvider.GitLab:
-                owner = string.Join("/", pathSegments, 0, pathSegments.Length - 1);
-                return !string.IsNullOrWhiteSpace(owner);
-
-            case GitHostingProvider.GitHub:
-            case GitHostingProvider.Bitbucket:
-                if (pathSegments.Length != 2)
-                {
-                    return false;
-                }
-
-                owner = pathSegments[0];
-                return !string.IsNullOrWhiteSpace(owner);
-
-            default:
-                return false;
-        }
-    }
-
-    private static bool ContainsHostKeyword(string host, string keyword)
-    {
-        return host.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
-    }
-
-    private static string TrimGitSuffix(string repositoryName)
-    {
-        if (string.IsNullOrEmpty(repositoryName))
-        {
-            return repositoryName;
-        }
-
-        return repositoryName.EndsWith(".git", StringComparison.OrdinalIgnoreCase)
-            ? repositoryName.Substring(0, repositoryName.Length - 4)
-            : repositoryName;
     }
 
     #endregion

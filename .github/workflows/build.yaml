@@ -21,6 +21,7 @@ jobs:
     env:
       Configuration: Release
       DeployExtension: False
+      TestResultsDirectory: ${{ github.workspace }}\TestResults
       VsixManifestPath: src\source.extension.vsixmanifest
       VsixManifestSourcePath: src\source.extension.cs
 
@@ -57,7 +58,11 @@ jobs:
       run: msbuild /v:m -restore /p:OutDir=\_built
 
     - name: Run tests
-      run: dotnet vstest /_built/CommentsVS.Test.dll --logger "trx;LogFileName=test-results.trx"
+      run: >
+        dotnet vstest /_built/CommentsVS.Test.dll
+        --ResultsDirectory:"${{ env.TestResultsDirectory }}"
+        --logger:"trx;LogFileName=test-results.trx"
+        --Collect:"Code Coverage;Format=Cobertura"
 
     - name: Report test results
       uses: dorny/test-reporter@v3
@@ -67,6 +72,20 @@ jobs:
         path: '**/test-results.trx'
         reporter: dotnet-trx
         fail-on-error: true
+
+    - name: Add coverage summary
+      if: ${{ !cancelled() }}
+      shell: pwsh
+      run: |
+        $coverageFile = Get-ChildItem "${{ env.TestResultsDirectory }}" -Filter "*.cobertura.xml" -Recurse |
+          Select-Object -First 1
+        if (-not $coverageFile) {
+          throw "Cobertura coverage report was not produced."
+        }
+
+        [xml]$coverage = Get-Content $coverageFile.FullName
+        $lineCoverage = [double]$coverage.coverage.'line-rate'
+        "Code coverage: **$($lineCoverage.ToString('P2'))**" >> $env:GITHUB_STEP_SUMMARY
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7

@@ -5,7 +5,11 @@ namespace CommentsVS.Test;
 [TestClass]
 public sealed class PrefixCommentClassifierTests
 {
-    // Regex patterns for different comment styles - same as in PrefixCommentClassifier
+    // Regex patterns for different comment styles - same as in PrefixCommentClassifier.
+    // Kept as a mirror (rather than referencing the real class) because
+    // PrefixCommentClassifier has fields typed as VS Editor interfaces (ITextBuffer,
+    // IClassificationType), which requires Microsoft.VisualStudio.Text.Logic to be
+    // resolvable at type-load time - unavailable in the bare unit-test host.
     private static readonly Regex _cStyleRegex = new(
         @"(?<prefix>//)\s*(?<marker>[!?*\->]|//)\s*(?<content>.*?)$",
         RegexOptions.Compiled | RegexOptions.Multiline);

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using CommentsVS.Services;
 
 namespace CommentsVS.Test;
 
@@ -166,7 +167,7 @@ public sealed class CommentTagRangeMatchingTests
     {
         List<(int Start, int Length)> spans = [];
 
-        foreach ((int Start, int Length) commentSpan in TestHelpers.FindCommentSpans(text))
+        foreach ((int Start, int Length) commentSpan in CommentSpanHelper.FindCommentSpans(text))
         {
             if (!ContainsAnyKeywordInRange(text, commentSpan.Start, commentSpan.Length, AnchorKeywords))
             {
@@ -195,7 +196,7 @@ public sealed class CommentTagRangeMatchingTests
     {
         List<(int Start, int Length)> spans = [];
 
-        foreach ((int Start, int Length) commentSpan in TestHelpers.FindCommentSpans(text))
+        foreach ((int Start, int Length) commentSpan in CommentSpanHelper.FindCommentSpans(text))
         {
             if (!ContainsAnyKeywordInRange(text, commentSpan.Start, commentSpan.Length, AnchorKeywords))
             {
