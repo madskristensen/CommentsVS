@@ -81,6 +81,7 @@ Comment Studio respects `.editorconfig` files for per-project or per-folder conf
 
 | Property | Description |
 |----------|-------------|
+| `commentsvs_enabled` | Set to `false` to disable Comment Studio features for matching files. |
 | `max_line_length` | Standard EditorConfig property. Sets the maximum line length for comment reflow. |
 | `custom_anchor_tags` | Comma-separated list of custom anchor tags to highlight (e.g., `PERF, SECURITY`). |
 | `custom_anchor_tag_prefixes` | Comma-separated list of optional prefix characters for comment tags (e.g., `@, $`). |
@@ -102,6 +103,7 @@ Right-click in any C#, VB, or C++ code editor to access the **Comment Studio** s
 
 - **Expand/collapse XML Doc Comments** — Toggle visibility of all XML doc comments (**Ctrl+M, Ctrl+C**)
 - **Collapse XML Doc Comments by Default** — Toggle automatic collapsing
+- **Reflow Comment** — Reflow the XML documentation comment at the caret (**Alt+Q**)
 - **Rendering: Off / Compact / Full** — Switch between rendering modes
 - **Settings...** — Open extension settings
 

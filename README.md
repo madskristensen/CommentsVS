@@ -22,7 +22,7 @@ or get the [CI build][vsixgallery].
 
 - **[Rendered Comments](https://github.com/madskristensen/CommentsVS/blob/master/docs/rendering.md)** — View XML docs as clean, formatted text (no XML noise)
 - **[Markdown Support](https://github.com/madskristensen/CommentsVS/blob/master/docs/rendering.md#markdown-formatting-in-comments)** — Use `**bold**`, `*italic*`, `` `code` ``, and `[links](url)` in comments
-- **[Auto-Reflow](https://github.com/madskristensen/CommentsVS/blob/master/docs/reflow.md)** — Automatically wrap comments to your preferred line length
+- **[Comment Reflow](https://github.com/madskristensen/CommentsVS/blob/master/docs/reflow.md)** — Automatically wrap comments or reflow the current comment with **Alt+Q**, with optional preservation of standalone `<para/>` lines
 - **[Collapse/Expand](https://github.com/madskristensen/CommentsVS/blob/master/docs/outlining.md)** — Hide comment blocks to focus on code, expand when needed
 - **[Color-coded Anchor Tags](https://github.com/madskristensen/CommentsVS/blob/master/docs/comment-tags.md)** — TODO, HACK, BUG, FIXME, NOTE highlighted in distinct colors, plus custom tags
 - **[Better Comments Style](https://github.com/madskristensen/CommentsVS/blob/master/docs/comment-tags.md#prefix-based-comment-highlighting)** — Prefix-based highlighting (`!`, `?`, `*`, `//`, `-`, `>`) for visual differentiation
@@ -30,6 +30,7 @@ or get the [CI build][vsixgallery].
 - **[Clickable Issues](https://github.com/madskristensen/CommentsVS/blob/master/docs/issue-links.md)** — `#123` links directly to GitHub/GitLab/Azure DevOps issues
 - **[Link Anchors](https://github.com/madskristensen/CommentsVS/blob/master/docs/link-anchors.md)** — Navigate to other files, lines, or named anchors with `LINK:` or uppercase `LINK` syntax
 - **[Comment Remover](https://github.com/madskristensen/CommentsVS/blob/master/docs/comment-remover.md)** — Bulk remove comments with smart preservation options
+- **[File & Project Exclusions](https://github.com/madskristensen/CommentsVS/blob/master/docs/settings.md#excluding-files-and-projects)** — Disable Comment Studio for matching files with `.editorconfig`
 - **Theme-aware** — Works with light and dark Visual Studio themes
 
 **Supports:** C#, VB.NET, F#, C++, TypeScript, JavaScript, Razor, SQL, and PowerShell
@@ -37,6 +38,8 @@ or get the [CI build][vsixgallery].
 ### Rendered Comments
 
 See your documentation, not the XML. The Full rendering mode strips away XML noise and displays your docs with proper formatting.
+
+Rendered comments match the editor font size by default. Customize their fonts, sizes, and colors under **Tools > Options > Environment > Fonts and Colors** using the `Rendered Comment - Text`, `Heading`, `Code`, and `Link` entries.
 
 ![Rendered Comments](art/rendered-comments.png)
 
@@ -77,16 +80,18 @@ Comment Studio solves all of these problems, letting you focus on writing great 
 
 1. Install the extension from the [Visual Studio Marketplace][marketplace]
 2. Open any C# or VB.NET file with XML documentation comments
-3. **Try rendering modes** – Use **Edit > Comments** to switch between Off, Compact, and Full rendering
-4. **Try reflow** – Edit a comment and use **Format Document** (Ctrl+K, Ctrl+D) to see automatic formatting
+3. **Try rendering modes** – Use **Edit > Comment Studio** to switch between Off, Compact, and Full rendering
+4. **Try reflow** – Place the caret in an XML documentation comment and press **Alt+Q**, or use **Format Document** (Ctrl+K, Ctrl+D) to reflow all comments
 5. **Try collapsing** – Press **Ctrl+M, Ctrl+C** to collapse all comments and focus on code
+
+To exclude generated files, a file type, or an entire project, set `commentsvs_enabled = false` in a matching `.editorconfig` section.
 
 ## Documentation
 
 | Topic | Description |
 |-------|-------------|
 | [Comment Rendering](https://github.com/madskristensen/CommentsVS/blob/master/docs/rendering.md) | Rendering modes, rendered XML docs, Markdown formatting |
-| [Comment Reflow](https://github.com/madskristensen/CommentsVS/blob/master/docs/reflow.md) | Auto-reflow, Format Document integration, Smart Paste |
+| [Comment Reflow](https://github.com/madskristensen/CommentsVS/blob/master/docs/reflow.md) | Alt+Q reflow, auto-reflow, Format Document integration, Smart Paste, XML structure preservation |
 | [Comment Outlining](https://github.com/madskristensen/CommentsVS/blob/master/docs/outlining.md) | Collapse and expand XML doc comments |
 | [Comment Tags](https://github.com/madskristensen/CommentsVS/blob/master/docs/comment-tags.md) | Color-coded tags, custom tags, prefix-based highlighting |
 | [Code Anchors](https://github.com/madskristensen/CommentsVS/blob/master/docs/code-anchors.md) | Solution-wide Code Anchors tool window |
