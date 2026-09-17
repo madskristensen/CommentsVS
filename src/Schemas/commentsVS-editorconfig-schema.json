@@ -1,6 +1,14 @@
 {
   "properties": [
     {
+      "name": "commentsvs_enabled",
+      "description": "Enables or disables CommentsVS features for matching files. Set to false in an .editorconfig section to exclude a file type, folder, or entire project.",
+      "severity": false,
+      "values": [ "true", "false" ],
+      "defaultValue": [ "true" ],
+      "documentationLink": "https://github.com/madskristensen/CommentsVS/blob/master/docs/settings.md#excluding-files-and-projects"
+    },
+    {
       "name": "custom_anchor_tags",
       "description": "Comma-separated list of custom comment tags to highlight (e.g., PERF, SECURITY, DEBT). These are recognized in addition to built-in tags like TODO, HACK, NOTE, BUG, FIXME, UNDONE, REVIEW.",
       "severity": false,

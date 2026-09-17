@@ -127,6 +127,11 @@ namespace CommentsVS.Classification
                 return result;
             }
 
+            if (!EditorConfigSettings.IsEnabled(_buffer.GetFileName()))
+            {
+                return result;
+            }
+
             // Skip large files for performance
             if (span.Snapshot.Length > Constants.MaxFileSize)
             {

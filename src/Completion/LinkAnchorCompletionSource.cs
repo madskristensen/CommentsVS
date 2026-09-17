@@ -84,6 +84,11 @@ namespace CommentsVS.Completion
                 Initialize();
             }
 
+            if (!EditorConfigSettings.IsEnabled(_currentFilePath))
+            {
+                return CompletionStartData.DoesNotParticipateInCompletion;
+            }
+
             ITextSnapshotLine line = triggerLocation.GetContainingLine();
             var lineText = line.GetText();
 

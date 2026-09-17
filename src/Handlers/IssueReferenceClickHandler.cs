@@ -46,6 +46,11 @@ namespace CommentsVS.Handlers
                 return;
             }
 
+            if (!EditorConfigSettings.IsEnabled(_filePath ?? TextBufferHelper.GetFilePath(textView.TextBuffer)))
+            {
+                return;
+            }
+
             // Check for Ctrl+Click
             if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
             {

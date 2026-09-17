@@ -59,6 +59,11 @@ namespace CommentsVS.Tagging
 
         public IEnumerable<ITagSpan<IClassificationTag>> GetTags(NormalizedSnapshotSpanCollection spans)
         {
+            if (!EditorConfigSettings.IsEnabled(TextBufferHelper.GetFilePath(_buffer)))
+            {
+                yield break;
+            }
+
             if (_linkClassificationType == null)
             {
                 yield break;

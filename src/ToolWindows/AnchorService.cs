@@ -33,7 +33,7 @@ namespace CommentsVS.ToolWindows
         /// <returns>A list of anchors found in the buffer.</returns>
         public IReadOnlyList<AnchorItem> ScanBuffer(ITextBuffer buffer, string filePath, string projectName = null)
         {
-            if (buffer == null)
+            if (buffer == null || !EditorConfigSettings.IsEnabled(filePath))
             {
                 return [];
             }
@@ -57,7 +57,7 @@ namespace CommentsVS.ToolWindows
         /// <returns>A list of anchors found in the text.</returns>
         public IReadOnlyList<AnchorItem> ScanText(string text, string filePath, string projectName = null)
         {
-            if (string.IsNullOrEmpty(text))
+            if (string.IsNullOrEmpty(text) || !EditorConfigSettings.IsEnabled(filePath))
             {
                 return [];
             }

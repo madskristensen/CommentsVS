@@ -44,6 +44,11 @@ namespace CommentsVS.Handlers
                 ITextBuffer buffer = docView.TextBuffer;
                 ITextView textView = docView.TextView;
 
+                if (!EditorConfigSettings.IsEnabled(TextBufferHelper.GetFilePath(buffer)))
+                {
+                    return CommandProgression.Continue;
+                }
+
                 var contentType = buffer.ContentType.TypeName;
                 var commentStyle = LanguageCommentStyle.GetForContentType(contentType);
 

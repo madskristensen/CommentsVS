@@ -164,6 +164,11 @@ namespace CommentsVS.Handlers
             {
                 General options = await General.GetLiveInstanceAsync();
 
+                if (!EditorConfigSettings.IsEnabled(TextBufferHelper.GetFilePath(_textView.TextBuffer)))
+                {
+                    return;
+                }
+
                 ITextSnapshot snapshot = _textView.TextSnapshot;
                 if (position >= snapshot.Length)
                 {

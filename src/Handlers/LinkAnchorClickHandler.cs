@@ -37,6 +37,11 @@ namespace CommentsVS.Handlers
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
+            if (!EditorConfigSettings.IsEnabled(_currentFilePath ?? TextBufferHelper.GetFilePath(textView.TextBuffer)))
+            {
+                return;
+            }
+
             // Check for Ctrl+Click
             if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
             {

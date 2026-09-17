@@ -61,6 +61,11 @@ namespace CommentsVS.QuickInfo
             IAsyncQuickInfoSession session,
             CancellationToken cancellationToken)
         {
+            if (!EditorConfigSettings.IsEnabled(_filePath))
+            {
+                return null;
+            }
+
             // Show tooltip in Compact mode only (Full mode shows all details inline)
             RenderingMode renderingMode = General.Instance.CommentRenderingMode;
             if (renderingMode != RenderingMode.Compact)

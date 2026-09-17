@@ -79,6 +79,11 @@ namespace CommentsVS.Tagging
                 yield break;
             }
 
+            if (!EditorConfigSettings.IsEnabled(_buffer.GetFileName()))
+            {
+                yield break;
+            }
+
             if (spans.Count == 0)
             {
                 yield break;

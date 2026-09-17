@@ -110,6 +110,11 @@ namespace CommentsVS.Tagging
 
         public IEnumerable<ITagSpan<IErrorTag>> GetTags(NormalizedSnapshotSpanCollection spans)
         {
+            if (!EditorConfigSettings.IsEnabled(_currentFilePath ?? TextBufferHelper.GetFilePath(_buffer)))
+            {
+                yield break;
+            }
+
             if (spans.Count == 0)
             {
                 yield break;

@@ -37,6 +37,11 @@ namespace CommentsVS.Handlers
             ITextView textView = args.TextView;
             ITextBuffer textBuffer = args.SubjectBuffer;
 
+            if (!EditorConfigSettings.IsEnabled(TextBufferHelper.GetFilePath(textBuffer)))
+            {
+                return false;
+            }
+
             // Get the current position before paste
             var caretPositionBeforePaste = textView.Caret.Position.BufferPosition.Position;
             ITextSnapshot snapshotBeforePaste = textBuffer.CurrentSnapshot;

@@ -44,6 +44,11 @@ namespace CommentsVS.QuickInfo
                 return null;
             }
 
+            if (!EditorConfigSettings.IsEnabled(TextBufferHelper.GetFilePath(textBuffer)))
+            {
+                return null;
+            }
+
             SnapshotPoint? triggerPoint = session.GetTriggerPoint(textBuffer.CurrentSnapshot);
             if (!triggerPoint.HasValue)
             {

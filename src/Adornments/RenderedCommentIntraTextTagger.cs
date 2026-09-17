@@ -338,6 +338,11 @@ namespace CommentsVS.Adornments
         protected override IEnumerable<Tuple<SnapshotSpan, PositionAffinity?, XmlDocCommentBlock>> GetAdornmentData(
             NormalizedSnapshotSpanCollection spans)
         {
+            if (!EditorConfigSettings.IsEnabled(_filePath))
+            {
+                yield break;
+            }
+
             RenderingMode renderingMode = General.Instance.CommentRenderingMode;
 
             // Only provide adornments in Compact or Full mode

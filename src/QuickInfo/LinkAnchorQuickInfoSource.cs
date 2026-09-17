@@ -33,6 +33,11 @@ namespace CommentsVS.QuickInfo
             IAsyncQuickInfoSession session,
             CancellationToken cancellationToken)
         {
+            if (!EditorConfigSettings.IsEnabled(TextBufferHelper.GetFilePath(textBuffer)))
+            {
+                return Task.FromResult<QuickInfoItem>(null);
+            }
+
             SnapshotPoint? triggerPoint = session.GetTriggerPoint(textBuffer.CurrentSnapshot);
             if (!triggerPoint.HasValue)
             {

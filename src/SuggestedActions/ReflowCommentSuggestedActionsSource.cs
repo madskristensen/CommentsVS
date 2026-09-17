@@ -159,6 +159,11 @@ namespace CommentsVS.SuggestedActions
         /// </summary>
         private XmlDocCommentBlock TryGetCommentBlockUnderCaret()
         {
+            if (!EditorConfigSettings.IsEnabled(TextBufferHelper.GetFilePath(textBuffer)))
+            {
+                return null;
+            }
+
             SnapshotPoint caretPosition = textView.Caret.Position.BufferPosition;
             ITextSnapshot snapshot = caretPosition.Snapshot;
 

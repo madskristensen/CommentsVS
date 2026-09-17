@@ -34,6 +34,9 @@ namespace CommentsVS.Services
         // Cache for tag prefix patterns from .editorconfig files keyed by directory path
         private static readonly ConcurrentDictionary<string, string> _tagPrefixCache = new();
 
+        // Cache for per-file enablement because .editorconfig sections can vary by file name or extension
+        private static readonly ConcurrentDictionary<string, bool> _enabledCache = new(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// Built-in anchor keywords that are always recognized.
         /// </summary>
@@ -43,6 +46,56 @@ namespace CommentsVS.Services
         /// Regex pattern for built-in anchor tags.
         /// </summary>
         public const string BuiltInAnchorPattern = "TODO|HACK|NOTE|BUG|FIXME|UNDONE|REVIEW|ANCHOR";
+
+        /// <summary>
+        /// Returns whether CommentsVS features are enabled for a file.
+        /// </summary>
+        public static bool IsEnabled(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return true;
+            }
+
+            string fullPath;
+            try
+            {
+                fullPath = System.IO.Path.GetFullPath(filePath);
+            }
+            catch (Exception)
+            {
+                return true;
+            }
+
+            return _enabledCache.GetOrAdd(fullPath, path =>
+            {
+                try
+                {
+                    FileConfiguration config = _parser.Parse(path);
+                    return config.Properties.TryGetValue("commentsvs_enabled", out var value)
+                        ? ParseEnabledValue(value)
+                        : true;
+                }
+                catch (Exception)
+                {
+                    return true;
+                }
+            });
+        }
+
+        internal static bool ParseEnabledValue(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return true;
+            }
+
+            return value.Trim().ToLowerInvariant() switch
+            {
+                "false" or "off" or "no" or "0" => false,
+                _ => true
+            };
+        }
 
         /// <summary>
         /// Gets all anchor tags: built-in tags plus custom tags from .editorconfig or Options page.
@@ -438,6 +491,7 @@ namespace CommentsVS.Services
             _serviceRegexCache.Clear();
             _customTagsCache.Clear();
             _tagPrefixCache.Clear();
+            _enabledCache.Clear();
         }
 
         private static HashSet<string> ParseCustomTags(string customTags)

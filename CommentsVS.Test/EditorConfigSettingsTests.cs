@@ -12,6 +12,93 @@ namespace CommentsVS.Test;
 public sealed class EditorConfigSettingsTests
 {
     [TestMethod]
+    [DataRow("false")]
+    [DataRow("off")]
+    [DataRow("no")]
+    [DataRow("0")]
+    public void ParseEnabledValue_DisabledValues_ReturnFalse(string value)
+    {
+        Assert.IsFalse(EditorConfigSettings.ParseEnabledValue(value));
+    }
+
+    [TestMethod]
+    [DataRow("true")]
+    [DataRow("on")]
+    [DataRow("yes")]
+    [DataRow("1")]
+    [DataRow("")]
+    [DataRow("invalid")]
+    public void ParseEnabledValue_OtherValues_ReturnTrue(string value)
+    {
+        Assert.IsTrue(EditorConfigSettings.ParseEnabledValue(value));
+    }
+
+    [TestMethod]
+    public void IsEnabled_FileExtensionSection_ExcludesMatchingFilesOnly()
+    {
+        string directory = CreateEditorConfigTestDirectory(
+            """
+            root = true
+
+            [*.ps1]
+            commentsvs_enabled = false
+            """);
+
+        try
+        {
+            string powerShellFile = Path.Combine(directory, "build.ps1");
+            string csharpFile = Path.Combine(directory, "Program.cs");
+            File.WriteAllText(powerShellFile, "# test");
+            File.WriteAllText(csharpFile, "// test");
+            EditorConfigSettings.ClearCaches();
+
+            Assert.IsFalse(EditorConfigSettings.IsEnabled(powerShellFile));
+            Assert.IsTrue(EditorConfigSettings.IsEnabled(csharpFile));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+            EditorConfigSettings.ClearCaches();
+        }
+    }
+
+    [TestMethod]
+    public void IsEnabled_ProjectRootSection_ExcludesNestedFiles()
+    {
+        string directory = CreateEditorConfigTestDirectory(
+            """
+            root = true
+
+            [*]
+            commentsvs_enabled = false
+            """);
+
+        try
+        {
+            string nestedDirectory = Path.Combine(directory, "Features");
+            Directory.CreateDirectory(nestedDirectory);
+            string filePath = Path.Combine(nestedDirectory, "Feature.cs");
+            File.WriteAllText(filePath, "// test");
+            EditorConfigSettings.ClearCaches();
+
+            Assert.IsFalse(EditorConfigSettings.IsEnabled(filePath));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+            EditorConfigSettings.ClearCaches();
+        }
+    }
+
+    private static string CreateEditorConfigTestDirectory(string editorConfig)
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "CommentsVS.Test", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, ".editorconfig"), editorConfig);
+        return directory;
+    }
+
+    [TestMethod]
     public void BuildAnchorKeywordsPattern_EmptyCustomTags_ReturnsBuiltInPattern()
     {
         var result = EditorConfigSettings.BuildAnchorKeywordsPattern([]);

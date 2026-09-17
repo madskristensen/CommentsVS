@@ -29,6 +29,24 @@ Configure Comment Studio via **Tools > Options > CommentsVS**.
 
 Rendered comment colors can be customized via **Tools > Options > Environment > Fonts and Colors** under "Rendered Comment - [Type]" entries (Text, Heading, Code, Link). See the full [Fonts & Colors reference](fonts-and-colors.md).
 
+## Excluding Files and Projects
+
+Use `commentsvs_enabled = false` in `.editorconfig` to disable comment rendering, outlining, reflow, highlighting, and Code Anchors for matching files.
+
+Exclude a file type:
+
+```ini
+[*.ps1]
+commentsvs_enabled = false
+```
+
+Exclude an entire project by placing this in an `.editorconfig` at the project root:
+
+```ini
+[*]
+commentsvs_enabled = false
+```
+
 ## Comment Tags
 
 | Setting | Default | Description |

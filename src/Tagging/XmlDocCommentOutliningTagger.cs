@@ -130,6 +130,11 @@ namespace CommentsVS.Tagging
 
         public IEnumerable<ITagSpan<IOutliningRegionTag>> GetTags(NormalizedSnapshotSpanCollection spans)
         {
+            if (!EditorConfigSettings.IsEnabled(TextBufferHelper.GetFilePath(_buffer)))
+            {
+                yield break;
+            }
+
             // Early exit if feature is not active
             if (!ShouldProvideOutliningTags())
             {
