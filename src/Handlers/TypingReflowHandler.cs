@@ -230,9 +230,16 @@ namespace CommentsVS.Handlers
                     return;
                 }
 
-                // Calculate caret offset from end of block to preserve position
                 var caretPosition = _textView.Caret.Position.BufferPosition.Position;
+                var originalText = snapshot.GetText(block.Span);
+                var originalCaretOffset = caretPosition - block.Span.Start;
                 var offsetFromBlockEnd = block.Span.End - caretPosition;
+                int? mappedCaretOffset = CommentCaretMapper.MapCaretOffset(
+                    originalText,
+                    reflowed,
+                    originalCaretOffset,
+                    block.CommentStyle,
+                    block.IsMultiLineStyle);
 
                 _isReflowing = true;
                 try
@@ -243,15 +250,15 @@ namespace CommentsVS.Handlers
                         _ = edit.Apply();
                     }
 
-                    // Calculate new caret position based on length difference
-                    // Avoids re-parsing the comment block
                     ITextSnapshot newSnapshot = _textView.TextSnapshot;
-                    var lengthDelta = reflowed.Length - block.Span.Length;
-                    var newBlockEnd = block.Span.End + lengthDelta;
-                    var newCaretPosition = newBlockEnd - offsetFromBlockEnd;
+                    var newCaretPosition = mappedCaretOffset.HasValue
+                        ? block.Span.Start + mappedCaretOffset.Value
+                        : block.Span.Start + reflowed.Length - offsetFromBlockEnd;
 
                     // Clamp to valid range
-                    newCaretPosition = Math.Max(block.Span.Start, Math.Min(newCaretPosition, newSnapshot.Length));
+                    var newBlockEnd = block.Span.Start + reflowed.Length;
+                    newCaretPosition = Math.Max(block.Span.Start, Math.Min(newCaretPosition, newBlockEnd));
+                    newCaretPosition = Math.Min(newCaretPosition, newSnapshot.Length);
 
                     var newCaretPoint = new SnapshotPoint(newSnapshot, newCaretPosition);
                     _ = _textView.Caret.MoveTo(newCaretPoint);

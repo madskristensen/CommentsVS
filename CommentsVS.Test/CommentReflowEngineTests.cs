@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using CommentsVS.Services;
 
 namespace CommentsVS.Test;
 
@@ -10,6 +11,65 @@ namespace CommentsVS.Test;
 [TestClass]
 public sealed class CommentReflowEngineTests
 {
+    #region Caret Mapping Tests (issue #76)
+
+    [TestMethod]
+    public void MapCaretOffset_ReflowAfterTypedCharacter_PreservesCaretAfterCharacter()
+    {
+        string original = CreateIssue76Comment("AAAAAA Z     BBBB BBBB");
+        string reflowed = CreateIssue76ReflowedComment("AAAAAA Z BBBB", "BBBB");
+        var originalCaret = original.IndexOf("AAAAAA Z", StringComparison.Ordinal) + "AAAAAA Z".Length;
+
+        int? mappedCaret = CommentCaretMapper.MapCaretOffset(
+            original,
+            reflowed,
+            originalCaret,
+            LanguageCommentStyle.CSharp,
+            isMultiLineStyle: false);
+
+        Assert.IsNotNull(mappedCaret);
+        Assert.EndsWith("AAAAAA Z", reflowed.Substring(0, mappedCaret.Value));
+        Assert.AreEqual(' ', reflowed[mappedCaret.Value]);
+    }
+
+    [TestMethod]
+    public void MapCaretOffset_ReflowAfterTypedSpace_PreservesCaretAfterNormalizedSpace()
+    {
+        string original = CreateIssue76Comment("AAAAAA       BBBB BBBB");
+        string reflowed = CreateIssue76ReflowedComment("AAAAAA BBBB", "BBBB");
+        var originalCaret = original.IndexOf("AAAAAA", StringComparison.Ordinal) + "AAAAAA  ".Length;
+
+        int? mappedCaret = CommentCaretMapper.MapCaretOffset(
+            original,
+            reflowed,
+            originalCaret,
+            LanguageCommentStyle.CSharp,
+            isMultiLineStyle: false);
+
+        Assert.IsNotNull(mappedCaret);
+        Assert.EndsWith("AAAAAA ", reflowed.Substring(0, mappedCaret.Value));
+        Assert.AreEqual('B', reflowed[mappedCaret.Value]);
+    }
+
+    private static string CreateIssue76Comment(string editedText)
+    {
+        return string.Join(Environment.NewLine,
+            "        /// <summary>",
+            $"        /// Leading text {editedText} trailing text.",
+            "        /// </summary>");
+    }
+
+    private static string CreateIssue76ReflowedComment(string firstLineEnd, string secondLineStart)
+    {
+        return string.Join(Environment.NewLine,
+            "        /// <summary>",
+            $"        /// Leading text {firstLineEnd}",
+            $"        /// {secondLineStart} trailing text.",
+            "        /// </summary>");
+    }
+
+    #endregion
+
     #region Text Wrapping Tests
 
     [TestMethod]
