@@ -48,6 +48,24 @@ Uppercase anchor tags may be written without `:` or `!`, but lowercase or mixed-
 
 These are especially useful for marking important sections you frequently need to return to. They can also be used as targets for [Link Anchors](link-anchors.md).
 
+## Excluding Files
+
+Use `.editorconfig` sections to exclude generated, vendor, or other files from Code Anchors:
+
+```ini
+[wwwroot/lib/**/*.js]
+commentsvs_enabled = false
+```
+
+You can also exclude an entire file type:
+
+```ini
+[*.min.js]
+commentsvs_enabled = false
+```
+
+After changing exclusions, use **Refresh** in the Code Anchors toolbar to rescan the solution.
+
 ## Exporting Anchors
 
 Use the **Export** split button in the toolbar to export the currently filtered anchors:
