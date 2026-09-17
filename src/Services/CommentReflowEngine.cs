@@ -444,11 +444,14 @@ namespace CommentsVS.Services
             var currentLine = new StringBuilder();
             var currentLength = 0;
             string previousToken = null;
+            var previousTokenEnd = 0;
 
             foreach (var token in tokens)
             {
+                var tokenStart = text.IndexOf(token, previousTokenEnd, StringComparison.Ordinal);
+                var hadLeadingWhitespace = tokenStart > previousTokenEnd;
                 var tokenLength = token.Length;
-                var needsLeadingSpace = RequiresLeadingSpace(token, previousToken);
+                var needsLeadingSpace = RequiresLeadingSpace(token, previousToken, hadLeadingWhitespace);
                 var separatorLength = needsLeadingSpace ? 1 : 0;
 
                 if (currentLength == 0)
@@ -475,6 +478,7 @@ namespace CommentsVS.Services
                 }
 
                 previousToken = token;
+                previousTokenEnd = tokenStart + tokenLength;
             }
 
             if (currentLine.Length > 0)
@@ -485,9 +489,14 @@ namespace CommentsVS.Services
             return lines;
         }
 
-        private static bool RequiresLeadingSpace(string token, string previousToken)
+        private static bool RequiresLeadingSpace(string token, string previousToken, bool hadLeadingWhitespace)
         {
             if (string.IsNullOrEmpty(token))
+            {
+                return false;
+            }
+
+            if (!hadLeadingWhitespace)
             {
                 return false;
             }
