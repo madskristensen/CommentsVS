@@ -87,7 +87,7 @@ public sealed class AnchorServiceTests
     [TestMethod]
     public void Parse_NullString_ReturnsNull()
     {
-        AnchorType? result = AnchorTypeExtensions.Parse(null);
+        AnchorType? result = AnchorTypeExtensions.Parse(null!);
 
         Assert.IsNull(result);
     }

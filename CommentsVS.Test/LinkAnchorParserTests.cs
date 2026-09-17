@@ -307,7 +307,7 @@ public sealed class LinkAnchorParserTests
     {
         string? text = null;
 
-        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text);
+        IReadOnlyList<LinkAnchorInfo> results = LinkAnchorParser.Parse(text!);
 
         Assert.IsEmpty(results);
     }

@@ -38,8 +38,8 @@ public sealed class WorkspacePathFilterTests
     [TestMethod]
     public void IsFileWithinRoot_NullOrEmptyInput_ReturnsFalse()
     {
-        Assert.IsFalse(WorkspacePathFilter.IsFileWithinRoot(null, @"C:\Repo"));
-        Assert.IsFalse(WorkspacePathFilter.IsFileWithinRoot(@"C:\Repo\a.cs", null));
+        Assert.IsFalse(WorkspacePathFilter.IsFileWithinRoot(null!, @"C:\Repo"));
+        Assert.IsFalse(WorkspacePathFilter.IsFileWithinRoot(@"C:\Repo\a.cs", null!));
         Assert.IsFalse(WorkspacePathFilter.IsFileWithinRoot(string.Empty, @"C:\Repo"));
         Assert.IsFalse(WorkspacePathFilter.IsFileWithinRoot(@"C:\Repo\a.cs", string.Empty));
     }

@@ -468,7 +468,7 @@ public sealed class GitRepositoryServiceTests
             }
         }
 
-        if (!TryGetRemoteLocation(remoteUrl, out var host, out var baseUrl, out var pathSegments))
+        if (!TryGetRemoteLocation(remoteUrl!, out var host, out var baseUrl, out var pathSegments))
         {
             return null;
         }

@@ -102,7 +102,7 @@ public sealed class FilePathResolverTests
     [TestMethod]
     public void Resolve_SolutionRelative_NoSolutionDir_ReturnsNull()
     {
-        var resolver = new FilePathResolver(_testCurrentFile, solutionDirectory: null, _testProjectDir);
+        var resolver = new FilePathResolver(_testCurrentFile, solutionDirectory: null!, _testProjectDir);
 
         var result = resolver.Resolve("~/readme.md");
 
@@ -136,7 +136,7 @@ public sealed class FilePathResolverTests
     [TestMethod]
     public void Resolve_ProjectRelative_NoProjectDir_ReturnsNull()
     {
-        var resolver = new FilePathResolver(_testCurrentFile, _testSolutionDir, projectDirectory: null);
+        var resolver = new FilePathResolver(_testCurrentFile, _testSolutionDir, projectDirectory: null!);
 
         var result = resolver.Resolve("@/Models/User.cs");
 
@@ -178,7 +178,7 @@ public sealed class FilePathResolverTests
     {
         var resolver = new FilePathResolver(_testCurrentFile, _testSolutionDir, _testProjectDir);
 
-        var result = resolver.Resolve(null);
+        var result = resolver.Resolve(null!);
 
         Assert.IsNull(result);
     }
@@ -206,7 +206,7 @@ public sealed class FilePathResolverTests
     [TestMethod]
     public void Resolve_NoCurrentFile_RelativePathReturnsNull()
     {
-        var resolver = new FilePathResolver(currentFilePath: null, _testSolutionDir, _testProjectDir);
+        var resolver = new FilePathResolver(currentFilePath: null!, _testSolutionDir, _testProjectDir);
 
         var result = resolver.Resolve("file.cs");
 
@@ -286,7 +286,7 @@ public sealed class FilePathResolverTests
     [TestMethod]
     public void FileExists_NullPath_ReturnsFalse()
     {
-        var result = FilePathResolver.FileExists(null);
+        var result = FilePathResolver.FileExists(null!);
 
         Assert.IsFalse(result);
     }

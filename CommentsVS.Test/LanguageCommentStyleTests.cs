@@ -160,7 +160,7 @@ public sealed class LanguageCommentStyleTests
     [TestMethod]
     public void GetForContentType_WithNull_ReturnsNull()
     {
-        var result = LanguageCommentStyle.GetForContentType((string?)null);
+        var result = LanguageCommentStyle.GetForContentType((string)null!);
 
         Assert.IsNull(result);
     }

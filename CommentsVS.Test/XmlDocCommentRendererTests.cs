@@ -447,7 +447,7 @@ public sealed class XmlDocCommentRendererTests
         var result = XmlDocCommentRenderer.GetStrippedSummaryFromXml(xml);
 
         Assert.AreNotEqual(NoSummaryPlaceholder, result, "Plain-text comments should not be rendered as the no-summary placeholder.");
-        Assert.IsTrue(result.Contains("Helpers"), $"Expected the rendered summary to contain the comment text. Got: '{result}'.");
+        Assert.Contains("Helpers", result, $"Expected the rendered summary to contain the comment text. Got: '{result}'.");
     }
 
     [TestMethod]
@@ -484,8 +484,8 @@ public sealed class XmlDocCommentRendererTests
         RenderedComment result = XmlDocCommentRenderer.RenderXmlContent(xml);
 
         var allText = string.Concat(result.Summary.Lines.SelectMany(l => l.Segments).Select(s => s.Text));
-        Assert.IsFalse(allText.Contains("----"), $"Rendered summary should not contain separator runs. Got: '{allText}'.");
-        Assert.IsTrue(allText.Contains("Helpers"), $"Rendered summary should still contain content. Got: '{allText}'.");
+        Assert.DoesNotContain("----", allText, $"Rendered summary should not contain separator runs. Got: '{allText}'.");
+        Assert.Contains("Helpers", allText, $"Rendered summary should still contain content. Got: '{allText}'.");
     }
 
     [TestMethod]
